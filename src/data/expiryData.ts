@@ -1,4 +1,4 @@
-import type { ChangeHistoryEntry, ProductionLine } from '../types/expiry';
+import type { ChangeHistoryEntry, ConditioningLine } from '../types/expiry';
 import { addDays } from '../utils/date';
 
 const now = new Date();
@@ -9,80 +9,55 @@ const daysAgo = (days: number, hours = 0) => {
   return date.toISOString();
 };
 
-export const initialProductionLines: ProductionLine[] = [
+const lineCBlockChangedAt = daysAgo(4, 4);
+
+export const initialConditioningLines: ConditioningLine[] = [
   {
     id: 'line-a',
-    name: 'Ligne A - Remplissage',
+    name: 'Ligne de conditionnement A',
     vat: 'Cuve C-204',
     product: 'Formule Alpha',
-    productionStartedAt: daysAgo(1, 3),
-    materialChangePending: false,
+    conditioningStartedAt: daysAgo(1, 3),
     elements: [
       {
-        type: 'hoses',
-        label: 'Tuyaux produit',
+        type: 'fillingBlock',
+        label: 'Bloc de remplissage',
         lastChangedAt: daysAgo(1),
         expiresAt: addDays(daysAgo(1), 5),
         validityDays: 5,
         operator: 'A. Martin'
-      },
-      {
-        type: 'fillingHead',
-        label: 'Tête de remplissage',
-        lastChangedAt: daysAgo(4, 7),
-        expiresAt: addDays(daysAgo(4, 7), 5),
-        validityDays: 5,
-        operator: 'L. Bernard'
       }
     ]
   },
   {
     id: 'line-b',
-    name: 'Ligne B - Conditionnement',
+    name: 'Ligne de conditionnement B',
     vat: 'Cuve M-117',
     product: 'Base Hydra',
-    productionStartedAt: daysAgo(2, 6),
-    materialChangePending: false,
+    conditioningStartedAt: daysAgo(2, 6),
     elements: [
       {
-        type: 'hoses',
-        label: 'Tuyaux produit',
+        type: 'fillingBlock',
+        label: 'Bloc de remplissage',
         lastChangedAt: daysAgo(6),
         expiresAt: addDays(daysAgo(6), 5),
         validityDays: 5,
         operator: 'N. Petit'
-      },
-      {
-        type: 'fillingHead',
-        label: 'Tête de remplissage',
-        lastChangedAt: daysAgo(2),
-        expiresAt: addDays(daysAgo(2), 5),
-        validityDays: 5,
-        operator: 'S. Leroy'
       }
     ]
   },
   {
     id: 'line-c',
-    name: 'Ligne C - Format test',
+    name: 'Ligne de conditionnement C',
     vat: 'Cuve T-008',
     product: 'Solution Test',
-    productionStartedAt: daysAgo(0, 5),
-    materialChangePending: true,
+    conditioningStartedAt: daysAgo(0, 5),
     elements: [
       {
-        type: 'hoses',
-        label: 'Tuyaux produit',
-        lastChangedAt: daysAgo(0, 8),
-        expiresAt: addDays(daysAgo(0, 8), 5),
-        validityDays: 5,
-        operator: 'R. Moreau'
-      },
-      {
-        type: 'fillingHead',
-        label: 'Tête de remplissage',
-        lastChangedAt: daysAgo(0, 8),
-        expiresAt: addDays(daysAgo(0, 8), 5),
+        type: 'fillingBlock',
+        label: 'Bloc de remplissage',
+        lastChangedAt: lineCBlockChangedAt,
+        expiresAt: addDays(lineCBlockChangedAt, 5),
         validityDays: 5,
         operator: 'R. Moreau'
       }
@@ -94,21 +69,31 @@ export const initialChangeHistory: ChangeHistoryEntry[] = [
   {
     id: 'hist-1',
     lineId: 'line-a',
-    lineName: 'Ligne A - Remplissage',
-    elementLabel: 'Tuyaux produit',
+    lineName: 'Ligne de conditionnement A',
+    elementLabel: 'Bloc de remplissage',
     changedAt: daysAgo(1),
     operator: 'A. Martin',
-    comment: 'Remplacement déclaré avant démarrage de série.',
+    comment: 'Remplacement du bloc de remplissage avant démarrage de conditionnement.',
+    newExpiresAt: addDays(daysAgo(1), 5)
+  },
+  {
+    id: 'hist-3',
+    lineId: 'line-a',
+    lineName: 'Ligne de conditionnement A',
+    elementLabel: 'Recharge de cuve - même matière',
+    changedAt: daysAgo(0, 10),
+    operator: 'M. Durand',
+    comment: 'Recharge avec Cuve C-204. Matière inchangée : Formule Alpha.',
     newExpiresAt: addDays(daysAgo(1), 5)
   },
   {
     id: 'hist-2',
     lineId: 'line-c',
-    lineName: 'Ligne C - Format test',
-    elementLabel: 'Tuyaux produit + tête',
-    changedAt: daysAgo(0, 8),
+    lineName: 'Ligne de conditionnement C',
+    elementLabel: 'Bloc de remplissage',
+    changedAt: lineCBlockChangedAt,
     operator: 'R. Moreau',
-    comment: 'Préparation format de test.',
-    newExpiresAt: addDays(daysAgo(0, 8), 5)
+    comment: '',
+    newExpiresAt: addDays(lineCBlockChangedAt, 5)
   }
 ];

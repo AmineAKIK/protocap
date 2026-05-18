@@ -1,6 +1,6 @@
-export type ContactElementType = 'hoses' | 'fillingHead';
+export type ContactElementType = 'fillingBlock';
 export type ElementStatus = 'ok' | 'warning' | 'expired';
-export type LineStatus = 'conform' | 'watch' | 'nonConform' | 'actionRequired';
+export type LineStatus = 'conform' | 'watch' | 'nonConform';
 
 export interface ContactElement {
   type: ContactElementType;
@@ -12,13 +12,12 @@ export interface ContactElement {
   comment?: string;
 }
 
-export interface ProductionLine {
+export interface ConditioningLine {
   id: string;
   name: string;
   vat: string;
   product: string;
-  productionStartedAt: string;
-  materialChangePending: boolean;
+  conditioningStartedAt: string;
   elements: ContactElement[];
 }
 

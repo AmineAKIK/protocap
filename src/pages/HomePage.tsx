@@ -1,77 +1,134 @@
-import { ArrowRight, ClipboardCheck, Library, RadioTower, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, Library, RadioTower, Wifi, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 
-const prototypes = [
+const modules = [
   {
     title: 'Expiry Check',
-    description: 'Suivi de validité des tuyaux produit et de la tête de remplissage avant démarrage.',
+    description: 'Suivi de la validité du bloc de remplissage par ligne, board tournée laveur et traçabilité des recharges de cuves.',
     to: '/expiry-check',
-    icon: ClipboardCheck
+    icon: ClipboardCheck,
+    tag: 'Traçabilité · Qualité',
+    highlight: 'Démarrage sécurisé, échéances visibles'
   },
   {
     title: 'Logistics Call',
-    description: 'Signalement digital des palettes prêtes à évacuer, visible immédiatement côté logistique.',
+    description: "Création d'appel horodaté depuis la ligne, priorisation et board logistique synchronisé en temps réel.",
     to: '/logistics-call',
-    icon: RadioTower
+    icon: RadioTower,
+    tag: 'Flux logistique · Temps réel',
+    highlight: 'Demandes visibles, suivies, priorisées'
   },
   {
     title: 'Knowledge Base',
-    description: 'Base documentaire fictive avec recherche, catégories, fiches structurées et favoris.',
+    description: 'Accès rapide aux modes opératoires, check-lists et fiches réaction des lignes de conditionnement.',
     to: '/knowledge-base',
-    icon: Library
+    icon: Library,
+    tag: 'Documentation · Standards',
+    highlight: 'Information utile accessible rapidement'
   }
 ];
 
 export function HomePage() {
   return (
     <div>
+      {/* Hero */}
       <section className="industrial-grid border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-3 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
-          <div className="flex min-w-0 flex-col justify-center">
-            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
-              <ShieldCheck size={16} />
-              <span>Démonstration générique, données fictives</span>
-            </div>
-            <h1 className="text-3xl font-bold tracking-normal text-slate-950 sm:text-5xl">LineOps Toolkit</h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-              Prototypes génériques pour fluidifier certains usages terrain en environnement de production :
-              suivi de validité d’éléments critiques, appels logistiques et accès simplifié à la documentation.
-            </p>
-            <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-              Merci pour votre accueil. J’ai préparé ces maquettes génériques comme exercice de conception et de développement autour de situations terrain que je trouve intéressantes.
-            </div>
-          </div>
-          <div className="grid min-w-0 content-end gap-3">
-            <div className="panel p-4 sm:p-5">
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Contexte</p>
-              <p className="mt-2 text-base leading-7 text-slate-700">
-                Cette page présente des maquettes fictives conçues comme démonstration d’idées d’amélioration. Les données affichées sont uniquement des exemples.
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-16">
+
+            {/* Left */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-5xl font-bold tracking-tight text-slate-950 sm:text-6xl">
+                LineOps<br />
+                <span className="text-teal-700">Toolkit</span>
+              </h1>
+              <p className="mt-4 text-lg leading-8 text-slate-500">
+                Trois modules terrain pour ligne de conditionnement.
               </p>
+
+              {/* Message */}
+              <div className="mt-6 border-l-4 border-teal-600 bg-teal-50 rounded-r-xl px-5 py-4">
+                <p className="text-sm leading-6 text-slate-700">
+                  Merci beaucoup pour votre accueil et pour votre geste attentionné.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Veuillez trouver ci-joint trois idées d'amélioration issues de ma première journée d'observation en ligne de conditionnement.
+                </p>
+              </div>
+
+              {/* CTAs */}
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/logistics-call">
+                  <Button icon={<Zap size={16} />} className="py-2.5 px-5">
+                    Logistics Call
+                  </Button>
+                </Link>
+                <Link to="/expiry-check">
+                  <Button variant="ghost" icon={<ClipboardCheck size={16} />} className="py-2.5 px-5">
+                    Expiry Check
+                  </Button>
+                </Link>
+                <Link to="/knowledge-base">
+                  <Button variant="ghost" icon={<Library size={16} />} className="py-2.5 px-5">
+                    Knowledge Base
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-3">
-              {['Validité', 'Appels', 'Docs'].map((item) => (
-                <div key={item} className="rounded-lg bg-slate-900 p-3 text-center text-sm font-semibold text-white sm:p-4">
-                  {item}
+
+            {/* Right — Périmètre card */}
+            <div className="w-full lg:w-72 xl:w-80 shrink-0">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Périmètre</p>
                 </div>
-              ))}
+                <ul className="divide-y divide-slate-100">
+                  <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">1</span>
+                    Trois modules indépendants, chacun centré sur un flux terrain précis.
+                  </li>
+                  <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">2</span>
+                    Aucune donnée réelle ou confidentielle.
+                  </li>
+                  <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">3</span>
+                    Les interactions sont conservées localement dans le navigateur.
+                  </li>
+                </ul>
+                <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-400">
+                  <Wifi size={13} />
+                  PWA — fonctionne aussi hors-ligne une fois chargée
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-3 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <div className="grid gap-4 md:grid-cols-3">
-          {prototypes.map((prototype) => (
-            <article key={prototype.title} className="panel flex flex-col p-4 transition hover:-translate-y-0.5 hover:shadow-soft sm:p-5">
-              <div className="mb-5 grid h-12 w-12 place-items-center rounded-lg bg-teal-50 text-teal-700">
-                <prototype.icon size={24} />
+      {/* Module cards */}
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
+        <div className="grid gap-5 md:grid-cols-3">
+          {modules.map((module) => (
+            <article
+              key={module.title}
+              className="panel group flex flex-col p-6 transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                <module.icon size={22} />
               </div>
-              <h2 className="text-xl font-bold text-slate-950">{prototype.title}</h2>
-              <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{prototype.description}</p>
-              <Link to={prototype.to} className="mt-5 block">
-                <Button className="w-full" icon={<ArrowRight size={17} />}>
-                  Voir le prototype
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{module.tag}</p>
+              <h3 className="text-xl font-bold text-slate-950 group-hover:text-teal-700 transition">{module.title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">{module.description}</p>
+              <div className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
+                {module.highlight}
+              </div>
+              <Link to={module.to} className="mt-4 block">
+                <Button className="w-full" icon={<ArrowRight size={16} />}>
+                  Ouvrir le module
                 </Button>
               </Link>
             </article>
@@ -79,11 +136,19 @@ export function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white px-4 py-6 text-center text-sm font-semibold text-slate-500">
-        Prototype personnel - données fictives - aucune information réelle ou confidentielle -{' '}
-        <a className="text-teal-700 transition hover:text-teal-900" href="https://www.akiksystems.com" target="_blank" rel="noreferrer">
-          www.akiksystems.com
-        </a>
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p>Application personnelle — aucune donnée réelle ou confidentielle.</p>
+          <a
+            className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline"
+            href="https://www.akiksystems.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            www.akiksystems.com
+          </a>
+        </div>
       </footer>
     </div>
   );

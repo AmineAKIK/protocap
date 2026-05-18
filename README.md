@@ -1,16 +1,16 @@
 # LineOps Toolkit
 
-PWA React/TypeScript de démonstration présentant trois prototypes génériques inspirés de problématiques courantes en environnement de production et de conditionnement.
+PWA React/TypeScript pour trois modules génériques liés aux lignes de conditionnement.
 
 ## Objectif
 
-Le projet illustre des idées simples d’amélioration terrain :
+Le projet regroupe trois modules fonctionnels et leurs bénéfices opérationnels :
 
-- **Expiry Check** : suivi de validité d’éléments en contact produit, avec contrôle avant démarrage.
+- **Expiry Check** : suivi de validité du bloc de remplissage, traçabilité des recharges de cuves et board de tournée laveur.
 - **Logistics Call** : appel digital pour évacuation ou fourniture de palettes, avec board logistique.
 - **Knowledge Base** : base documentaire fictive plus claire, recherchable et structurée.
 
-> Prototype personnel générique - données fictives - aucune information réelle ou confidentielle.
+> Application personnelle générique - données fictives - aucune information réelle ou confidentielle.
 
 ## Stack
 
@@ -97,7 +97,7 @@ src/
   components/   composants UI réutilisables
   data/         données fictives
   hooks/        persistance localStorage
-  pages/        pages et prototypes
+  pages/        pages applicatives
   types/        types métier TypeScript
   utils/        helpers date, statuts et identifiants
 ```

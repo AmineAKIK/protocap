@@ -1,6 +1,6 @@
-import { ArrowLeft, Boxes, ClipboardCheck, Home, Library, RadioTower } from 'lucide-react';
+import { Boxes, ClipboardCheck, Home, Library, RadioTower } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
@@ -14,63 +14,72 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const location = useLocation();
-  const isHome = location.pathname === '/';
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 lg:px-8">
-          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal-700 text-white sm:h-10 sm:w-10">
-              <Boxes size={22} />
+      {/* Top header */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" style={{ height: '56px' }}>
+
+          {/* Logo */}
+          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
+              <Boxes size={18} />
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-slate-950">LineOps Toolkit</span>
-              <span className="hidden text-xs text-slate-500 sm:block">Prototypes terrain génériques</span>
-            </span>
+            <span className="text-sm font-bold text-slate-950 hidden sm:block">LineOps Toolkit</span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
+
+          {/* Desktop nav — centred */}
+          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 md:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.to === '/'}
                 className={({ isActive }) =>
-                  `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                    isActive ? 'bg-teal-50 text-teal-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+                  `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-teal-700 text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`
                 }
               >
-                <item.icon size={17} />
+                <item.icon size={15} />
                 {item.label}
               </NavLink>
             ))}
           </nav>
-          {!isHome ? (
-            <Link className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:px-3" to="/">
-              <ArrowLeft size={17} />
-              <span className="hidden min-[380px]:inline">Accueil</span>
-            </Link>
-          ) : null}
+
+          <div className="hidden w-32 md:block" />
         </div>
-        <nav className="flex gap-1 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
+      </header>
+
+      {/* Page content — padding-bottom on mobile to avoid bottom nav overlap */}
+      <main className="pb-20 md:pb-0">{children}</main>
+
+      {/* Mobile bottom nav */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm md:hidden">
+        <div className="grid grid-cols-4">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.to === '/'}
               className={({ isActive }) =>
-                `inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  isActive ? 'bg-teal-50 text-teal-800' : 'text-slate-600'
+                `flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
+                  isActive ? 'text-teal-700' : 'text-slate-400'
                 }`
               }
             >
-              <item.icon size={17} />
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  <item.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                  <span>{item.label.split(' ')[0]}</span>
+                </>
+              )}
             </NavLink>
           ))}
-        </nav>
-      </header>
-      <main>{children}</main>
+        </div>
+      </nav>
     </div>
   );
 }

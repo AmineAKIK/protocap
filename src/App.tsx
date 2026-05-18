@@ -12,7 +12,7 @@ export function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/expiry-check" element={<ExpiryCheckPage />} />
         <Route path="/logistics-call" element={<LogisticsCallPage />} />
-        <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+        <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
       </Routes>
     </AppShell>
   );

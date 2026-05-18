@@ -1,204 +1,295 @@
-import { Bookmark, BookmarkCheck, Clock, FileText, Search } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckSquare,
+  ChevronRight,
+  Circle,
+  FileText,
+  ListChecks,
+  Search,
+  Zap
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
 import { knowledgeCategories, procedureDocs } from '../data/knowledgeData';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import type { Criticality, Difficulty } from '../types/knowledge';
+import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';
 import { formatDate } from '../utils/date';
 
-const criticalityTone: Record<Criticality, 'slate' | 'amber' | 'red'> = {
-  standard: 'slate',
-  important: 'amber',
-  critical: 'red'
+const typeLabel: Record<StandardType, string> = {
+  SOP: 'Mode opératoire',
+  OPL: 'Leçon ponctuelle',
+  CHECK: 'Check-list',
+  REACT: 'Fiche réaction'
 };
 
-const difficultyLabel: Record<Difficulty, string> = {
-  simple: 'Simple',
-  intermediate: 'Intermédiaire',
-  advanced: 'Avancé'
+const typeTone: Record<StandardType, 'teal' | 'blue' | 'amber' | 'red'> = {
+  SOP: 'teal',
+  OPL: 'blue',
+  CHECK: 'amber',
+  REACT: 'red'
 };
 
-const criticalityLabel: Record<Criticality, string> = {
-  standard: 'Standard',
-  important: 'Important',
-  critical: 'Critique'
+const typeIcon: Record<StandardType, typeof FileText> = {
+  SOP: FileText,
+  OPL: Circle,
+  CHECK: CheckSquare,
+  REACT: Zap
 };
 
-export function KnowledgeBasePage() {
+const statusLabel: Record<StandardStatus, string> = {
+  active: 'En vigueur',
+  review: 'En révision',
+  draft: 'Brouillon'
+};
+
+const statusTone: Record<StandardStatus, 'green' | 'amber' | 'slate'> = {
+  active: 'green',
+  review: 'amber',
+  draft: 'slate'
+};
+
+function DocList() {
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('Toutes');
-  const [selectedId, setSelectedId] = useState(procedureDocs[0].id);
-  const [favorites, setFavorites] = useLocalStorage<string[]>('lineops.knowledge.favorites', []);
+  const [category, setCategory] = useState('Tous');
+  const navigate = useNavigate();
 
-  const filteredDocs = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return procedureDocs.filter((doc) => {
-      const inCategory = category === 'Toutes' || doc.category === category;
-      const inSearch =
-        !normalized ||
-        [doc.title, doc.summary, doc.category, ...doc.tags].some((value) => value.toLowerCase().includes(normalized));
-      return inCategory && inSearch;
+      const inCat = category === 'Tous' || doc.category === category;
+      const inSearch = !q || [doc.code, doc.title, doc.category, doc.lineArea, doc.summary].some((v) =>
+        v.toLowerCase().includes(q)
+      );
+      return inCat && inSearch;
     });
-  }, [category, query]);
-
-  const selectedDoc = procedureDocs.find((doc) => doc.id === selectedId) ?? filteredDocs[0] ?? procedureDocs[0];
-
-  function toggleFavorite(id: string) {
-    setFavorites((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-  }
+  }, [query, category]);
 
   return (
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
-        <p className="label">Prototype 3</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Knowledge Base</h1>
-        <p className="mt-2 max-w-3xl text-slate-600">Base documentaire plus claire, plus rapide, plus accessible.</p>
+        <p className="label">Module documentation</p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Standards terrain</h1>
+        <p className="mt-2 text-slate-600">Modes opératoires, check-lists et fiches réaction des lignes de conditionnement.</p>
       </div>
 
-      <div className="mb-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
-        Cette maquette illustre comment une base documentaire plus moderne peut améliorer l’accès à l’information terrain grâce à une navigation plus claire, une recherche plus rapide et des contenus structurés.
+      {/* Search + filters */}
+      <div className="mb-4 space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+          <input
+            className="field pl-10 py-2.5"
+            placeholder="Rechercher par code, titre, zone..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {knowledgeCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                category === cat ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="panel p-4 sm:p-5">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              className="field pl-10"
-              placeholder="Rechercher une procédure, un tag, une catégorie..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+      {/* Count */}
+      <p className="mb-3 text-xs text-slate-400 font-medium uppercase tracking-wide">
+        {filtered.length} document{filtered.length !== 1 ? 's' : ''}
+      </p>
+
+      {/* Dense list */}
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        {filtered.length === 0 ? (
+          <div className="py-16 text-center text-sm text-slate-500">
+            <Search size={28} className="mx-auto mb-3 text-slate-300" />
+            Aucun document trouvé.
           </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {filtered.map((doc) => {
+              const Icon = typeIcon[doc.type];
+              return (
+                <li key={doc.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(doc.id)}
+                    className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition hover:bg-slate-50 sm:px-5"
+                  >
+                    {/* Type icon */}
+                    <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                      doc.type === 'SOP' ? 'bg-teal-50 text-teal-700' :
+                      doc.type === 'CHECK' ? 'bg-amber-50 text-amber-700' :
+                      doc.type === 'REACT' ? 'bg-rose-50 text-rose-700' :
+                      'bg-sky-50 text-sky-700'
+                    }`}>
+                      <Icon size={18} />
+                    </div>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {knowledgeCategories.map((item) => (
-              <button
-                key={item}
-                className={`shrink-0 rounded-full px-3 py-2 text-sm font-semibold transition ${
-                  category === item ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-                onClick={() => setCategory(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
+                    {/* Main info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-400">{doc.code}</span>
+                        <Badge tone={typeTone[doc.type]}>{typeLabel[doc.type]}</Badge>
+                        <Badge tone={statusTone[doc.status]}>{statusLabel[doc.status]}</Badge>
+                      </div>
+                      <p className="mt-0.5 font-semibold text-slate-950 group-hover:text-teal-700 transition">{doc.title}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{doc.lineArea} · {doc.version} · Validé le {formatDate(doc.updatedAt)}</p>
+                    </div>
 
-          <div className="mt-5 grid gap-3">
-            {filteredDocs.map((doc) => (
-              <button
-                key={doc.id}
-                type="button"
-                onClick={() => setSelectedId(doc.id)}
-                className={`rounded-lg border p-4 text-left transition hover:border-teal-300 hover:bg-teal-50/40 ${
-                  selectedDoc.id === doc.id ? 'border-teal-500 bg-teal-50/60' : 'border-slate-200 bg-white'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="font-bold text-slate-950">{doc.title}</h2>
-                    <p className="mt-1 text-sm text-slate-600">{doc.summary}</p>
-                  </div>
-                  {favorites.includes(doc.id) ? <BookmarkCheck className="shrink-0 text-teal-700" size={18} /> : null}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge tone="teal">{doc.category}</Badge>
-                  <Badge tone={criticalityTone[doc.criticality]}>{criticalityLabel[doc.criticality]}</Badge>
-                  <Badge>{doc.estimatedMinutes} min</Badge>
-                </div>
-              </button>
-            ))}
-            {filteredDocs.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                Aucune fiche ne correspond à cette recherche fictive.
-              </div>
-            ) : null}
-          </div>
-        </section>
+                    {/* Key checks preview */}
+                    <div className="hidden xl:flex flex-col gap-1 w-56 shrink-0">
+                      {doc.keyChecks.slice(0, 2).map((c) => (
+                        <p key={c} className="flex items-start gap-1.5 text-xs text-slate-500">
+                          <ListChecks size={12} className="mt-0.5 shrink-0 text-teal-500" />
+                          <span className="truncate">{c}</span>
+                        </p>
+                      ))}
+                    </div>
 
-        <section className="panel overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-900 p-4 text-white sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-teal-100">{selectedDoc.category}</p>
-                <h2 className="mt-2 text-xl font-bold sm:text-2xl">{selectedDoc.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-200">{selectedDoc.summary}</p>
-              </div>
-              <button
-                className="rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20"
-                onClick={() => toggleFavorite(selectedDoc.id)}
-                aria-label="Favori"
-              >
-                {favorites.includes(selectedDoc.id) ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-              </button>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Badge tone={criticalityTone[selectedDoc.criticality]}>{criticalityLabel[selectedDoc.criticality]}</Badge>
-              <Badge tone="blue">{difficultyLabel[selectedDoc.difficulty]}</Badge>
-              <Badge tone="slate"><Clock size={13} className="mr-1" />{selectedDoc.estimatedMinutes} min</Badge>
-            </div>
-          </div>
-
-          <div className="grid gap-5 p-4 sm:p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-slate-50 p-4 text-sm">
-                <p className="label">Auteur / validateur</p>
-                <p className="mt-2 font-semibold text-slate-800">{selectedDoc.author}</p>
-                <p className="text-slate-500">Validé par {selectedDoc.validator}</p>
-              </div>
-              <div className="rounded-lg bg-slate-50 p-4 text-sm">
-                <p className="label">Mise à jour</p>
-                <p className="mt-2 font-semibold text-slate-800">{formatDate(selectedDoc.updatedAt)}</p>
-                <p className="text-slate-500">Version de démonstration</p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="flex items-center gap-2 font-bold text-slate-950"><FileText size={18} />Étapes</h3>
-              <ol className="mt-3 space-y-3">
-                {selectedDoc.steps.map((step, index) => (
-                  <li key={step} className="flex min-w-0 gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{index + 1}</span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-slate-950">Points de vigilance</h3>
-              <div className="mt-3 grid gap-2">
-                {selectedDoc.watchPoints.map((point) => (
-                  <div key={point} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">{point}</div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <h3 className="font-bold text-slate-950">Documents liés</h3>
-                <div className="mt-3 space-y-2">
-                  {selectedDoc.relatedDocs.map((doc) => (
-                    <div key={doc} className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{doc}</div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-950">Tags</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedDoc.tags.map((tag) => <Badge key={tag} tone="slate">{tag}</Badge>)}
-                </div>
-              </div>
-            </div>
-
-            <Button variant="ghost" onClick={() => toggleFavorite(selectedDoc.id)}>
-              {favorites.includes(selectedDoc.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            </Button>
-          </div>
-        </section>
+                    <ChevronRight size={16} className="shrink-0 text-slate-300 group-hover:text-teal-600 transition" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
+  );
+}
+
+function DocDetail() {
+  const { id } = useParams<{ id: string }>();
+  const doc = procedureDocs.find((d) => d.id === id);
+
+  if (!doc) {
+    return (
+      <div className="mx-auto max-w-7xl px-3 py-16 text-center sm:px-6 lg:px-8">
+        <p className="text-slate-500">Document introuvable.</p>
+        <Link to="/knowledge-base" className="mt-4 inline-block text-teal-700 underline">Retour</Link>
+      </div>
+    );
+  }
+
+  const Icon = typeIcon[doc.type];
+
+  return (
+    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <Link
+        to="/knowledge-base"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 transition"
+      >
+        <ArrowLeft size={15} />
+        Standards terrain
+      </Link>
+
+      {/* Header */}
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="font-mono text-sm font-bold text-slate-500">{doc.code}</span>
+            <Badge tone={typeTone[doc.type]}>{typeLabel[doc.type]}</Badge>
+            <Badge tone={statusTone[doc.status]}>{statusLabel[doc.status]}</Badge>
+          </div>
+          <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">{doc.title}</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{doc.summary}</p>
+        </div>
+
+        {/* Meta row */}
+        <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100 sm:grid-cols-4">
+          {[
+            { label: 'Version', value: doc.version },
+            { label: 'Zone', value: doc.lineArea },
+            { label: 'Validé le', value: formatDate(doc.updatedAt) },
+            { label: 'Révision', value: formatDate(doc.nextReviewAt) }
+          ].map((item) => (
+            <div key={item.label} className="px-4 py-3">
+              <p className="label">{item.label}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid divide-y divide-slate-100 sm:divide-y-0 sm:divide-x sm:grid-cols-2">
+          {/* Key checks */}
+          <div className="p-5">
+            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
+              <ListChecks size={15} className="text-teal-600" />Points de contrôle clés
+            </h2>
+            <ul className="space-y-2">
+              {doc.keyChecks.map((check) => (
+                <li key={check} className="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800">
+                  <CheckSquare size={15} className="mt-0.5 shrink-0 text-teal-600" />
+                  {check}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Watch points */}
+          <div className="p-5">
+            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
+              <AlertTriangle size={15} className="text-amber-500" />Points de vigilance
+            </h2>
+            <ul className="space-y-2">
+              {doc.watchPoints.map((point) => (
+                <li key={point} className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-900">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Steps */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Séquence opératoire</h2>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {doc.steps.map((step, idx) => (
+            <div key={idx} className="flex gap-4 px-5 py-4">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                {idx + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-950">{step.action}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  <span className="font-medium text-teal-700">Résultat attendu : </span>
+                  {step.expected}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer meta */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-500">
+        <span>Rédigé par <strong className="text-slate-700">{doc.author}</strong></span>
+        <span>Validé par <strong className="text-slate-700">{doc.validator}</strong></span>
+        {doc.relatedDocs.length > 0 && (
+          <span>Voir aussi : <strong className="text-slate-700">{doc.relatedDocs.join(', ')}</strong></span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function KnowledgeBasePage() {
+  return (
+    <Routes>
+      <Route index element={<DocList />} />
+      <Route path=":id" element={<DocDetail />} />
+    </Routes>
   );
 }

@@ -1,4 +1,4 @@
-import type { ContactElement, ElementStatus, LineStatus, ProductionLine } from '../types/expiry';
+import type { ConditioningLine, ContactElement, ElementStatus, LineStatus } from '../types/expiry';
 import { hoursUntil } from './date';
 
 export function getElementStatus(element: ContactElement, now = new Date()): ElementStatus {
@@ -8,8 +8,7 @@ export function getElementStatus(element: ContactElement, now = new Date()): Ele
   return 'ok';
 }
 
-export function getLineStatus(line: ProductionLine, now = new Date()): LineStatus {
-  if (line.materialChangePending) return 'actionRequired';
+export function getLineStatus(line: ConditioningLine, now = new Date()): LineStatus {
   const statuses = line.elements.map((element) => getElementStatus(element, now));
   if (statuses.includes('expired')) return 'nonConform';
   if (statuses.includes('warning')) return 'watch';
@@ -23,8 +22,7 @@ export function statusLabel(status: ElementStatus | LineStatus): string {
     expired: 'Expiré',
     conform: 'Conforme',
     watch: 'Vigilance',
-    nonConform: 'Non conforme',
-    actionRequired: 'Action requise'
+    nonConform: 'Non conforme'
   };
   return labels[status];
 }

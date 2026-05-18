@@ -5,8 +5,8 @@ const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60000).t
 export const initialLogisticsRequests: LogisticsRequest[] = [
   {
     id: 'LOG-201',
-    line: 'Ligne A',
-    zone: 'Sortie remplissage',
+    line: 'Ligne de conditionnement A',
+    zone: 'Bout de ligne',
     palletCount: 2,
     priority: 'normal',
     nature: 'Palette pleine à évacuer',
@@ -16,8 +16,8 @@ export const initialLogisticsRequests: LogisticsRequest[] = [
   },
   {
     id: 'LOG-202',
-    line: 'Ligne B',
-    zone: 'Fin de conditionnement',
+    line: 'Ligne de conditionnement B',
+    zone: 'Sortie conditionnement',
     palletCount: 1,
     priority: 'high',
     nature: 'Palette pleine à évacuer',
@@ -27,11 +27,12 @@ export const initialLogisticsRequests: LogisticsRequest[] = [
   },
   {
     id: 'LOG-203',
-    line: 'Ligne C',
-    zone: 'Poste test',
+    line: 'Ligne de conditionnement C',
+    zone: 'Zone palette',
     palletCount: 3,
     priority: 'normal',
     nature: 'Palettes vides à fournir',
+    comment: '',
     createdAt: minutesAgo(94),
     status: 'pickedUp'
   }
