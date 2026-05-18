@@ -49,10 +49,10 @@ export function KnowledgeBasePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
         <p className="label">Prototype 3</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">Knowledge Base</h1>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Knowledge Base</h1>
         <p className="mt-2 max-w-3xl text-slate-600">Base documentaire plus claire, plus rapide, plus accessible.</p>
       </div>
 
@@ -61,7 +61,7 @@ export function KnowledgeBasePage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="panel p-5">
+        <section className="panel p-4 sm:p-5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -97,7 +97,7 @@ export function KnowledgeBasePage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <h2 className="font-bold text-slate-950">{doc.title}</h2>
                     <p className="mt-1 text-sm text-slate-600">{doc.summary}</p>
                   </div>
@@ -119,11 +119,11 @@ export function KnowledgeBasePage() {
         </section>
 
         <section className="panel overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-900 p-5 text-white">
+          <div className="border-b border-slate-200 bg-slate-900 p-4 text-white sm:p-5">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-teal-100">{selectedDoc.category}</p>
-                <h2 className="mt-2 text-2xl font-bold">{selectedDoc.title}</h2>
+                <h2 className="mt-2 text-xl font-bold sm:text-2xl">{selectedDoc.title}</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-200">{selectedDoc.summary}</p>
               </div>
               <button
@@ -141,7 +141,7 @@ export function KnowledgeBasePage() {
             </div>
           </div>
 
-          <div className="grid gap-5 p-5">
+          <div className="grid gap-5 p-4 sm:p-5">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg bg-slate-50 p-4 text-sm">
                 <p className="label">Auteur / validateur</p>
@@ -159,7 +159,7 @@ export function KnowledgeBasePage() {
               <h3 className="flex items-center gap-2 font-bold text-slate-950"><FileText size={18} />Étapes</h3>
               <ol className="mt-3 space-y-3">
                 {selectedDoc.steps.map((step, index) => (
-                  <li key={step} className="flex gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
+                  <li key={step} className="flex min-w-0 gap-3 rounded-lg border border-slate-200 p-3 text-sm text-slate-700">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{index + 1}</span>
                     {step}
                   </li>

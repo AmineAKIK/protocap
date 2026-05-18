@@ -27,14 +27,14 @@ export function HomePage() {
   return (
     <div>
       <section className="industrial-grid border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
-          <div className="flex flex-col justify-center">
-            <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
+        <div className="mx-auto grid max-w-7xl gap-8 px-3 py-8 sm:px-6 sm:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
+          <div className="flex min-w-0 flex-col justify-center">
+            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
               <ShieldCheck size={16} />
-              Démonstration générique, données fictives
+              <span>Démonstration générique, données fictives</span>
             </div>
-            <h1 className="text-4xl font-bold tracking-normal text-slate-950 sm:text-5xl">LineOps Toolkit</h1>
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-650 text-slate-600">
+            <h1 className="text-3xl font-bold tracking-normal text-slate-950 sm:text-5xl">LineOps Toolkit</h1>
+            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
               Prototypes génériques pour fluidifier certains usages terrain en environnement de production :
               suivi de validité d’éléments critiques, appels logistiques et accès simplifié à la documentation.
             </p>
@@ -42,16 +42,16 @@ export function HomePage() {
               Merci pour votre accueil. J’ai préparé ces maquettes génériques comme exercice de conception et de développement autour de situations terrain que je trouve intéressantes.
             </div>
           </div>
-          <div className="grid content-end gap-3">
-            <div className="panel p-5">
+          <div className="grid min-w-0 content-end gap-3">
+            <div className="panel p-4 sm:p-5">
               <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Contexte</p>
               <p className="mt-2 text-base leading-7 text-slate-700">
                 Cette page présente des maquettes fictives conçues comme démonstration d’idées d’amélioration. Les données affichées sont uniquement des exemples.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-3">
               {['Validité', 'Appels', 'Docs'].map((item) => (
-                <div key={item} className="rounded-lg bg-slate-900 p-4 text-center text-sm font-semibold text-white">
+                <div key={item} className="rounded-lg bg-slate-900 p-3 text-center text-sm font-semibold text-white sm:p-4">
                   {item}
                 </div>
               ))}
@@ -60,10 +60,10 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-3 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="grid gap-4 md:grid-cols-3">
           {prototypes.map((prototype) => (
-            <article key={prototype.title} className="panel flex flex-col p-5 transition hover:-translate-y-0.5 hover:shadow-soft">
+            <article key={prototype.title} className="panel flex flex-col p-4 transition hover:-translate-y-0.5 hover:shadow-soft sm:p-5">
               <div className="mb-5 grid h-12 w-12 place-items-center rounded-lg bg-teal-50 text-teal-700">
                 <prototype.icon size={24} />
               </div>

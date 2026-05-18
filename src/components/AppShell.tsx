@@ -20,13 +20,13 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-teal-700 text-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 lg:px-8">
+          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal-700 text-white sm:h-10 sm:w-10">
               <Boxes size={22} />
             </span>
-            <span>
-              <span className="block text-sm font-bold text-slate-950">LineOps Toolkit</span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-slate-950">LineOps Toolkit</span>
               <span className="hidden text-xs text-slate-500 sm:block">Prototypes terrain génériques</span>
             </span>
           </Link>
@@ -47,13 +47,13 @@ export function AppShell({ children }: AppShellProps) {
             ))}
           </nav>
           {!isHome ? (
-            <Link className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100" to="/">
+            <Link className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:px-3" to="/">
               <ArrowLeft size={17} />
-              Accueil
+              <span className="hidden min-[380px]:inline">Accueil</span>
             </Link>
           ) : null}
         </div>
-        <nav className="flex gap-1 overflow-x-auto border-t border-slate-100 px-4 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

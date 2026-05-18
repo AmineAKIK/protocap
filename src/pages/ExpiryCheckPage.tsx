@@ -86,10 +86,10 @@ export function ExpiryCheckPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
         <p className="label">Prototype 1</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">Expiry Check</h1>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Expiry Check</h1>
         <p className="mt-2 max-w-3xl text-slate-600">Suivi de validité des éléments en contact produit.</p>
       </div>
 
@@ -110,8 +110,8 @@ export function ExpiryCheckPage() {
                 onClick={() => setSelectedLineId(line.id)}
                 className={`panel w-full p-4 text-left transition hover:border-teal-300 ${line.id === selectedLine.id ? 'ring-2 ring-teal-600' : ''}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <h2 className="font-bold text-slate-950">{line.name}</h2>
                     <p className="mt-1 text-sm text-slate-600">{line.vat} · {line.product}</p>
                   </div>
@@ -124,16 +124,16 @@ export function ExpiryCheckPage() {
         </section>
 
         <section className="space-y-5">
-          <div className="panel p-5">
+          <div className="panel p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="min-w-0">
                 <p className="label">Éléments en contact produit</p>
-                <h2 className="mt-1 text-xl font-bold text-slate-950">{selectedLine.name}</h2>
+                <h2 className="mt-1 text-lg font-bold text-slate-950 sm:text-xl">{selectedLine.name}</h2>
                 <p className="mt-1 text-sm text-slate-600">{selectedLine.vat} · {selectedLine.product}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" icon={<RefreshCcw size={17} />} onClick={declareMaterialChange}>Changement de matière</Button>
-                <Button icon={<Plus size={17} />} onClick={() => { setChangeTarget('all'); setModalOpen(true); }}>Déclarer un changement</Button>
+              <div className="grid w-full gap-2 min-[520px]:w-auto min-[520px]:grid-cols-2">
+                <Button className="w-full" variant="ghost" icon={<RefreshCcw size={17} />} onClick={declareMaterialChange}>Changement de matière</Button>
+                <Button className="w-full" icon={<Plus size={17} />} onClick={() => { setChangeTarget('all'); setModalOpen(true); }}>Déclarer un changement</Button>
               </div>
             </div>
 
@@ -147,16 +147,16 @@ export function ExpiryCheckPage() {
               {selectedLine.elements.map((element) => {
                 const status = getElementStatus(element);
                 return (
-                  <div key={element.type} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex items-center justify-between gap-3">
+                  <div key={element.type} className="min-w-0 rounded-lg border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="font-bold text-slate-950">{element.label}</h3>
                       <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
                     </div>
                     <dl className="mt-4 space-y-2 text-sm">
-                      <div className="flex justify-between gap-4"><dt className="text-slate-500">Dernier changement</dt><dd className="font-medium text-slate-800">{formatDateTime(element.lastChangedAt)}</dd></div>
-                      <div className="flex justify-between gap-4"><dt className="text-slate-500">Expiration</dt><dd className="font-medium text-slate-800">{formatDateTime(element.expiresAt)}</dd></div>
-                      <div className="flex justify-between gap-4"><dt className="text-slate-500">Validité</dt><dd className="font-medium text-slate-800">{element.validityDays} jours</dd></div>
-                      <div className="flex justify-between gap-4"><dt className="text-slate-500">Déclaré par</dt><dd className="font-medium text-slate-800">{element.operator}</dd></div>
+                      <div className="grid gap-1 min-[420px]:grid-cols-[1fr_auto] min-[420px]:gap-4"><dt className="text-slate-500">Dernier changement</dt><dd className="font-medium text-slate-800 min-[420px]:text-right">{formatDateTime(element.lastChangedAt)}</dd></div>
+                      <div className="grid gap-1 min-[420px]:grid-cols-[1fr_auto] min-[420px]:gap-4"><dt className="text-slate-500">Expiration</dt><dd className="font-medium text-slate-800 min-[420px]:text-right">{formatDateTime(element.expiresAt)}</dd></div>
+                      <div className="grid gap-1 min-[420px]:grid-cols-[1fr_auto] min-[420px]:gap-4"><dt className="text-slate-500">Validité</dt><dd className="font-medium text-slate-800 min-[420px]:text-right">{element.validityDays} jours</dd></div>
+                      <div className="grid gap-1 min-[420px]:grid-cols-[1fr_auto] min-[420px]:gap-4"><dt className="text-slate-500">Déclaré par</dt><dd className="font-medium text-slate-800 min-[420px]:text-right">{element.operator}</dd></div>
                     </dl>
                     <Button className="mt-4 w-full" variant="ghost" onClick={() => { setChangeTarget(element.type); setModalOpen(true); }}>Déclarer cet élément</Button>
                   </div>
@@ -165,11 +165,11 @@ export function ExpiryCheckPage() {
             </div>
           </div>
 
-          <div className="panel p-5">
+          <div className="panel p-4 sm:p-5">
             <p className="label">Contrôle avant démarrage</p>
             <div className="mt-4 flex items-start gap-3 rounded-lg bg-slate-50 p-4">
-              {getLineStatus(selectedLine) === 'conform' ? <CheckCircle2 className="text-emerald-600" /> : <AlertTriangle className="text-amber-600" />}
-              <div>
+              {getLineStatus(selectedLine) === 'conform' ? <CheckCircle2 className="shrink-0 text-emerald-600" /> : <AlertTriangle className="shrink-0 text-amber-600" />}
+              <div className="min-w-0">
                 <h3 className="font-bold text-slate-950">Synthèse : {statusLabel(getLineStatus(selectedLine))}</h3>
                 <p className="mt-1 text-sm text-slate-600">
                   {getLineStatus(selectedLine) === 'nonConform'
@@ -182,12 +182,12 @@ export function ExpiryCheckPage() {
             </div>
           </div>
 
-          <div className="panel p-5">
+          <div className="panel p-4 sm:p-5">
             <div className="flex items-center gap-2">
-              <History size={18} className="text-slate-500" />
+              <History size={18} className="shrink-0 text-slate-500" />
               <h2 className="font-bold text-slate-950">Historique des changements</h2>
             </div>
-            <div className="mt-4 max-h-72 space-y-3 overflow-auto pr-1">
+            <div className="mt-4 max-h-72 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
               {history.map((entry) => (
                 <div key={entry.id} className="rounded-lg border border-slate-200 p-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -227,7 +227,7 @@ export function ExpiryCheckPage() {
               <span className="label">Commentaire facultatif</span>
               <textarea className="field mt-1 min-h-24" name="comment" placeholder="Exemple : remplacement avant redémarrage" />
             </label>
-            <div className="flex justify-end gap-2">
+            <div className="grid gap-2 min-[420px]:flex min-[420px]:justify-end">
               <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Annuler</Button>
               <Button type="submit">Valider</Button>
             </div>

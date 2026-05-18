@@ -54,10 +54,10 @@ export function LogisticsCallPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
         <p className="label">Prototype 2</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">Logistics Call</h1>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Logistics Call</h1>
         <p className="mt-2 max-w-3xl text-slate-600">Signalement digital des palettes prêtes à évacuer.</p>
       </div>
 
@@ -68,13 +68,13 @@ export function LogisticsCallPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className={`${mobileTab === 'line' ? 'block' : 'hidden'} lg:block`}>
-          <div className="panel h-full p-5">
+          <div className="panel h-full p-4 sm:p-5">
             <div className="mb-5 flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-lg bg-teal-50 text-teal-700">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700">
                 <PlusCircle size={23} />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-950">Ligne de production</h2>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-slate-950 sm:text-xl">Ligne de production</h2>
                 <p className="text-sm text-slate-600">Créer une demande claire en quelques secondes.</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ export function LogisticsCallPage() {
               <h3 className="font-bold text-slate-950">Mes derniers appels</h3>
               <div className="mt-3 space-y-2">
                 {requests.slice(0, 3).map((request) => (
-                  <div key={request.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm">
+                  <div key={request.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-3 text-sm">
                     <span className="font-semibold text-slate-800">{request.id} · {request.line}</span>
                     <Badge tone={statusTone[request.status]}>{logisticsStatusLabels[request.status]}</Badge>
                   </div>
@@ -141,13 +141,13 @@ export function LogisticsCallPage() {
         </section>
 
         <section className={`${mobileTab === 'logistics' ? 'block' : 'hidden'} lg:block`}>
-          <div className="panel h-full p-5">
+          <div className="panel h-full p-4 sm:p-5">
             <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-slate-950">Board logistique</h2>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-slate-950 sm:text-xl">Board logistique</h2>
                 <p className="text-sm text-slate-600">Les appels envoyés côté ligne apparaissent ici immédiatement.</p>
               </div>
-              <PackageCheck className="text-teal-700" />
+              <PackageCheck className="shrink-0 text-teal-700" />
             </div>
 
             <div className="mb-5 grid gap-3 sm:grid-cols-3">
@@ -162,7 +162,7 @@ export function LogisticsCallPage() {
 
                 return (
                   <section key={status} className="rounded-lg bg-slate-50 p-3">
-                    <h3 className="mb-3 flex items-center justify-between text-sm font-bold text-slate-800">
+                    <h3 className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm font-bold text-slate-800">
                       {logisticsStatusLabels[status]}
                       <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">{statusRequests.length}</span>
                     </h3>
@@ -173,8 +173,8 @@ export function LogisticsCallPage() {
                     ) : (
                       <div className="grid gap-3 min-[1380px]:grid-cols-2">
                         {statusRequests.map((request) => (
-                          <article key={request.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                            <div className="flex items-start justify-between gap-2">
+                          <article key={request.id} className="min-w-0 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
                               <strong className="text-sm text-slate-950">{request.id}</strong>
                               <Badge tone={request.priority === 'high' ? 'red' : 'slate'}>{request.priority === 'high' ? 'Haute' : 'Normale'}</Badge>
                             </div>
@@ -185,18 +185,18 @@ export function LogisticsCallPage() {
                               <Clock3 size={13} className="mr-1 inline" />
                               {formatDateTime(request.createdAt)} · {elapsedLabel(request.createdAt)}
                             </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="mt-3 grid gap-2 min-[430px]:flex min-[430px]:flex-wrap">
                               {request.status === 'waiting' ? (
-                                <Button variant="ghost" icon={<Eye size={15} />} onClick={() => updateStatus(request.id, 'seen')}>Vu</Button>
+                                <Button className="w-full min-[430px]:w-auto" variant="ghost" icon={<Eye size={15} />} onClick={() => updateStatus(request.id, 'seen')}>Vu</Button>
                               ) : null}
                               {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-                                <Button variant="secondary" icon={<Check size={15} />} onClick={() => updateStatus(request.id, 'inProgress')}>Prendre en charge</Button>
+                                <Button className="w-full min-[430px]:w-auto" variant="secondary" icon={<Check size={15} />} onClick={() => updateStatus(request.id, 'inProgress')}>Prendre en charge</Button>
                               ) : null}
                               {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-                                <Button icon={<PackageCheck size={15} />} onClick={() => updateStatus(request.id, 'pickedUp')}>Récupéré</Button>
+                                <Button className="w-full min-[430px]:w-auto" icon={<PackageCheck size={15} />} onClick={() => updateStatus(request.id, 'pickedUp')}>Récupéré</Button>
                               ) : null}
                               {request.status !== 'cancelled' && request.status !== 'pickedUp' ? (
-                                <Button variant="danger" icon={<XCircle size={15} />} onClick={() => updateStatus(request.id, 'cancelled')}>Annuler</Button>
+                                <Button className="w-full min-[430px]:w-auto" variant="danger" icon={<XCircle size={15} />} onClick={() => updateStatus(request.id, 'cancelled')}>Annuler</Button>
                               ) : null}
                             </div>
                           </article>
