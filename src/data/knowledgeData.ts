@@ -1,0 +1,111 @@
+import type { ProcedureDoc } from '../types/knowledge';
+
+export const knowledgeCategories = [
+  'Toutes',
+  'Démarrage de ligne',
+  'Hygiène & nettoyage',
+  'Changement de format',
+  'Contrôles qualité',
+  'Logistique interne',
+  'Sécurité',
+  'Maintenance de premier niveau'
+];
+
+export const procedureDocs: ProcedureDoc[] = [
+  {
+    id: 'start-check',
+    title: 'Vérification avant démarrage',
+    category: 'Démarrage de ligne',
+    summary: 'Contrôles rapides à réaliser avant autorisation de lancement d’une production.',
+    steps: ['Identifier la ligne et la cuve associée.', 'Vérifier les éléments en contact produit.', 'Contrôler la disponibilité des consommables.', 'Confirmer la zone de sortie palette.'],
+    watchPoints: ['Ne pas lancer si un élément critique est expiré.', 'Tracer les écarts avant redémarrage.'],
+    estimatedMinutes: 8,
+    author: 'Équipe méthodes',
+    validator: 'Référent production',
+    updatedAt: '2026-03-12T09:30:00.000Z',
+    relatedDocs: ['Fiche de contrôle démarrage', 'Guide statut ligne'],
+    tags: ['démarrage', 'contrôle', 'traçabilité'],
+    criticality: 'critical',
+    difficulty: 'simple'
+  },
+  {
+    id: 'contact-elements',
+    title: 'Changement des éléments en contact produit',
+    category: 'Hygiène & nettoyage',
+    summary: 'Méthode fictive de déclaration d’un remplacement de tuyaux produit et tête de remplissage.',
+    steps: ['Mettre la ligne en état sécurisé.', 'Retirer les éléments à remplacer.', 'Installer les éléments propres et identifiés.', 'Déclarer la date et l’opérateur dans le suivi.'],
+    watchPoints: ['Un changement de matière implique un remplacement avant redémarrage.', 'Vérifier la cohérence de la date limite générée.'],
+    estimatedMinutes: 18,
+    author: 'Support terrain',
+    validator: 'Coordinateur qualité',
+    updatedAt: '2026-02-18T14:00:00.000Z',
+    relatedDocs: ['Checklist éléments critiques', 'Historique des remplacements'],
+    tags: ['hygiène', 'tuyaux', 'remplissage'],
+    criticality: 'critical',
+    difficulty: 'intermediate'
+  },
+  {
+    id: 'pallet-end-line',
+    title: 'Gestion d’une palette en fin de ligne',
+    category: 'Logistique interne',
+    summary: 'Création d’un appel logistique structuré lorsqu’une palette est prête à être évacuée.',
+    steps: ['Sélectionner la ligne concernée.', 'Indiquer la zone et le nombre de palettes.', 'Choisir la priorité.', 'Suivre l’état de prise en charge sur le board.'],
+    watchPoints: ['Éviter les doublons de demande.', 'Utiliser une priorité haute uniquement si la zone devient bloquante.'],
+    estimatedMinutes: 3,
+    author: 'Équipe amélioration continue',
+    validator: 'Référent logistique',
+    updatedAt: '2026-04-02T10:15:00.000Z',
+    relatedDocs: ['Règles de priorité logistique'],
+    tags: ['palette', 'appel', 'logistique'],
+    criticality: 'important',
+    difficulty: 'simple'
+  },
+  {
+    id: 'anomaly-response',
+    title: 'Réaction en cas d’anomalie',
+    category: 'Contrôles qualité',
+    summary: 'Repères génériques pour signaler, contenir et documenter une anomalie observée sur ligne.',
+    steps: ['Identifier clairement le poste concerné.', 'Isoler les unités douteuses.', 'Prévenir le référent adéquat.', 'Documenter les faits observés.'],
+    watchPoints: ['Ne pas interpréter sans fait observable.', 'Conserver une trace claire des décisions.'],
+    estimatedMinutes: 12,
+    author: 'Équipe qualité',
+    validator: 'Responsable atelier fictif',
+    updatedAt: '2026-01-28T08:45:00.000Z',
+    relatedDocs: ['Journal des anomalies', 'Fiche décision qualité'],
+    tags: ['anomalie', 'qualité', 'escalade'],
+    criticality: 'critical',
+    difficulty: 'intermediate'
+  },
+  {
+    id: 'station-cleaning',
+    title: 'Nettoyage de poste',
+    category: 'Hygiène & nettoyage',
+    summary: 'Séquence synthétique pour préparer un poste propre entre deux phases de production.',
+    steps: ['Retirer les déchets de conditionnement.', 'Nettoyer les surfaces de travail.', 'Contrôler les zones difficiles d’accès.', 'Valider visuellement le poste.'],
+    watchPoints: ['Utiliser uniquement les consommables prévus.', 'Signaler tout élément endommagé.'],
+    estimatedMinutes: 15,
+    author: 'Support terrain',
+    validator: 'Référent hygiène',
+    updatedAt: '2026-03-05T11:20:00.000Z',
+    relatedDocs: ['Plan de nettoyage poste'],
+    tags: ['nettoyage', 'poste', 'hygiène'],
+    criticality: 'important',
+    difficulty: 'simple'
+  },
+  {
+    id: 'batch-transition',
+    title: 'Passage d’un lot à un autre',
+    category: 'Changement de format',
+    summary: 'Aide mémoire fictif pour sécuriser une transition entre deux lots ou configurations.',
+    steps: ['Clôturer les informations du lot précédent.', 'Vérifier les références attendues.', 'Adapter les réglages de format.', 'Réaliser un contrôle de reprise.'],
+    watchPoints: ['Attention aux mélanges de composants.', 'Contrôler les étiquettes avant redémarrage.'],
+    estimatedMinutes: 25,
+    author: 'Équipe méthodes',
+    validator: 'Référent production',
+    updatedAt: '2026-02-07T16:30:00.000Z',
+    relatedDocs: ['Guide changement de format', 'Checklist reprise'],
+    tags: ['lot', 'format', 'reprise'],
+    criticality: 'important',
+    difficulty: 'advanced'
+  }
+];
