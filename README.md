@@ -39,15 +39,43 @@ npm run preview
 
 ## Déploiement GitHub Pages
 
-Le `base` Vite est configurable avec `VITE_BASE_PATH`.
+Le projet est prêt pour un déploiement automatique via GitHub Actions.
+
+### Déploiement automatique
+
+1. Pousser le projet sur un dépôt GitHub.
+2. Aller dans **Settings > Pages**.
+3. Dans **Build and deployment**, choisir **GitHub Actions**.
+4. Pousser sur la branche `main`.
+5. Le workflow `.github/workflows/deploy.yml` construit l’application et publie le dossier `dist/`.
+
+Le workflow configure automatiquement le `base` Vite avec le nom du dépôt :
+
+```bash
+VITE_BASE_PATH=/${{ repository-name }}/
+```
+
+Il génère aussi `dist/404.html` pour que les routes React comme `/expiry-check`, `/logistics-call` et `/knowledge-base` restent accessibles après rechargement direct.
+
+### Build local pour GitHub Pages
+
+Le `base` Vite reste configurable avec `VITE_BASE_PATH`.
 
 Exemple pour un dépôt publié sous `/lineops-toolkit/` :
 
 ```bash
-VITE_BASE_PATH=/lineops-toolkit/ npm run build
+VITE_BASE_PATH=/lineops-toolkit/ npm run build:pages
 ```
 
 Le dossier généré est `dist/`.
+
+### Domaine personnalisé
+
+Si le site est publié sur un domaine personnalisé à la racine, construire avec :
+
+```bash
+VITE_BASE_PATH=/ npm run build:pages
+```
 
 ## PWA
 
