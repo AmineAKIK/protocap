@@ -1,4 +1,4 @@
-import { ArrowRight, ClipboardCheck, Library, RadioTower, Wifi, Zap } from 'lucide-react';
+import { ArrowRight, Calculator, ClipboardCheck, Library, RadioTower, Wifi, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 
@@ -26,6 +26,14 @@ const modules = [
     icon: Library,
     tag: 'Documentation · Standards',
     highlight: 'Information utile accessible rapidement'
+  },
+  {
+    title: 'Packing Calculator',
+    description: "Conversion d'une quantité demandée en palettes, cartons et unités selon la référence.",
+    to: '/packing-calculator',
+    icon: Calculator,
+    tag: 'Calcul conditionnement',
+    highlight: 'Calcul rapide, écart visible'
   }
 ];
 
@@ -44,7 +52,7 @@ export function HomePage() {
                 <span className="text-teal-700">Toolkit</span>
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
-                Trois modules terrain pour ligne de conditionnement.
+                Quatre modules terrain pour ligne de conditionnement.
               </p>
 
               {/* Message */}
@@ -53,7 +61,7 @@ export function HomePage() {
                   Merci beaucoup pour votre accueil et pour votre geste attentionné.
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
-                  Veuillez trouver ci-joint trois petites maquettes génériques autour de flux terrain que je trouve intéressants en environnement de conditionnement. Ces prototypes sont fictifs et n’utilisent aucune donnée réelle. Ils ont simplement pour but d’illustrer des pistes possibles autour de la traçabilité, des appels logistiques et de l’accès rapide à l’information.
+                  Veuillez trouver ci-joint quatre petites maquettes génériques autour de flux terrain que je trouve intéressants en environnement de conditionnement. Ces prototypes sont fictifs et n’utilisent aucune donnée réelle. Ils ont simplement pour but d’illustrer des pistes possibles autour de la traçabilité, des appels logistiques, de l’accès rapide à l’information et des calculs de conditionnement.
                 </p>
               </div>
 
@@ -74,6 +82,11 @@ export function HomePage() {
                     Knowledge Base
                   </Button>
                 </Link>
+                <Link to="/packing-calculator" className="block">
+                  <Button variant="ghost" icon={<Calculator size={16} />} className="w-full px-5 sm:w-auto">
+                    Packing Calculator
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -86,7 +99,7 @@ export function HomePage() {
                 <ul className="divide-y divide-slate-100">
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">1</span>
-                    Trois modules indépendants, chacun centré sur un flux terrain précis.
+                    Quatre modules indépendants, chacun centré sur un flux terrain précis.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">2</span>
@@ -111,7 +124,7 @@ export function HomePage() {
       {/* Module cards */}
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {modules.map((module) => (
             <article
               key={module.title}

@@ -1,4 +1,4 @@
-import { Boxes, ClipboardCheck, Home, Library, RadioTower } from 'lucide-react';
+import { Boxes, Calculator, ClipboardCheck, Home, Library, RadioTower } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
@@ -6,7 +6,8 @@ const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
   { to: '/expiry-check', label: 'Expiry Check', icon: ClipboardCheck },
   { to: '/logistics-call', label: 'Logistics Call', icon: RadioTower },
-  { to: '/knowledge-base', label: 'Knowledge Base', icon: Library }
+  { to: '/knowledge-base', label: 'Knowledge Base', icon: Library },
+  { to: '/packing-calculator', label: 'Packing Calculator', icon: Calculator }
 ];
 
 interface AppShellProps {
@@ -58,7 +59,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

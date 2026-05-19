@@ -4,6 +4,7 @@ import { ExpiryCheckPage } from './pages/ExpiryCheckPage';
 import { HomePage } from './pages/HomePage';
 import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { LogisticsCallPage } from './pages/LogisticsCallPage';
+import { PackingCalculatorPage } from './pages/PackingCalculatorPage';
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
         <Route path="/expiry-check" element={<ExpiryCheckPage />} />
         <Route path="/logistics-call" element={<LogisticsCallPage />} />
         <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
+        <Route path="/packing-calculator" element={<PackingCalculatorPage />} />
       </Routes>
     </AppShell>
   );
