@@ -84,12 +84,12 @@ function DocList() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto scroll-px-3 pb-1">
           {knowledgeCategories.map((cat) => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`min-h-10 shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${
                 category === cat ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -120,7 +120,7 @@ function DocList() {
                   <button
                     type="button"
                     onClick={() => navigate(doc.id)}
-                    className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition hover:bg-slate-50 sm:px-5"
+                    className="group flex min-h-16 w-full items-center gap-3 px-3 py-3.5 text-left transition hover:bg-slate-50 sm:gap-4 sm:px-5"
                   >
                     {/* Type icon */}
                     <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
@@ -192,7 +192,7 @@ function DocDetail() {
 
       {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+        <div className="border-b border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="font-mono text-sm font-bold text-slate-500">{doc.code}</span>
             <Badge tone={typeTone[doc.type]}>{typeLabel[doc.type]}</Badge>
@@ -203,7 +203,7 @@ function DocDetail() {
         </div>
 
         {/* Meta row */}
-        <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100 sm:grid-cols-4">
+        <div className="grid grid-cols-1 divide-y divide-slate-100 border-b border-slate-100 min-[360px]:grid-cols-2 min-[360px]:divide-x min-[360px]:divide-y-0 sm:grid-cols-4">
           {[
             { label: 'Version', value: doc.version },
             { label: 'Zone', value: doc.lineArea },
@@ -219,7 +219,7 @@ function DocDetail() {
 
         <div className="grid divide-y divide-slate-100 sm:divide-y-0 sm:divide-x sm:grid-cols-2">
           {/* Key checks */}
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
               <ListChecks size={15} className="text-teal-600" />Points de contrôle clés
             </h2>
@@ -234,7 +234,7 @@ function DocDetail() {
           </div>
 
           {/* Watch points */}
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
               <AlertTriangle size={15} className="text-amber-500" />Points de vigilance
             </h2>
@@ -257,7 +257,7 @@ function DocDetail() {
         </div>
         <div className="divide-y divide-slate-100">
           {doc.steps.map((step, idx) => (
-            <div key={idx} className="flex gap-4 px-5 py-4">
+            <div key={idx} className="flex gap-3 px-4 py-4 sm:gap-4 sm:px-5">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-900 text-xs font-bold text-white">
                 {idx + 1}
               </span>
@@ -274,7 +274,7 @@ function DocDetail() {
       </div>
 
       {/* Footer meta */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-500">
+      <div className="mt-5 flex flex-col items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-5">
         <span>Rédigé par <strong className="text-slate-700">{doc.author}</strong></span>
         <span>Validé par <strong className="text-slate-700">{doc.validator}</strong></span>
         {doc.relatedDocs.length > 0 && (

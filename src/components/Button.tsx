@@ -17,10 +17,10 @@ const variants: Record<ButtonVariant, string> = {
 export function Button({ children, variant = 'primary', icon, className = '', ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-center text-sm font-semibold leading-5 transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
       {...props}
     >
-      {icon}
+      {icon ? <span className="shrink-0">{icon}</span> : null}
       {children}
     </button>
   );

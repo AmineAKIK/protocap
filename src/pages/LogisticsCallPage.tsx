@@ -86,7 +86,7 @@ function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
         <p className="mt-2 text-xs text-slate-600 italic">"{request.comment}"</p>
       ) : null}
 
-      <div className="mt-3 flex items-center gap-2 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
         <Clock3 size={13} className={`shrink-0 ${isUrgent && isWaiting ? 'text-rose-500' : 'text-slate-400'}`} />
         <span className="text-slate-500">{formatDateTime(request.createdAt)}</span>
         <span className={`ml-auto font-semibold tabular-nums ${isUrgent && isWaiting ? 'text-rose-600' : 'text-slate-600'}`}>
@@ -94,22 +94,22 @@ function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
         {isWaiting ? (
-          <Button className="flex-1" variant="ghost" icon={<Eye size={14} />} onClick={() => onUpdate(request.id, 'seen')}>Vu</Button>
+          <Button className="w-full" variant="ghost" icon={<Eye size={14} />} onClick={() => onUpdate(request.id, 'seen')}>Vu</Button>
         ) : null}
         {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-          <Button className="flex-1" variant="secondary" icon={<Truck size={14} />} onClick={() => onUpdate(request.id, 'inProgress')}>
+          <Button className="w-full" variant="secondary" icon={<Truck size={14} />} onClick={() => onUpdate(request.id, 'inProgress')}>
             En route
           </Button>
         ) : null}
         {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-          <Button className="flex-1" icon={<PackageCheck size={14} />} onClick={() => onUpdate(request.id, 'pickedUp')}>
+          <Button className="w-full" icon={<PackageCheck size={14} />} onClick={() => onUpdate(request.id, 'pickedUp')}>
             Récupéré
           </Button>
         ) : null}
         {request.status !== 'cancelled' && request.status !== 'pickedUp' ? (
-          <Button variant="danger" icon={<XCircle size={14} />} onClick={() => onUpdate(request.id, 'cancelled')}>
+          <Button className="w-full" variant="danger" icon={<XCircle size={14} />} onClick={() => onUpdate(request.id, 'cancelled')}>
             Annuler
           </Button>
         ) : null}
@@ -160,7 +160,6 @@ export function LogisticsCallPage() {
     event.currentTarget.reset();
 
     setMobileTab('logistics');
-    setTimeout(() => setMobileTab('line'), 2000);
   }
 
   function updateStatus(id: string, status: LogisticsStatus) {
@@ -181,28 +180,30 @@ export function LogisticsCallPage() {
       </div>
 
       {/* Mobile tab switcher */}
-      <div className="mb-4 grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 lg:hidden">
-        <button
-          className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${mobileTab === 'line' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
-          onClick={() => setMobileTab('line')}
-        >
-          Ligne cond.
-        </button>
-        <button
-          className={`relative rounded-lg px-3 py-2.5 text-sm font-semibold transition ${mobileTab === 'logistics' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
-          onClick={() => setMobileTab('logistics')}
-        >
-          Board logistique
-          {stats.waiting > 0 ? (
-            <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-600 text-[10px] font-bold text-white">
-              {stats.waiting}
-            </span>
-          ) : null}
-        </button>
+      <div className="sticky top-14 z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 p-2 backdrop-blur lg:hidden">
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileTab === 'line' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
+            onClick={() => setMobileTab('line')}
+          >
+            Ligne cond.
+          </button>
+          <button
+            className={`relative min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileTab === 'logistics' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
+            onClick={() => setMobileTab('logistics')}
+          >
+            Board logistique
+            {stats.waiting > 0 ? (
+              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-rose-600 text-[10px] font-bold text-white">
+                {stats.waiting}
+              </span>
+            ) : null}
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <section className={`${mobileTab === 'line' ? 'block' : 'hidden'} rounded-2xl border-2 border-teal-500 bg-teal-50 p-3 shadow-md sm:p-4 lg:block`}>
+        <section className={`${mobileTab === 'line' ? 'block' : 'hidden'} rounded-2xl border-2 border-teal-500 bg-teal-50 p-2 shadow-md sm:p-4 lg:block`}>
           <div className="mb-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran conducteur</p>
             <h2 className="mt-1 text-xl font-black">Appel depuis la ligne</h2>
@@ -211,18 +212,18 @@ export function LogisticsCallPage() {
             </p>
           </div>
           <div className="panel p-4 sm:p-5">
-            <div className="mb-5 flex items-center gap-3">
+            <div className="mb-5 flex items-start gap-3">
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700">
                 <Bell size={24} />
               </div>
-              <div>
+              <div className="min-w-0">
                   <h3 className="text-lg font-bold text-slate-950">Formulaire ligne</h3>
                   <p className="text-sm text-slate-500">L'appel est horodaté et envoyé au board logistique.</p>
               </div>
             </div>
 
             {confirmation ? (
-              <div className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
+              <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
                 <Check size={18} className="shrink-0 text-emerald-600" />
                 {confirmation}
               </div>
@@ -279,7 +280,7 @@ export function LogisticsCallPage() {
                 <div className="space-y-2">
                   {requests.slice(0, 3).map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
-                      <span className="font-semibold text-slate-800">{r.id} · {r.line}</span>
+                      <span className="min-w-0 font-semibold text-slate-800">{r.id} · {r.line}</span>
                       <Badge tone={statusTone[r.status]}>{logisticsStatusLabels[r.status]}</Badge>
                     </div>
                   ))}
@@ -289,7 +290,7 @@ export function LogisticsCallPage() {
           </div>
         </section>
 
-        <section className={`${mobileTab === 'logistics' ? 'block' : 'hidden'} rounded-2xl border-2 border-slate-500 bg-white p-3 shadow-md sm:p-4 lg:block`}>
+        <section className={`${mobileTab === 'logistics' ? 'block' : 'hidden'} rounded-2xl border-2 border-slate-500 bg-white p-2 shadow-md sm:p-4 lg:block`}>
           <div className="mb-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Écran logistique</p>
             <h2 className="mt-1 text-xl font-black">Board de traitement</h2>
@@ -298,18 +299,18 @@ export function LogisticsCallPage() {
             </p>
           </div>
           <div className="panel p-4 sm:p-5">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            <div className="mb-5 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-900 text-white">
                   <Truck size={22} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-lg font-bold text-slate-950">Demandes actives</h3>
                   <p className="text-sm text-slate-500">Statuts, priorités et temps écoulé restent visibles.</p>
                 </div>
               </div>
               {stats.waiting > 0 ? (
-                <div className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-white shadow-lg">
+                <div className="flex min-h-11 items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-white shadow-lg">
                   <Bell size={16} className="animate-bounce" />
                   <span className="text-sm font-bold">{stats.waiting} en attente</span>
                 </div>

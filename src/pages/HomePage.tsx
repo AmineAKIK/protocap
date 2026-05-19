@@ -34,21 +34,21 @@ export function HomePage() {
     <div>
       {/* Hero */}
       <section className="industrial-grid border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-16">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16 lg:px-8">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-16">
 
             {/* Left */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-5xl font-bold tracking-tight text-slate-950 sm:text-6xl">
+              <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
                 LineOps<br />
                 <span className="text-teal-700">Toolkit</span>
               </h1>
-              <p className="mt-4 text-lg leading-8 text-slate-500">
+              <p className="mt-4 text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
                 Trois modules terrain pour ligne de conditionnement.
               </p>
 
               {/* Message */}
-              <div className="mt-6 border-l-4 border-teal-600 bg-teal-50 rounded-r-xl px-5 py-4">
+              <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
                 <p className="text-sm leading-6 text-slate-700">
                   Merci beaucoup pour votre accueil et pour votre geste attentionné.
                 </p>
@@ -58,19 +58,19 @@ export function HomePage() {
               </div>
 
               {/* CTAs */}
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/logistics-call">
-                  <Button icon={<Zap size={16} />} className="py-2.5 px-5">
+              <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+                <Link to="/logistics-call" className="block">
+                  <Button icon={<Zap size={16} />} className="w-full px-5 sm:w-auto">
                     Logistics Call
                   </Button>
                 </Link>
-                <Link to="/expiry-check">
-                  <Button variant="ghost" icon={<ClipboardCheck size={16} />} className="py-2.5 px-5">
+                <Link to="/expiry-check" className="block">
+                  <Button variant="ghost" icon={<ClipboardCheck size={16} />} className="w-full px-5 sm:w-auto">
                     Expiry Check
                   </Button>
                 </Link>
-                <Link to="/knowledge-base">
-                  <Button variant="ghost" icon={<Library size={16} />} className="py-2.5 px-5">
+                <Link to="/knowledge-base" className="block">
+                  <Button variant="ghost" icon={<Library size={16} />} className="w-full px-5 sm:w-auto">
                     Knowledge Base
                   </Button>
                 </Link>
@@ -111,11 +111,11 @@ export function HomePage() {
       {/* Module cards */}
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {modules.map((module) => (
             <article
               key={module.title}
-              className="panel group flex flex-col p-6 transition hover:-translate-y-0.5 hover:shadow-md"
+              className="panel group flex flex-col p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
             >
               <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
                 <module.icon size={22} />

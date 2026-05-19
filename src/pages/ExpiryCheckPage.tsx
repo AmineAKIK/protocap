@@ -118,21 +118,21 @@ function BlockedModal({ line, onClose, onDeclare }: {
   onDeclare: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden animate-slide-in">
-        <div className="bg-rose-600 px-6 py-5 flex items-start justify-between gap-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[calc(100dvh_-_1rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-slide-in sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-4 bg-rose-600 px-4 py-4 text-white sm:px-6 sm:py-5">
           <div className="flex items-center gap-3">
-            <Ban size={26} className="shrink-0 text-white" />
+            <Ban size={26} className="shrink-0" />
             <h2 className="text-lg font-bold text-white">
               Bloc de remplissage expiré — démarrage bloqué
             </h2>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-white/70 hover:text-white transition">
+          <button onClick={onClose} className="grid min-h-11 min-w-11 place-items-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white" aria-label="Fermer">
             <X size={20} />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
           <p className="text-slate-700 leading-6">
             Sur <strong>{line.name}</strong>, le bloc de remplissage a dépassé sa période d'utilisation de {line.elements[0]?.validityDays ?? 5} jours.
           </p>
@@ -149,9 +149,9 @@ function BlockedModal({ line, onClose, onDeclare }: {
             Déclarez le remplacement du bloc pour débloquer le démarrage.
           </div>
 
-          <div className="flex justify-end gap-3 pt-1">
-            <Button variant="ghost" onClick={onClose}>Voir quand même</Button>
-            <Button variant="danger" icon={<Plus size={15} />} onClick={onDeclare}>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <Button className="w-full sm:w-auto" variant="ghost" onClick={onClose}>Voir quand même</Button>
+            <Button className="w-full sm:w-auto" variant="danger" icon={<Plus size={15} />} onClick={onDeclare}>
               Déclarer le remplacement
             </Button>
           </div>
@@ -169,6 +169,7 @@ export function ExpiryCheckPage() {
   const [blockedModalOpen, setBlockedModalOpen] = useState(false);
   const [vatModalOpen, setVatModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'tour' | 'line'>('tour');
 
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? lines[0];
   const lineStatus = getLineStatus(selectedLine);
@@ -277,7 +278,26 @@ export function ExpiryCheckPage() {
         </p>
       </div>
 
-      <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <div className="sticky top-14 z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 px-3 py-2 backdrop-blur lg:hidden">
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileView === 'tour' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
+            onClick={() => setMobileView('tour')}
+          >
+            Tournée
+          </button>
+          <button
+            type="button"
+            className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileView === 'line' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
+            onClick={() => setMobileView('line')}
+          >
+            Ligne
+          </button>
+        </div>
+      </div>
+
+      <section className={`${mobileView === 'tour' ? 'block' : 'hidden'} mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran laveur</p>
@@ -287,7 +307,7 @@ export function ExpiryCheckPage() {
             Affiché côté laveur. Chaque carte signale clairement l'état du bloc pour repérer les remplacements à prendre en charge.
           </p>
         </div>
-        <div className="rounded-xl border border-teal-200 bg-white p-4 sm:p-5">
+        <div className="rounded-xl border border-teal-200 bg-white p-3 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="label">Vue consolidée des lignes</p>
@@ -335,7 +355,7 @@ export function ExpiryCheckPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <section className={`${mobileView === 'line' ? 'block' : 'hidden'} rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Écran conducteur</p>
@@ -346,7 +366,7 @@ export function ExpiryCheckPage() {
           </p>
         </div>
       <div className="space-y-4">
-        <section className="panel p-4">
+        <section className="panel sticky top-[7.25rem] z-20 p-3 lg:static lg:p-4">
           <p className="label">Navigation entre lignes</p>
           <p className="mt-1 text-sm leading-6 text-slate-600">
             Dans un usage terrain, chaque ligne dispose de son propre dashboard. Le sélecteur affiche plusieurs lignes uniquement pour parcourir les états de la maquette : conforme, vigilance et non conforme.
@@ -372,7 +392,7 @@ export function ExpiryCheckPage() {
                   key={line.id}
                   type="button"
                   onClick={() => setSelectedLineId(line.id)}
-                  className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
+                  className={`min-h-11 rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                 >
                   {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
                   <span className={`ml-2 font-normal ${isSelected ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
@@ -385,32 +405,32 @@ export function ExpiryCheckPage() {
         <section className="space-y-4">
           {/* Status banner */}
           {isBlocked ? (
-            <div className="rounded-xl border-2 border-rose-400 bg-rose-50 p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-xl border-2 border-rose-400 bg-rose-50 p-3 sm:p-4">
               <Ban size={20} className="shrink-0 text-rose-600" />
               <p className="text-sm font-semibold text-rose-900 flex-1">
                 Bloc de remplissage expiré — démarrage non conforme.
               </p>
               <button
                 onClick={() => setBlockedModalOpen(true)}
-                className="shrink-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 transition"
+                className="min-h-11 shrink-0 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700"
               >
                 Voir
               </button>
             </div>
           ) : lineStatus === 'conform' ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
               <ShieldCheck size={20} className="shrink-0 text-emerald-600" />
               <p className="text-sm font-semibold text-emerald-900">Démarrage de la ligne autorisé — bloc de remplissage dans sa période de validité.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:p-4">
               <AlertTriangle size={20} className="shrink-0 text-amber-600" />
               <p className="text-sm font-semibold text-amber-900">Vigilance — bloc de remplissage en fin de validité. Prévoir le remplacement.</p>
             </div>
           )}
 
           {/* Feuille de suivi: bloc + recharges */}
-          <div className="panel p-4 sm:p-5">
+          <div className="panel p-3 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="label">Ligne de conditionnement sélectionnée</p>
@@ -420,7 +440,7 @@ export function ExpiryCheckPage() {
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            <div className={`rounded-xl border-2 p-5 ${
+            <div className={`rounded-xl border-2 p-3 sm:p-5 ${
               blockStatus === 'expired' ? 'border-rose-300 bg-rose-50' :
               blockStatus === 'warning' ? 'border-amber-200 bg-amber-50/40' :
               'border-slate-200 bg-white'
@@ -431,12 +451,12 @@ export function ExpiryCheckPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
+                <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200 sm:p-4">
                   <p className="label">Bloc changé le</p>
                   <p className="mt-2 text-xl font-black tabular-nums text-slate-950">{formatDateOnly(latestChange(selectedLine))}</p>
                   <p className="text-lg font-bold tabular-nums text-slate-700">{formatTimeOnly(latestChange(selectedLine))}</p>
                 </div>
-                <div className={`rounded-xl p-4 ring-1 ${blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
+                <div className={`rounded-xl p-3 ring-1 sm:p-4 ${blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
                   <p className="label">Péremption bloc</p>
                   <p className={`mt-2 text-xl font-black tabular-nums ${blockStatus === 'expired' ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
                   <p className={`text-lg font-bold tabular-nums ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
@@ -467,7 +487,7 @@ export function ExpiryCheckPage() {
               </Button>
             </div>
 
-            <div className="rounded-xl border-2 border-slate-200 bg-white p-5">
+            <div className="rounded-xl border-2 border-slate-200 bg-white p-3 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h3 className="text-base font-bold text-slate-950">Recharges de cuves</h3>
                 <Badge tone="slate">{vatHistory.length}</Badge>
@@ -502,12 +522,12 @@ export function ExpiryCheckPage() {
           <div className="panel overflow-hidden">
             <button
               type="button"
-              className="flex w-full items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition"
+              className="flex min-h-14 w-full items-center justify-between p-3 transition hover:bg-slate-50 sm:p-5"
               onClick={() => setHistoryOpen((v) => !v)}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2 text-left">
                 <History size={17} className="text-slate-500" />
-                <span className="font-bold text-slate-950">Registre complet de la ligne</span>
+                <span className="min-w-0 font-bold text-slate-950">Registre complet de la ligne</span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{selectedLineHistory.length}</span>
               </div>
               {historyOpen ? <ChevronUp size={17} className="text-slate-400" /> : <ChevronDown size={17} className="text-slate-400" />}
@@ -566,9 +586,9 @@ export function ExpiryCheckPage() {
               <span className="label">Commentaire</span>
               <textarea className="field mt-1 min-h-20" name="comment" placeholder="Ex : recharge de cuve, matière inchangée" />
             </label>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setVatModalOpen(false)}>Annuler</Button>
-              <Button type="submit">Tracer la recharge</Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={() => setVatModalOpen(false)}>Annuler</Button>
+              <Button className="w-full sm:w-auto" type="submit">Tracer la recharge</Button>
             </div>
           </form>
         </Modal>
@@ -593,9 +613,9 @@ export function ExpiryCheckPage() {
               <span className="label">Commentaire</span>
               <textarea className="field mt-1 min-h-20" name="comment" placeholder="Ex : remplacement avant redémarrage" />
             </label>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setDeclareModalOpen(false)}>Annuler</Button>
-              <Button type="submit">Valider le remplacement</Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={() => setDeclareModalOpen(false)}>Annuler</Button>
+              <Button className="w-full sm:w-auto" type="submit">Valider le remplacement</Button>
             </div>
           </form>
         </Modal>

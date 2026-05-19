@@ -29,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
           </Link>
 
           {/* Desktop nav — centred */}
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 md:flex">
+          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -49,15 +49,15 @@ export function AppShell({ children }: AppShellProps) {
             ))}
           </nav>
 
-          <div className="hidden w-32 md:block" />
+          <div className="hidden w-32 lg:block" />
         </div>
       </header>
 
       {/* Page content — padding-bottom on mobile to avoid bottom nav overlap */}
-      <main className="pb-20 md:pb-0">{children}</main>
+      <main className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden">
         <div className="grid grid-cols-4">
           {navItems.map((item) => (
             <NavLink
@@ -65,7 +65,7 @@ export function AppShell({ children }: AppShellProps) {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
+                `flex min-h-14 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
                   isActive ? 'text-teal-700' : 'text-slate-400'
                 }`
               }
