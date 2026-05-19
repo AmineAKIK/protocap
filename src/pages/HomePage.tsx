@@ -53,7 +53,7 @@ export function HomePage() {
                   Merci beaucoup pour votre accueil et pour votre geste attentionné.
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
-                  Veuillez trouver ci-joint trois idées d'amélioration issues de ma première journée d'observation en ligne de conditionnement.
+                  Veuillez trouver ci-joint trois petites maquettes génériques autour de flux terrain que je trouve intéressants en environnement de conditionnement. Ces prototypes sont fictifs et n’utilisent aucune donnée réelle. Ils ont simplement pour but d’illustrer des pistes possibles autour de la traçabilité, des appels logistiques et de l’accès rapide à l’information.
                 </p>
               </div>
 
