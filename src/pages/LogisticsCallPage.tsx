@@ -31,8 +31,8 @@ const statusTone: Record<LogisticsStatus, 'amber' | 'blue' | 'teal' | 'green' | 
 const activeStatuses: LogisticsStatus[] = ['waiting', 'seen', 'inProgress'];
 const doneStatuses: LogisticsStatus[] = ['pickedUp', 'cancelled'];
 
-function liveElapsed(createdAt: string, now: Date): string {
-  const seconds = Math.max(0, Math.floor((now.getTime() - new Date(createdAt).getTime()) / 1000));
+function elapsedLabel(createdAt: string, endAt: Date): string {
+  const seconds = Math.max(0, Math.floor((endAt.getTime() - new Date(createdAt).getTime()) / 1000));
   if (seconds < 60) return `${seconds} s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min ${seconds % 60} s`;
@@ -58,7 +58,9 @@ interface RequestCardProps {
 function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
   const isHigh = request.priority === 'high';
   const isWaiting = request.status === 'waiting';
+  const isDone = doneStatuses.includes(request.status);
   const isUrgent = isHigh || (isWaiting && (now.getTime() - new Date(request.createdAt).getTime()) / 60000 > 15);
+  const elapsedEndAt = isDone ? new Date(request.completedAt ?? request.createdAt) : now;
 
   return (
     <article
@@ -90,7 +92,7 @@ function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
         <Clock3 size={13} className={`shrink-0 ${isUrgent && isWaiting ? 'text-rose-500' : 'text-slate-400'}`} />
         <span className="text-slate-500">{formatDateTime(request.createdAt)}</span>
         <span className={`ml-auto font-semibold tabular-nums ${isUrgent && isWaiting ? 'text-rose-600' : 'text-slate-600'}`}>
-          {liveElapsed(request.createdAt, now)}
+          {elapsedLabel(request.createdAt, elapsedEndAt)}
         </span>
       </div>
 
@@ -135,6 +137,18 @@ export function LogisticsCallPage() {
   const activeRequests = requests.filter((r) => activeStatuses.includes(r.status));
   const doneRequests = requests.filter((r) => doneStatuses.includes(r.status));
 
+  useEffect(() => {
+    setRequests((current) => {
+      let changed = false;
+      const migrated = current.map((request) => {
+        if (!doneStatuses.includes(request.status) || request.completedAt) return request;
+        changed = true;
+        return { ...request, completedAt: new Date().toISOString() };
+      });
+      return changed ? migrated : current;
+    });
+  }, [setRequests]);
+
   function createRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -163,7 +177,13 @@ export function LogisticsCallPage() {
   }
 
   function updateStatus(id: string, status: LogisticsStatus) {
-    setRequests((current) => current.map((r) => (r.id === id ? { ...r, status } : r)));
+    setRequests((current) => current.map((r) => {
+      if (r.id !== id) return r;
+      if (doneStatuses.includes(status)) {
+        return { ...r, status, completedAt: r.completedAt ?? new Date().toISOString() };
+      }
+      return { ...r, status, completedAt: undefined };
+    }));
   }
 
   return (
@@ -202,7 +222,7 @@ export function LogisticsCallPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid items-start gap-5 lg:grid-cols-2">
         <section className={`${mobileTab === 'line' ? 'block' : 'hidden'} rounded-2xl border-2 border-teal-500 bg-teal-50 p-2 shadow-md sm:p-4 lg:block`}>
           <div className="mb-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran conducteur</p>

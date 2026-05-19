@@ -78,6 +78,14 @@ function formatTimeOnly(dateIso: string) {
   }).format(new Date(dateIso));
 }
 
+function isBlockHistoryEntry(entry: ChangeHistoryEntry) {
+  return entry.elementLabel.toLowerCase().includes('bloc');
+}
+
+function isVatHistoryEntry(entry: ChangeHistoryEntry) {
+  return entry.elementLabel.toLowerCase().includes('cuve');
+}
+
 function BlockValidityBar({ line }: { line: ConditioningLine }) {
   const validityDays = line.elements[0]?.validityDays ?? 5;
   const changedAt = latestChange(line);
@@ -260,9 +268,39 @@ export function ExpiryCheckPage() {
   const blockStatus = getBlockStatus(selectedLine);
   const selectedLineHistory = history.filter((entry) => entry.lineId === selectedLine.id);
   const currentBlockChangedAt = new Date(latestChange(selectedLine)).getTime();
-  const vatHistory = selectedLineHistory.filter(
-    (entry) => entry.elementLabel.includes('Cuve') && new Date(entry.changedAt).getTime() >= currentBlockChangedAt
+  const blockHistory = selectedLineHistory.filter(isBlockHistoryEntry);
+  const hasCurrentBlockHistory = blockHistory.some(
+    (entry) => Math.abs(new Date(entry.changedAt).getTime() - currentBlockChangedAt) < 1000
   );
+  const currentBlockHistory: ChangeHistoryEntry = {
+    id: `current-block-${selectedLine.id}-${latestChange(selectedLine)}`,
+    lineId: selectedLine.id,
+    lineName: selectedLine.name,
+    elementLabel: 'Bloc de remplissage',
+    changedAt: latestChange(selectedLine),
+    operator: selectedLine.elements[0]?.operator ?? 'Opérateur non renseigné',
+    comment: selectedLine.elements[0]?.comment,
+    newExpiresAt: earliestExpiry(selectedLine)
+  };
+  const blockInstances = (hasCurrentBlockHistory ? blockHistory : [currentBlockHistory, ...blockHistory])
+    .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
+  const vatEntries = selectedLineHistory
+    .filter(isVatHistoryEntry)
+    .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
+  const blockHistoryGroups = blockInstances.map((block, index) => {
+    const blockStartedAt = new Date(block.changedAt).getTime();
+    const nextBlockStartedAt = index > 0 ? new Date(blockInstances[index - 1].changedAt).getTime() : Number.POSITIVE_INFINITY;
+    return {
+      block,
+      isCurrent: index === 0,
+      vatEntries: vatEntries.filter((entry) => {
+        const changedAt = new Date(entry.changedAt).getTime();
+        return changedAt >= blockStartedAt && changedAt < nextBlockStartedAt;
+      })
+    };
+  });
+  const vatHistory = blockHistoryGroups[0]?.vatEntries ?? [];
+  const registerEntryCount = blockHistoryGroups.reduce((count, group) => count + 1 + group.vatEntries.length, 0);
   const washerBoard = lines;
 
   return (
@@ -330,7 +368,7 @@ export function ExpiryCheckPage() {
                 type="button"
                 onClick={() => setSelectedLineId(line.id)}
                 className={`rounded-xl border p-4 text-left transition hover:border-teal-300 ${
-                  status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-slate-200 bg-white'
+                  status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -343,7 +381,7 @@ export function ExpiryCheckPage() {
                 <p className={`mt-3 text-base font-bold ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                   {remainingLabel(line)}
                 </p>
-                <div className="mt-3 rounded-lg bg-white/80 p-3 ring-1 ring-slate-200">
+                <div className="mt-3 rounded-lg bg-white/85 p-3 ring-1 ring-slate-200">
                   <p className="label">Péremption bloc</p>
                   <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatDateOnly(expiry)}</p>
                   <p className="text-base font-bold tabular-nums text-slate-700">{formatTimeOnly(expiry)}</p>
@@ -528,22 +566,43 @@ export function ExpiryCheckPage() {
               <div className="flex min-w-0 items-center gap-2 text-left">
                 <History size={17} className="text-slate-500" />
                 <span className="min-w-0 font-bold text-slate-950">Registre complet de la ligne</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{selectedLineHistory.length}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{registerEntryCount}</span>
               </div>
               {historyOpen ? <ChevronUp size={17} className="text-slate-400" /> : <ChevronDown size={17} className="text-slate-400" />}
             </button>
             {historyOpen && (
               <div className="border-t border-slate-100 p-4 sm:p-5">
                 <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-                  {selectedLineHistory.map((entry) => (
-                    <div key={entry.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                  {blockHistoryGroups.map((group) => (
+                    <div key={group.block.id} className="rounded-lg border border-slate-200 p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <strong className="text-slate-950">{entry.elementLabel}</strong>
-                        <span className="text-slate-500"><Clock size={13} className="mr-1 inline" />{formatDateTime(entry.changedAt)}</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-slate-950">{group.block.elementLabel}</strong>
+                          {group.isCurrent ? <Badge tone="teal">Bloc courant</Badge> : null}
+                          <Badge tone="slate">{group.vatEntries.length} recharge{group.vatEntries.length > 1 ? 's' : ''}</Badge>
+                        </div>
+                        <span className="text-slate-500"><Clock size={13} className="mr-1 inline" />{formatDateTime(group.block.changedAt)}</span>
                       </div>
-                      <p className="mt-1 text-slate-600">{entry.lineName} · {entry.operator}</p>
-                      <p className="mt-1 text-xs text-slate-500">Limite bloc : {formatDateTime(entry.newExpiresAt)}</p>
-                      {entry.comment ? <p className="mt-2 text-slate-600">{entry.comment}</p> : null}
+                      <p className="mt-1 text-slate-600">{group.block.lineName} · {group.block.operator}</p>
+                      <p className="mt-1 text-xs text-slate-500">Limite bloc : {formatDateTime(group.block.newExpiresAt)}</p>
+                      {group.block.comment ? <p className="mt-2 text-slate-600">{group.block.comment}</p> : null}
+
+                      <div className="mt-3 space-y-2 border-l-2 border-teal-100 pl-3">
+                        {group.vatEntries.length > 0 ? group.vatEntries.map((entry) => (
+                          <div key={entry.id} className="rounded-lg bg-slate-50 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <strong className="text-slate-800">{entry.elementLabel}</strong>
+                              <span className="text-xs text-slate-500">{formatDateTime(entry.changedAt)}</span>
+                            </div>
+                            <p className="mt-1 text-slate-600">{entry.operator}</p>
+                            {entry.comment ? <p className="mt-1 text-xs text-slate-500">{entry.comment}</p> : null}
+                          </div>
+                        )) : (
+                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-500">
+                            Aucune recharge rattachée à cette instance de bloc.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

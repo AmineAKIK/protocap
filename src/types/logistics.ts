@@ -10,5 +10,6 @@ export interface LogisticsRequest {
   nature: string;
   comment?: string;
   createdAt: string;
+  completedAt?: string;
   status: LogisticsStatus;
 }

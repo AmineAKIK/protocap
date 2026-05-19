@@ -34,6 +34,7 @@ export const initialLogisticsRequests: LogisticsRequest[] = [
     nature: 'Palettes vides à fournir',
     comment: '',
     createdAt: minutesAgo(94),
+    completedAt: minutesAgo(18),
     status: 'pickedUp'
   }
 ];
