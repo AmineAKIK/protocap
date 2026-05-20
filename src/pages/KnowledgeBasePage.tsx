@@ -69,8 +69,9 @@ function DocList() {
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
         <p className="label">Module documentation</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Standards terrain</h1>
-        <p className="mt-2 text-slate-600">Modes opératoires, check-lists et fiches réaction des lignes de conditionnement.</p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Knowledge Base</h1>
+        <p className="mt-2 max-w-3xl text-slate-600">Modes opératoires, check-lists et fiches réaction des lignes de conditionnement.</p>
+        <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">Information accessible rapidement, standard facile à appliquer.</p>
       </div>
 
       {/* Search + filters */}

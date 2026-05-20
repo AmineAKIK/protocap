@@ -1,9 +1,10 @@
-import { Boxes, Calculator, ClipboardCheck, Home, Library, RadioTower } from 'lucide-react';
+import { Boxes, Calculator, ClipboardCheck, FileText, Home, Library, RadioTower } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
+  { to: '/rapport', label: 'Rapport', icon: FileText },
   { to: '/expiry-check', label: 'Expiry Check', icon: ClipboardCheck },
   { to: '/logistics-call', label: 'Logistics Call', icon: RadioTower },
   { to: '/knowledge-base', label: 'Knowledge Base', icon: Library },
@@ -59,7 +60,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -74,7 +75,7 @@ export function AppShell({ children }: AppShellProps) {
               {({ isActive }) => (
                 <>
                   <item.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
-                  <span>{item.label.split(' ')[0]}</span>
+                  <span className="truncate max-w-[52px]">{item.label.split(' ')[0]}</span>
                 </>
               )}
             </NavLink>

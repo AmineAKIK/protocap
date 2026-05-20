@@ -1,4 +1,4 @@
-import { ArrowRight, Calculator, ClipboardCheck, Library, RadioTower, Wifi, Zap } from 'lucide-react';
+import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, RadioTower, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 
@@ -64,30 +64,6 @@ export function HomePage() {
                   Veuillez trouver ci-joint quatre petites maquettes génériques autour de flux terrain que je trouve intéressants en environnement de conditionnement. Ces prototypes sont fictifs et n’utilisent aucune donnée réelle. Ils ont simplement pour but d’illustrer des pistes possibles autour de la traçabilité, des appels logistiques, de l’accès rapide à l’information et des calculs de conditionnement.
                 </p>
               </div>
-
-              {/* CTAs */}
-              <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-                <Link to="/logistics-call" className="block">
-                  <Button icon={<Zap size={16} />} className="w-full px-5 sm:w-auto">
-                    Logistics Call
-                  </Button>
-                </Link>
-                <Link to="/expiry-check" className="block">
-                  <Button variant="ghost" icon={<ClipboardCheck size={16} />} className="w-full px-5 sm:w-auto">
-                    Expiry Check
-                  </Button>
-                </Link>
-                <Link to="/knowledge-base" className="block">
-                  <Button variant="ghost" icon={<Library size={16} />} className="w-full px-5 sm:w-auto">
-                    Knowledge Base
-                  </Button>
-                </Link>
-                <Link to="/packing-calculator" className="block">
-                  <Button variant="ghost" icon={<Calculator size={16} />} className="w-full px-5 sm:w-auto">
-                    Packing Calculator
-                  </Button>
-                </Link>
-              </div>
             </div>
 
             {/* Right — Périmètre card */}
@@ -123,6 +99,28 @@ export function HomePage() {
 
       {/* Module cards */}
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">Rapport</p>
+        <article className="panel group mb-10 grid gap-5 p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
+          <div className="min-w-0">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+              <FileText size={22} />
+            </div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Synthèse opérationnelle</p>
+            <h3 className="text-xl font-bold text-slate-950 transition group-hover:text-teal-700">Du terrain au prototype</h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Une lecture terrain de la charge invisible autour du conducteur : informations dispersées, décisions à reconstruire et flux critiques à rendre plus lisibles.
+            </p>
+            <div className="mt-4 inline-flex max-w-full rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
+              Observation terrain, hypothèses, impacts et indicateurs possibles
+            </div>
+          </div>
+          <Link to="/rapport" className="block lg:self-end">
+            <Button className="w-full" icon={<ArrowRight size={16} />}>
+              Ouvrir le rapport
+            </Button>
+          </Link>
+        </article>
+
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {modules.map((module) => (
@@ -136,7 +134,7 @@ export function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{module.tag}</p>
               <h3 className="text-xl font-bold text-slate-950 group-hover:text-teal-700 transition">{module.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">{module.description}</p>
-              <div className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
+              <div className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
                 {module.highlight}
               </div>
               <Link to={module.to} className="mt-4 block">

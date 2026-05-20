@@ -145,7 +145,7 @@ function BlockedModal({ line, onClose, onDeclare }: {
             Sur <strong>{line.name}</strong>, le bloc de remplissage a dépassé sa période d'utilisation de {line.elements[0]?.validityDays ?? 5} jours.
           </p>
 
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-4">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4">
             <div className="flex items-center justify-between mb-3">
               <p className="font-bold text-rose-900">Bloc de remplissage</p>
               <Badge tone="red">Expiré</Badge>
@@ -381,7 +381,7 @@ export function ExpiryCheckPage() {
                 <p className={`mt-3 text-base font-bold ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                   {remainingLabel(line)}
                 </p>
-                <div className="mt-3 rounded-lg bg-white/85 p-3 ring-1 ring-slate-200">
+                <div className="mt-3 rounded-xl bg-white/85 p-3 ring-1 ring-slate-200">
                   <p className="label">Péremption bloc</p>
                   <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatDateOnly(expiry)}</p>
                   <p className="text-base font-bold tabular-nums text-slate-700">{formatTimeOnly(expiry)}</p>
@@ -535,7 +535,7 @@ export function ExpiryCheckPage() {
               </p>
               <div className="mt-4 max-h-56 space-y-3 overflow-y-auto pr-1">
                 {vatHistory.length > 0 ? vatHistory.map((entry) => (
-                  <div key={entry.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                  <div key={entry.id} className="rounded-xl bg-slate-50 p-3 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <strong className="text-slate-950">{entry.elementLabel}</strong>
                       <span className="text-xs text-slate-500">{formatDateTime(entry.changedAt)}</span>
@@ -544,7 +544,7 @@ export function ExpiryCheckPage() {
                     {entry.comment ? <p className="mt-1 text-xs text-slate-500">{entry.comment}</p> : null}
                   </div>
                 )) : (
-                  <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">
                     Aucune recharge tracée sur ce bloc.
                   </div>
                 )}
@@ -574,7 +574,7 @@ export function ExpiryCheckPage() {
               <div className="border-t border-slate-100 p-4 sm:p-5">
                 <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
                   {blockHistoryGroups.map((group) => (
-                    <div key={group.block.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+                    <div key={group.block.id} className="rounded-xl border border-slate-200 p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <strong className="text-slate-950">{group.block.elementLabel}</strong>
@@ -589,7 +589,7 @@ export function ExpiryCheckPage() {
 
                       <div className="mt-3 space-y-2 border-l-2 border-teal-100 pl-3">
                         {group.vatEntries.length > 0 ? group.vatEntries.map((entry) => (
-                          <div key={entry.id} className="rounded-lg bg-slate-50 p-3">
+                          <div key={entry.id} className="rounded-xl bg-slate-50 p-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <strong className="text-slate-800">{entry.elementLabel}</strong>
                               <span className="text-xs text-slate-500">{formatDateTime(entry.changedAt)}</span>
@@ -598,7 +598,7 @@ export function ExpiryCheckPage() {
                             {entry.comment ? <p className="mt-1 text-xs text-slate-500">{entry.comment}</p> : null}
                           </div>
                         )) : (
-                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-500">
+                          <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-500">
                             Aucune recharge rattachée à cette instance de bloc.
                           </p>
                         )}
@@ -626,7 +626,7 @@ export function ExpiryCheckPage() {
       {vatModalOpen && (
         <Modal title="Tracer une recharge de cuve" onClose={() => setVatModalOpen(false)}>
           <form className="space-y-4" onSubmit={handleVatSubmit}>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               Matière inchangée : <strong>{selectedLine.product}</strong>. Cette trace n'impacte pas la date de péremption du bloc.
             </div>
             <label className="block">
@@ -657,7 +657,7 @@ export function ExpiryCheckPage() {
       {declareModalOpen && (
         <Modal title="Déclarer un remplacement" onClose={() => setDeclareModalOpen(false)}>
           <form className="space-y-4" onSubmit={handleDeclareSubmit}>
-            <div className="rounded-lg bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-800 font-medium">
+            <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-800 font-medium">
               Remplacement du bloc de remplissage — {selectedLine.name}
             </div>
             <label className="block">

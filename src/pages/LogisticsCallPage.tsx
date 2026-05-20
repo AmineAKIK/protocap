@@ -299,8 +299,8 @@ export function LogisticsCallPage() {
                 <p className="label mb-3">Mes derniers appels</p>
                 <div className="space-y-2">
                   {requests.slice(0, 3).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
-                      <span className="min-w-0 font-semibold text-slate-800">{r.id} · {r.line}</span>
+                    <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
+                      <span className="min-w-0 truncate font-semibold text-slate-800">{r.id} · {r.line}</span>
                       <Badge tone={statusTone[r.status]}>{logisticsStatusLabels[r.status]}</Badge>
                     </div>
                   ))}
@@ -365,7 +365,7 @@ export function LogisticsCallPage() {
 
             {doneRequests.length > 0 ? (
               <details className="mt-4">
-                <summary className="cursor-pointer rounded-lg bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
+                <summary className="cursor-pointer rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
                   Terminées / Annulées ({doneRequests.length})
                 </summary>
                 <div className="mt-3 space-y-3">

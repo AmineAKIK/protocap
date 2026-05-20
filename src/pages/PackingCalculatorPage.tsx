@@ -47,9 +47,9 @@ function parsePackingInput(form: PackingFormState): PackingInput | null {
 
 function ResultMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white px-4 py-3">
       <p className="label leading-4">{label}</p>
-      <p className="mt-2 whitespace-nowrap break-normal text-2xl font-black tabular-nums text-slate-950 sm:text-3xl">{formatNumber(value)}</p>
+      <p className="mt-2 truncate text-2xl font-black tabular-nums text-slate-950 sm:text-3xl">{formatNumber(value)}</p>
       {detail ? <p className="mt-1 text-xs font-medium text-slate-500">{detail}</p> : null}
     </div>
   );
@@ -86,12 +86,10 @@ export function PackingCalculatorPage() {
   return (
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
-        <p className="label">Calcul conditionnement</p>
+        <p className="label">Module calcul</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Packing Calculator</h1>
-        <p className="mt-2 text-lg font-semibold text-slate-700">Calcul palettes / cartons / unités</p>
-        <p className="mt-2 max-w-3xl text-slate-600">
-          Convertir une quantité demandée en découpage opérationnel selon le conditionnement de la référence.
-        </p>
+        <p className="mt-2 max-w-3xl text-slate-600">Convertir une quantité demandée en découpage opérationnel selon le conditionnement de la référence.</p>
+        <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">Calcul rapide, écart visible, décision fiabilisée.</p>
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[0.92fr_1.08fr]">
@@ -176,7 +174,7 @@ export function PackingCalculatorPage() {
             </div>
           </div>
 
-          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-start gap-3">
               <PackageCheck size={18} className="mt-0.5 shrink-0 text-teal-700" />
               <div>
@@ -191,7 +189,7 @@ export function PackingCalculatorPage() {
           </div>
 
           {!neutral && calculation.selected.variance > 0 ? (
-            <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-600" />
               <p>
                 {form.policy === 'round-pallet' ? "L'arrondi palette" : "L'arrondi carton"} prépare {formatNumber(calculation.selected.variance)} unités de plus que la quantité demandée.
@@ -211,8 +209,8 @@ export function PackingCalculatorPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-lg border-2 border-teal-500 bg-teal-50 p-3 shadow-md sm:p-4">
-                <div className="rounded-lg bg-teal-700 px-4 py-4 text-white">
+              <div className="rounded-2xl border-2 border-teal-500 bg-teal-50 p-3 shadow-md sm:p-4">
+                <div className="rounded-xl bg-teal-700 px-4 py-4 text-white">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Découpage final sélectionné</p>
@@ -231,11 +229,11 @@ export function PackingCalculatorPage() {
                 <div className="mt-3 grid gap-3 min-[520px]:grid-cols-3">
                   <div className="rounded-lg bg-white px-4 py-3">
                     <p className="label">Total demandé</p>
-                    <p className="mt-1 whitespace-nowrap break-normal text-lg font-black tabular-nums text-slate-950">{formatNumber(input.quantity)}</p>
+                    <p className="mt-1 truncate text-lg font-black tabular-nums text-slate-950">{formatNumber(input.quantity)}</p>
                   </div>
                   <div className="rounded-lg bg-white px-4 py-3">
                     <p className="label">Total préparé</p>
-                    <p className="mt-1 whitespace-nowrap break-normal text-lg font-black tabular-nums text-slate-950">{formatNumber(calculation.selected.totalPrepared)}</p>
+                    <p className="mt-1 truncate text-lg font-black tabular-nums text-slate-950">{formatNumber(calculation.selected.totalPrepared)}</p>
                   </div>
                   <div className="rounded-lg bg-white px-4 py-3">
                     <p className="label">Écart</p>
@@ -271,7 +269,7 @@ export function PackingCalculatorPage() {
         </section>
       </div>
 
-      <section className="mt-5 rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+      <section className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
         <h2 className="text-base font-bold text-slate-950">Pourquoi ce module ?</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Réduit les calculs manuels et rend visible l'écart entre la quantité demandée et la quantité préparée.
