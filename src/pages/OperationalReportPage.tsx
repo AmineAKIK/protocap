@@ -417,20 +417,20 @@ const slides: Slide[] = [
     label: `Rapport d'observation opérationnelle`,
     title: `Du terrain au prototype`,
     body: (
-      <div className="space-y-6">
-        <p className="text-xl leading-9 text-slate-200">
+      <div className="space-y-3 sm:space-y-5">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Une ligne de conditionnement ne se pilote pas uniquement par la machine.
           Elle se pilote par l'enchaînement continu de décisions humaines.
         </p>
-        <p className="text-lg leading-8 text-slate-400">
+        <p className="text-sm leading-6 text-slate-400 sm:text-lg sm:leading-8">
           La performance d'une ligne dépend autant de la cadence machine que de la qualité
           de l'environnement informationnel autour du conducteur.
         </p>
-        <div className="grid gap-3 sm:grid-cols-3 pt-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           {openingStatements.map((s, i) => (
-            <div key={s.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <span className="mb-2 block text-xs font-black text-teal-400">0{i + 1}</span>
-              <p className="text-sm font-semibold leading-6 text-white">{s.text}</p>
+            <div key={s.key} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:rounded-2xl sm:p-4">
+              <span className="mb-1 block text-xs font-black text-teal-400">0{i + 1}</span>
+              <p className="text-xs font-semibold leading-5 text-white sm:text-sm sm:leading-6">{s.text}</p>
             </div>
           ))}
         </div>
@@ -441,19 +441,19 @@ const slides: Slide[] = [
     label: `Synthèse opérationnelle`,
     title: `Quatre modules, un même enjeu`,
     body: (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
         {summaryRows.map((row) => (
-          <div key={row.module} className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/20">
-                <row.icon size={18} className="text-teal-400" />
+          <div key={row.module} className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <div className="flex items-center gap-2 mb-2 sm:gap-3 sm:mb-4">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20">
+                <row.icon size={16} className="text-teal-400" />
               </div>
-              <div>
-                <p className="font-bold text-white">{row.module}</p>
-                <p className="text-xs text-teal-400">{row.flow}</p>
+              <div className="min-w-0">
+                <p className="font-bold text-white text-sm">{row.module}</p>
+                <p className="text-xs text-teal-400 truncate">{row.flow}</p>
               </div>
             </div>
-            <p className="text-sm text-slate-300 leading-6">{row.contribution}</p>
+            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">{row.contribution}</p>
           </div>
         ))}
       </div>
@@ -461,22 +461,21 @@ const slides: Slide[] = [
   },
   {
     label: `Chapitre 01`,
-    title: `Conduite de ligne et charge réelle du poste`,
+    title: `Conduite de ligne et charge réelle`,
     body: (
-      <div className="space-y-6 max-w-3xl">
-        <p className="text-xl leading-9 text-slate-200">
+      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           La conduite de ligne concentre plusieurs responsabilités simultanées.
-          Chaque tâche peut paraître simple isolément.
           Leur superposition crée la difficulté réelle du poste.
         </p>
-        <div className="rounded-2xl border border-teal-500/30 bg-teal-500/10 p-6">
-          <Gauge size={24} className="text-teal-400 mb-3" />
-          <p className="text-lg font-bold leading-8 text-white">
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-6">
+          <Gauge size={20} className="text-teal-400 mb-2" />
+          <p className="text-sm font-bold leading-6 text-white sm:text-lg sm:leading-8">
             La machine · le produit · la matière · la qualité · la quantité · les palettes ·
             les arrêts · les outils · les documents · les priorités · les urgences · les aléas.
           </p>
         </div>
-        <p className="text-base text-slate-400">
+        <p className="text-sm leading-6 text-slate-400 sm:text-base">
           Le conducteur doit souvent reconstruire lui-même la cohérence entre ces éléments.
           Cette reconstruction permanente consomme de l'attention.
         </p>
@@ -487,29 +486,28 @@ const slides: Slide[] = [
     label: `Chapitre 02`,
     title: `Fragmentation de l'attention`,
     body: (
-      <div className="space-y-6 max-w-3xl">
-        <p className="text-xl leading-9 text-slate-200">
-          Le point critique n'est pas l'absence d'information.
-          Le point critique est sa dispersion.
+      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
+          Le point critique n'est pas l'absence d'information — c'est sa dispersion.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
           {[
-            `Une date peut être sur une feuille.`,
-            `Une déclaration peut être dans un logiciel.`,
-            `Un appel logistique peut dépendre d'un signal physique.`,
-            `Une procédure peut être dans une base documentaire lente.`,
-            `Un calcul peut être fait mentalement ou à part.`,
-            `Un statut peut exister sans être visible par tous.`,
+            `Une date sur une feuille.`,
+            `Une déclaration dans un logiciel.`,
+            `Un appel via un signal physique.`,
+            `Une procédure dans une base lente.`,
+            `Un calcul fait mentalement.`,
+            `Un statut non visible par tous.`,
           ].map((t) => (
-            <div key={t} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <ArrowRight size={14} className="mt-1 shrink-0 text-slate-500" />
-              <p className="text-sm text-slate-300">{t}</p>
+            <div key={t} className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <ArrowRight size={12} className="mt-0.5 shrink-0 text-slate-500" />
+              <p className="text-xs leading-5 text-slate-300">{t}</p>
             </div>
           ))}
         </div>
-        <div className="rounded-2xl border border-teal-500/30 bg-teal-500/10 p-5">
-          <AlertTriangle size={20} className="text-teal-400 mb-3" />
-          <p className="text-lg font-bold text-white">
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-5">
+          <AlertTriangle size={18} className="text-teal-400 mb-2" />
+          <p className="text-sm font-bold leading-6 text-white sm:text-base sm:leading-7">
             Le conducteur ne doit pas compenser le système d'information.
             Le système d'information doit soutenir le conducteur.
           </p>
@@ -521,17 +519,17 @@ const slides: Slide[] = [
     label: `Chapitre 03`,
     title: `Impact opérationnel attendu`,
     body: (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {impactBlocks.map((block) => (
-          <div key={block.title} className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <block.icon size={18} className="text-teal-400" />
-              <p className="font-bold text-white text-sm">{block.title}</p>
+          <div key={block.title} className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <div className="flex items-center gap-1.5 mb-2 sm:gap-2 sm:mb-3">
+              <block.icon size={15} className="shrink-0 text-teal-400" />
+              <p className="font-bold text-white text-xs leading-4 sm:text-sm">{block.title}</p>
             </div>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {block.items.slice(0, 3).map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                <li key={item} className="flex items-start gap-1.5 text-xs text-slate-300 leading-4">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
                   {item}
                 </li>
               ))}
@@ -545,22 +543,21 @@ const slides: Slide[] = [
     label: `Chapitre 04`,
     title: `Principe de conception`,
     body: (
-      <div className="space-y-6 max-w-3xl">
-        <p className="text-xl leading-9 text-slate-200">
+      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Un outil métier efficace ne cherche pas à être visible pour lui-même. Il sert l'action.
-          Il doit répondre immédiatement à cinq questions.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2 lg:grid-cols-3">
           {designQuestions.map((q, i) => (
-            <div key={q} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <span className="text-xs font-black text-teal-400">{String(i + 1).padStart(2, '0')}</span>
-              <span className="text-sm font-semibold text-white">{q}</span>
+            <div key={q} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 sm:rounded-xl">
+              <span className="shrink-0 text-xs font-black text-teal-400">{String(i + 1).padStart(2, '0')}</span>
+              <span className="text-xs font-semibold text-white sm:text-sm">{q}</span>
             </div>
           ))}
         </div>
-        <div className="rounded-2xl border border-teal-500/30 bg-teal-500/10 p-5">
-          <Zap size={20} className="text-teal-400 mb-3" />
-          <p className="text-lg font-bold text-white">
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-5">
+          <Zap size={18} className="text-teal-400 mb-2" />
+          <p className="text-sm font-bold leading-6 text-white sm:text-base">
             La valeur d'un outil métier se mesure à la quantité de friction retirée du travail réel.
           </p>
         </div>
@@ -569,36 +566,36 @@ const slides: Slide[] = [
   },
   ...prototypes.map((proto) => ({
     label: `Prototype ${proto.id}`,
-    title: `${proto.title} — ${proto.subtitle}`,
+    title: `${proto.title}`,
     body: (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Enjeu</p>
-            <p className="text-sm leading-7 text-slate-300">{proto.issueParagraphs[0]}</p>
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
+        <div className="space-y-2 sm:space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Enjeu</p>
+            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.issueParagraphs[0]}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Réponse</p>
-            <p className="text-sm leading-7 text-slate-300">{proto.responseParagraphs[0]}</p>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Réponse</p>
+            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.responseParagraphs[0]}</p>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-teal-500/20 bg-teal-500/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-teal-500">Valeur opérationnelle</p>
-            <ul className="space-y-2">
+        <div className="space-y-2 sm:space-y-4">
+          <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-teal-500">Valeur</p>
+            <ul className="space-y-1.5">
               {proto.valueParagraphs.map((p) => (
-                <li key={p} className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <ArrowRight size={13} className="shrink-0 text-teal-500" />
+                <li key={p} className="flex items-center gap-1.5 text-xs font-semibold text-white sm:text-sm">
+                  <ArrowRight size={12} className="shrink-0 text-teal-500" />
                   {p}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Indicateurs</p>
-            <ul className="space-y-1.5">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Indicateurs</p>
+            <ul className="space-y-1">
               {proto.indicators.slice(0, 3).map((ind) => (
-                <li key={ind} className="flex items-start gap-2 text-xs text-slate-400">
+                <li key={ind} className="flex items-start gap-1.5 text-xs text-slate-400 leading-4">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" />
                   {ind}
                 </li>
@@ -611,43 +608,43 @@ const slides: Slide[] = [
   })),
   {
     label: `Chapitres 06 — 07`,
-    title: `Lecture globale & Intérêt des prototypes`,
+    title: `Lecture globale & Prototypes`,
     body: (
-      <div className="grid gap-5 sm:grid-cols-2 max-w-4xl">
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <Route size={20} className="text-teal-400 mb-3" />
-            <p className="text-base font-bold text-white leading-7">
+      <div className="grid gap-2 sm:grid-cols-2 sm:gap-5 max-w-4xl">
+        <div className="space-y-2 sm:space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <Route size={18} className="text-teal-400 mb-2" />
+            <p className="text-xs font-bold text-white leading-5 sm:text-base sm:leading-7">
               L'outil doit absorber la complexité répétitive pour laisser au conducteur
               la décision, la vigilance et l'arbitrage.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">4 formes de friction</p>
-            <ul className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">4 formes de friction</p>
+            <ul className="space-y-1.5">
               {globalFrictionItems.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                <li key={item} className="flex items-start gap-2 text-xs text-slate-300 leading-4 sm:text-sm sm:leading-6">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
                   {item}
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <FileText size={20} className="text-teal-400 mb-3" />
-            <p className="text-base font-bold text-white leading-7">
-              Un prototype transforme une idée abstraite en objet manipulable.
-              Il accélère le passage entre observation, discussion et décision.
+        <div className="space-y-2 sm:space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <FileText size={18} className="text-teal-400 mb-2" />
+            <p className="text-xs font-bold text-white leading-5 sm:text-base sm:leading-7">
+              Un prototype transforme une idée abstraite en objet manipulable
+              et accélère le passage entre observation et décision.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Sa valeur</p>
-            <ul className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Sa valeur</p>
+            <ul className="space-y-1.5">
               {prototypeValueItems.slice(0, 4).map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-slate-300">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-500" />
+                <li key={item} className="flex items-start gap-2 text-xs text-slate-300 leading-4 sm:text-sm sm:leading-6">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
                   {item}
                 </li>
               ))}
@@ -661,27 +658,27 @@ const slides: Slide[] = [
     label: `Chapitre 08`,
     title: `Vision`,
     body: (
-      <div className="space-y-6 max-w-3xl">
-        <p className="text-xl leading-9 text-slate-200">
-          L'objectif final n'est pas de multiplier les applications.
-          L'objectif est de construire un environnement de conduite plus fluide.
+      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
+          L'objectif est de construire un environnement de conduite plus fluide —
+          la bonne information, au bon moment, avec une action claire.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
           {visionItems.map((item) => (
-            <div key={item} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <CheckCircle2 size={14} className="shrink-0 text-teal-500" />
-              <span className="text-sm text-white">{item}</span>
+            <div key={item} className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 sm:rounded-xl sm:gap-2 sm:px-4 sm:py-3">
+              <CheckCircle2 size={12} className="shrink-0 text-teal-500" />
+              <span className="text-xs text-white sm:text-sm">{item}</span>
             </div>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
           {[
-            { text: `L'interface doit disparaître dans l'exécution.`, accent: true },
-            { text: `Elle reste présente pour sécuriser, alerter, guider et tracer.`, accent: false },
-            { text: `Elle s'efface lorsque le travail avance.`, accent: false },
+            { text: `L'interface disparaît dans l'exécution.`, accent: true },
+            { text: `Elle sécurise, alerte, guide et trace.`, accent: false },
+            { text: `Elle s'efface quand le travail avance.`, accent: false },
           ].map((item) => (
-            <div key={item.text} className={`rounded-xl p-4 ${item.accent ? 'border border-teal-500/30 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
-              <p className={`text-sm font-semibold leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
+            <div key={item.text} className={`rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/30 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
+              <p className={`text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
             </div>
           ))}
         </div>
@@ -690,27 +687,27 @@ const slides: Slide[] = [
   },
   {
     label: `Conclusion`,
-    title: `Rendre les flux terrain plus visibles, plus traçables, plus faciles à exécuter.`,
+    title: `Rendre les flux terrain plus visibles, plus traçables, plus simples.`,
     body: (
-      <div className="space-y-6 max-w-3xl">
-        <p className="text-xl leading-9 text-slate-200">
+      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+        <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Une ligne de conditionnement ne se résume pas à sa cadence.
           Elle dépend de la façon dont l'information circule autour de ceux qui la pilotent.
         </p>
-        <div className="rounded-2xl border border-teal-500/30 bg-teal-500/10 p-6">
-          <p className="text-lg font-black leading-8 text-white">
-            Moins d'erreurs évitables. Moins de temps perdu. Moins de charge cognitive.
-            Plus de traçabilité. Meilleure continuité opérationnelle.
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-6">
+          <p className="text-sm font-black leading-6 text-white sm:text-lg sm:leading-8">
+            Moins d'erreurs évitables · moins de temps perdu · moins de charge cognitive ·
+            plus de traçabilité · meilleure continuité opérationnelle.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
           {[
-            { text: `Les meilleurs outils métier ne s'ajoutent pas au travail.`, accent: false },
+            { text: `Les meilleurs outils ne s'ajoutent pas au travail.`, accent: false },
             { text: `Ils s'intègrent à son mouvement.`, accent: true },
             { text: `Ils soutiennent l'action sans la ralentir.`, accent: false },
           ].map((item) => (
-            <div key={item.text} className={`rounded-xl p-4 ${item.accent ? 'border border-teal-500/40 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
-              <p className={`text-sm font-semibold leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
+            <div key={item.text} className={`rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/40 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
+              <p className={`text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
             </div>
           ))}
         </div>

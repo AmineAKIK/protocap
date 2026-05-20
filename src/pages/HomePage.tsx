@@ -150,7 +150,7 @@ export function HomePage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p>Application personnelle — aucune donnée réelle ou confidentielle.</p>
+          <p>Aucune donnée réelle ou confidentielle.</p>
           <a
             className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline"
             href="https://www.akiksystems.com"
