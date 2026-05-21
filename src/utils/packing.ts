@@ -103,8 +103,6 @@ export function getPackingRecommendation(options: PackingOption[], policy: Packi
   const exact = options.find((option) => option.policy === 'no-overrun') ?? options[0];
   const carton = options.find((option) => option.policy === 'round-carton') ?? exact;
 
-  if (policy === 'no-overrun') return exact;
-
-  const lowCartonOverrun = carton.variance > 0 && carton.variance <= Math.ceil(unitsPerCarton / 2);
-  return lowCartonOverrun ? carton : exact;
+  if (carton.variance === 0) return exact;
+  return carton;
 }
