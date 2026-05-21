@@ -611,7 +611,7 @@ export function OperationalReportPage() {
                 <p>Un outil métier efficace ne cherche pas à être visible pour lui-même. Il sert l'action.</p>
                 <p>Il doit répondre immédiatement à cinq questions :</p>
               </div>
-              <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
                 {designQuestions.map((q, i) => (
                   <div key={q} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <span className="text-xs font-black text-teal-500">{String(i + 1).padStart(2, '0')}</span>

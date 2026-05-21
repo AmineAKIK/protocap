@@ -31,14 +31,14 @@ export function AppShell({ children }: AppShellProps) {
           </Link>
 
           {/* Desktop nav — centred */}
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 lg:flex">
+          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 xl:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     isActive
                       ? 'bg-teal-700 text-white'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -51,15 +51,15 @@ export function AppShell({ children }: AppShellProps) {
             ))}
           </nav>
 
-          <div className="hidden w-32 lg:block" />
+          <div className="hidden w-32 xl:block" />
         </div>
       </header>
 
       {/* Page content — padding-bottom on mobile to avoid bottom nav overlap */}
-      <main className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
+      <main className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0">{children}</main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm xl:hidden">
         <div className="grid grid-cols-6">
           {navItems.map((item) => (
             <NavLink

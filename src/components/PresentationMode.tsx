@@ -495,7 +495,6 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
       <div className="flex items-center justify-between px-4 py-3 sm:px-10 sm:py-4">
         <span className="text-xs font-bold uppercase tracking-widest text-teal-500">{slide.label}</span>
         <div className="flex items-center gap-4">
-          <span className="text-xs font-bold tabular-nums text-slate-500">{index + 1} / {total}</span>
           <button
             onClick={onClose}
             className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white"

@@ -63,7 +63,7 @@ export function HomePage() {
               {/* Message */}
               <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
                 <p className="text-sm leading-6 text-slate-700">
-                  Merci beaucoup pour votre accueil et pour votre geste attentionné.
+                  Merci pour votre accueil et pour votre geste attentionné. Une mention particulière à <span className="font-bold text-teal-900">Déborah</span>, dont la bienveillance et la chaleur humaine ont rendu cette journée d’intégration vraiment agréable.
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
                   Veuillez trouver ci-joint quatre petites maquettes génériques autour de flux terrain que je trouve intéressants en environnement de conditionnement. Ces prototypes sont fictifs et n’utilisent aucune donnée réelle. Ils ont simplement pour but d’illustrer des pistes possibles autour de la traçabilité, des appels logistiques, de l’accès rapide à l’information et des calculs de conditionnement.
@@ -136,7 +136,7 @@ export function HomePage() {
         </article>
 
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {modules.map((module) => (
             <article
               key={module.title}
