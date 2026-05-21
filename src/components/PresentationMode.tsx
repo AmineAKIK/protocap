@@ -454,6 +454,11 @@ const slides: Slide[] = [
         </div>
       </div>
     )
+  },
+  {
+    label: `Disponibilité`,
+    title: `Ces prototypes sont disponibles à tester sur ligne.`,
+    body: null
   }
 ];
 
