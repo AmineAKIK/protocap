@@ -177,7 +177,7 @@ export function ExpiryCheckPage() {
   const [blockedModalOpen, setBlockedModalOpen] = useState(false);
   const [vatModalOpen, setVatModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [mobileView, setMobileView] = useState<'tour' | 'line'>('tour');
+  const [mobileView, setMobileView] = useState<'tour' | 'line'>('line');
 
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? lines[0];
   const lineStatus = getLineStatus(selectedLine);
@@ -320,78 +320,20 @@ export function ExpiryCheckPage() {
         <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
           <button
             type="button"
-            className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileView === 'tour' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
-            onClick={() => setMobileView('tour')}
-          >
-            Tournée
-          </button>
-          <button
-            type="button"
             className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileView === 'line' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
             onClick={() => setMobileView('line')}
           >
             Ligne
           </button>
+          <button
+            type="button"
+            className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${mobileView === 'tour' ? 'bg-teal-700 text-white shadow' : 'text-slate-600'}`}
+            onClick={() => setMobileView('tour')}
+          >
+            Tournée
+          </button>
         </div>
       </div>
-
-      <section className={`${mobileView === 'tour' ? 'block' : 'hidden'} mb-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran laveur</p>
-            <h2 className="mt-1 text-xl font-black">Board de tournée</h2>
-          </div>
-          <p className="max-w-xl text-sm font-medium leading-6 text-teal-50">
-            Affiché côté laveur. Chaque carte signale clairement l'état du bloc pour repérer les remplacements à prendre en charge.
-          </p>
-        </div>
-        <div className="rounded-xl border border-teal-200 bg-white p-3 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="label">Vue consolidée des lignes</p>
-            <h2 className="mt-1 text-lg font-bold text-slate-950">Blocs à surveiller ou remplacer</h2>
-          </div>
-          <Route className="text-teal-700" size={22} />
-        </div>
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <StatCard label="Lignes conformes" value={stats.conform} />
-          <StatCard label="Vigilance" value={stats.watch} />
-          <StatCard label="Bloqués" value={stats.blocked} />
-        </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          {washerBoard.map((line) => {
-            const status = getBlockStatus(line);
-            const expiry = earliestExpiry(line);
-            return (
-              <button
-                key={line.id}
-                type="button"
-                onClick={() => setSelectedLineId(line.id)}
-                className={`rounded-xl border p-4 text-left transition hover:border-teal-300 ${
-                  status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-950">{line.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{line.vat} · {line.product}</p>
-                  </div>
-                  <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
-                </div>
-                <p className={`mt-3 text-base font-bold ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
-                  {remainingLabel(line)}
-                </p>
-                <div className="mt-3 rounded-xl bg-white/85 p-3 ring-1 ring-slate-200">
-                  <p className="label">Péremption bloc</p>
-                  <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatDateOnly(expiry)}</p>
-                  <p className="text-base font-bold tabular-nums text-slate-700">{formatTimeOnly(expiry)}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        </div>
-      </section>
 
       <section className={`${mobileView === 'line' ? 'block' : 'hidden'} rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
@@ -611,6 +553,64 @@ export function ExpiryCheckPage() {
           </div>
         </section>
       </div>
+      </section>
+
+      <section className={`${mobileView === 'tour' ? 'block' : 'hidden'} mb-6 mt-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran laveur</p>
+            <h2 className="mt-1 text-xl font-black">Board de tournée</h2>
+          </div>
+          <p className="max-w-xl text-sm font-medium leading-6 text-teal-50">
+            Affiché côté laveur. Chaque carte signale clairement l'état du bloc pour repérer les remplacements à prendre en charge.
+          </p>
+        </div>
+        <div className="rounded-xl border border-teal-200 bg-white p-3 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="label">Vue consolidée des lignes</p>
+            <h2 className="mt-1 text-lg font-bold text-slate-950">Blocs à surveiller ou remplacer</h2>
+          </div>
+          <Route className="text-teal-700" size={22} />
+        </div>
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          <StatCard label="Lignes conformes" value={stats.conform} />
+          <StatCard label="Vigilance" value={stats.watch} />
+          <StatCard label="Bloqués" value={stats.blocked} />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {washerBoard.map((line) => {
+            const status = getBlockStatus(line);
+            const expiry = earliestExpiry(line);
+            return (
+              <button
+                key={line.id}
+                type="button"
+                onClick={() => setSelectedLineId(line.id)}
+                className={`rounded-xl border p-4 text-left transition hover:border-teal-300 ${
+                  status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-950">{line.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">{line.vat} · {line.product}</p>
+                  </div>
+                  <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
+                </div>
+                <p className={`mt-3 text-base font-bold ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                  {remainingLabel(line)}
+                </p>
+                <div className="mt-3 rounded-xl bg-white/85 p-3 ring-1 ring-slate-200">
+                  <p className="label">Péremption bloc</p>
+                  <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatDateOnly(expiry)}</p>
+                  <p className="text-base font-bold tabular-nums text-slate-700">{formatTimeOnly(expiry)}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        </div>
       </section>
 
       {/* Blocked modal — auto on selection */}

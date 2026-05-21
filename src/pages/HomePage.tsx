@@ -1,6 +1,8 @@
-import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, RadioTower, Wifi } from 'lucide-react';
+import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, Maximize2, RadioTower, Wifi } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
+import { PresentationMode } from '../components/PresentationMode';
 
 const modules = [
   {
@@ -38,8 +40,11 @@ const modules = [
 ];
 
 export function HomePage() {
+  const [presenting, setPresenting] = useState(false);
+
   return (
     <div>
+      {presenting && <PresentationMode onClose={() => setPresenting(false)} />}
       {/* Hero */}
       <section className="industrial-grid border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16 lg:px-8">
@@ -86,6 +91,15 @@ export function HomePage() {
                     Les interactions sont conservées localement dans le navigateur.
                   </li>
                 </ul>
+                <div className="border-t border-slate-100 px-5 py-3">
+                  <button
+                    onClick={() => setPresenting(true)}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500 active:scale-95"
+                  >
+                    <Maximize2 size={15} />
+                    Lancer la présentation
+                  </button>
+                </div>
                 <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-400">
                   <Wifi size={13} />
                   PWA — fonctionne aussi hors-ligne une fois chargée
