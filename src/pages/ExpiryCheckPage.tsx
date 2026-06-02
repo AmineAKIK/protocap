@@ -304,14 +304,14 @@ export function ExpiryCheckPage() {
   const washerBoard = lines;
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mb-6">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mb-4 sm:mb-6">
         <p className="label">Module qualité</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Expiry Check</h1>
-        <p className="mt-2 max-w-3xl text-slate-600">
+        <h1 className="mt-1 text-xl font-bold text-slate-950 sm:mt-2 sm:text-3xl">Expiry Check</h1>
+        <p className="mt-1 hidden max-w-3xl text-slate-600 sm:mt-2 sm:block">
           Validité du bloc de remplissage, recharges de cuves et registre de traçabilité par ligne de conditionnement.
         </p>
-        <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">
+        <p className="mt-1 hidden max-w-3xl text-sm font-semibold text-teal-800 sm:mt-2 sm:block">
           Échéances visibles. Remplacements priorisés. Trace exploitable en cas d'investigation.
         </p>
       </div>
@@ -336,22 +336,22 @@ export function ExpiryCheckPage() {
       </div>
 
       <section className={`${mobileView === 'line' ? 'block' : 'hidden'} rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-900 px-3 py-3 text-white sm:px-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Écran conducteur</p>
-            <h2 className="mt-1 text-xl font-black">Dashboard ligne</h2>
+            <h2 className="text-lg font-black sm:mt-1 sm:text-xl">Dashboard ligne</h2>
           </div>
-          <p className="max-w-xl text-sm font-medium leading-6 text-slate-200">
+          <p className="hidden max-w-xl text-sm font-medium leading-6 text-slate-200 sm:block">
             Utilisé sur la ligne concernée pour déclarer le bloc de remplissage, tracer les recharges de cuves et alimenter le board laveur.
           </p>
         </div>
-      <div className="space-y-4">
-        <section className="panel sticky top-[7.25rem] z-20 p-3 lg:static lg:p-4">
-          <p className="label">Navigation entre lignes</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+      <div className="space-y-3 sm:space-y-4">
+        <section className="panel sticky top-[7.25rem] z-20 p-2 sm:p-3 lg:static lg:p-4">
+          <p className="label hidden sm:block">Navigation entre lignes</p>
+          <p className="mt-1 hidden text-sm leading-6 text-slate-600 sm:block">
             Dans un usage terrain, chaque ligne dispose de son propre dashboard. Le sélecteur affiche plusieurs lignes uniquement pour parcourir les états de la maquette : conforme, vigilance et non conforme.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-1 flex flex-wrap justify-center gap-2 sm:mt-3 sm:justify-start">
             {lines.map((line) => {
               const status = getLineStatus(line);
               const isSelected = line.id === selectedLine.id;
@@ -372,10 +372,10 @@ export function ExpiryCheckPage() {
                   key={line.id}
                   type="button"
                   onClick={() => setSelectedLineId(line.id)}
-                  className={`min-h-11 rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
+                  className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                 >
                   {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
-                  <span className={`ml-2 font-normal ${isSelected ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
+                  <span className={`ml-2 font-normal hidden sm:inline ${isSelected ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
                 </button>
               );
             })}
@@ -411,43 +411,43 @@ export function ExpiryCheckPage() {
 
           {/* Feuille de suivi: bloc + recharges */}
           <div className="panel p-3 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-1 sm:gap-3">
               <div className="min-w-0">
-                <p className="label">Ligne de conditionnement sélectionnée</p>
-                <h2 className="mt-1 text-lg font-bold text-slate-950">{selectedLine.name}</h2>
+                <p className="label">Ligne sélectionnée</p>
+                <h2 className="mt-0.5 text-base font-bold text-slate-950 sm:mt-1 sm:text-lg">{selectedLine.name}</h2>
                 <p className="text-sm text-slate-600">{selectedLine.vat} · {selectedLine.product}</p>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-3 grid gap-3 sm:mt-5 sm:gap-4 lg:grid-cols-2">
             <div className={`rounded-xl border-2 p-3 sm:p-5 ${
               blockStatus === 'expired' ? 'border-rose-300 bg-rose-50' :
               blockStatus === 'warning' ? 'border-amber-200 bg-amber-50/40' :
               'border-slate-200 bg-white'
             }`}>
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <h3 className="text-base font-bold text-slate-950">Bloc de remplissage</h3>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-sm font-bold text-slate-950 sm:text-base">Bloc de remplissage</h3>
                 <Badge tone={statusTone[blockStatus]}>{statusLabel(blockStatus)}</Badge>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-white p-3 ring-1 ring-slate-200 sm:p-4">
-                  <p className="label">Bloc changé le</p>
-                  <p className="mt-2 text-xl font-black tabular-nums text-slate-950">{formatDateOnly(latestChange(selectedLine))}</p>
-                  <p className="text-lg font-bold tabular-nums text-slate-700">{formatTimeOnly(latestChange(selectedLine))}</p>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="rounded-xl bg-white p-2.5 ring-1 ring-slate-200 sm:p-4">
+                  <p className="label text-[10px] sm:text-xs">Bloc changé le</p>
+                  <p className="mt-1 whitespace-nowrap text-base font-black tabular-nums text-slate-950 sm:mt-2 sm:text-xl">{formatDateOnly(latestChange(selectedLine))}</p>
+                  <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-lg">{formatTimeOnly(latestChange(selectedLine))}</p>
                 </div>
-                <div className={`rounded-xl p-3 ring-1 sm:p-4 ${blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
-                  <p className="label">Péremption bloc</p>
-                  <p className={`mt-2 text-xl font-black tabular-nums ${blockStatus === 'expired' ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
-                  <p className={`text-lg font-bold tabular-nums ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
+                <div className={`rounded-xl p-2.5 ring-1 sm:p-4 ${blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
+                  <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
+                  <p className={`mt-1 whitespace-nowrap text-base font-black tabular-nums sm:mt-2 sm:text-xl ${blockStatus === 'expired' ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
+                  <p className={`text-sm font-bold tabular-nums sm:text-lg ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
                 </div>
               </div>
 
-              <div className="my-5">
+              <div className="my-3 sm:my-5">
                 <BlockValidityBar line={selectedLine} />
               </div>
 
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:gap-y-2">
                 <dt className="text-slate-500">Temps restant</dt>
                 <dd className={`font-black text-right ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                   {remainingLabel(selectedLine)}
@@ -459,7 +459,7 @@ export function ExpiryCheckPage() {
               </dl>
 
               <Button
-                className="mt-5 w-full py-3 text-base shadow-sm"
+                className="mt-3 w-full py-3 text-base shadow-sm sm:mt-5"
                 variant={isBlocked ? 'danger' : 'primary'}
                 onClick={() => setDeclareModalOpen(true)}
               >
@@ -555,30 +555,39 @@ export function ExpiryCheckPage() {
       </div>
       </section>
 
-      <section className={`${mobileView === 'tour' ? 'block' : 'hidden'} mb-6 mt-6 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-4 lg:block`}>
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
+      <section className={`${mobileView === 'tour' ? 'block' : 'hidden'} mb-6 mt-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:mt-6 sm:p-4 lg:block`}>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-xl bg-teal-700 px-3 py-3 text-white sm:px-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran laveur</p>
-            <h2 className="mt-1 text-xl font-black">Board de tournée</h2>
+            <h2 className="text-lg font-black sm:mt-1 sm:text-xl">Board de tournée</h2>
           </div>
-          <p className="max-w-xl text-sm font-medium leading-6 text-teal-50">
+          <p className="hidden max-w-xl text-sm font-medium leading-6 text-teal-50 sm:block">
             Affiché côté laveur. Chaque carte signale clairement l'état du bloc pour repérer les remplacements à prendre en charge.
           </p>
         </div>
-        <div className="rounded-xl border border-teal-200 bg-white p-3 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-xl border border-teal-200 bg-white p-2 sm:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4 sm:gap-3">
           <div>
-            <p className="label">Vue consolidée des lignes</p>
-            <h2 className="mt-1 text-lg font-bold text-slate-950">Blocs à surveiller ou remplacer</h2>
+            <p className="label hidden sm:block">Vue consolidée des lignes</p>
+            <h2 className="text-base font-bold text-slate-950 sm:mt-1 sm:text-lg">Blocs à surveiller ou remplacer</h2>
           </div>
-          <Route className="text-teal-700" size={22} />
+          <Route className="text-teal-700" size={20} />
         </div>
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <StatCard label="Lignes conformes" value={stats.conform} />
-          <StatCard label="Vigilance" value={stats.watch} />
-          <StatCard label="Bloqués" value={stats.blocked} />
+        <div className="mb-3 grid grid-cols-3 gap-2 sm:mb-4 sm:gap-3">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-center sm:p-4">
+            <p className="text-[10px] font-semibold text-emerald-700 sm:text-xs sm:uppercase sm:tracking-wide">OK</p>
+            <p className="mt-1 text-2xl font-bold text-slate-950">{stats.conform}</p>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-center sm:p-4">
+            <p className="text-[10px] font-semibold text-amber-700 sm:text-xs sm:uppercase sm:tracking-wide">Vigilance</p>
+            <p className="mt-1 text-2xl font-bold text-slate-950">{stats.watch}</p>
+          </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-2 text-center sm:p-4">
+            <p className="text-[10px] font-semibold text-rose-700 sm:text-xs sm:uppercase sm:tracking-wide">Bloqués</p>
+            <p className="mt-1 text-2xl font-bold text-slate-950">{stats.blocked}</p>
+          </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-2 sm:gap-3 md:grid-cols-3">
           {washerBoard.map((line) => {
             const status = getBlockStatus(line);
             const expiry = earliestExpiry(line);
@@ -586,25 +595,25 @@ export function ExpiryCheckPage() {
               <button
                 key={line.id}
                 type="button"
-                onClick={() => setSelectedLineId(line.id)}
-                className={`rounded-xl border p-4 text-left transition hover:border-teal-300 ${
+                onClick={() => { setSelectedLineId(line.id); setMobileView('line'); }}
+                className={`rounded-xl border p-3 text-left transition hover:border-teal-300 sm:p-4 ${
                   status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-950">{line.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{line.vat} · {line.product}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-950">{line.name.replace('Ligne de conditionnement ', 'Ligne ')}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{line.vat} · {line.product}</p>
                   </div>
                   <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
                 </div>
-                <p className={`mt-3 text-base font-bold ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                <p className={`mt-2 text-sm font-bold sm:mt-3 sm:text-base ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                   {remainingLabel(line)}
                 </p>
-                <div className="mt-3 rounded-xl bg-white/85 p-3 ring-1 ring-slate-200">
-                  <p className="label">Péremption bloc</p>
-                  <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatDateOnly(expiry)}</p>
-                  <p className="text-base font-bold tabular-nums text-slate-700">{formatTimeOnly(expiry)}</p>
+                <div className="mt-2 rounded-xl bg-white/85 p-2 ring-1 ring-slate-200 sm:mt-3 sm:p-3">
+                  <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
+                  <p className="mt-1 text-base font-black tabular-nums text-slate-950 sm:text-lg">{formatDateOnly(expiry)}</p>
+                  <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-base">{formatTimeOnly(expiry)}</p>
                 </div>
               </button>
             );

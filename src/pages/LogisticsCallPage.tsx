@@ -187,14 +187,14 @@ export function LogisticsCallPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mb-6">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mb-4 sm:mb-6">
         <p className="label">Module logistique</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Logistics Call</h1>
-        <p className="mt-2 max-w-3xl text-slate-600">
+        <h1 className="mt-1 text-xl font-bold text-slate-950 sm:mt-2 sm:text-3xl">Logistics Call</h1>
+        <p className="mt-1 hidden max-w-3xl text-slate-600 sm:mt-2 sm:block">
           Appels palettes côté ligne, priorités, statuts de traitement et board logistique synchronisé.
         </p>
-        <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">
+        <p className="mt-1 hidden max-w-3xl text-sm font-semibold text-teal-800 sm:mt-2 sm:block">
           Demandes visibles, suivies et priorisées sans perte d'information.
         </p>
       </div>
@@ -224,10 +224,10 @@ export function LogisticsCallPage() {
 
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <section className={`${mobileTab === 'line' ? 'block' : 'hidden'} rounded-2xl border-2 border-teal-500 bg-teal-50 p-2 shadow-md sm:p-4 lg:block`}>
-          <div className="mb-3 rounded-xl bg-teal-700 px-4 py-3 text-white">
+          <div className="mb-3 rounded-xl bg-teal-700 px-3 py-3 text-white sm:px-4">
             <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Écran conducteur</p>
-            <h2 className="mt-1 text-xl font-black">Appel depuis la ligne</h2>
-            <p className="mt-2 text-sm font-medium leading-6 text-teal-50">
+            <h2 className="text-lg font-black sm:mt-1 sm:text-xl">Appel depuis la ligne</h2>
+            <p className="mt-1 hidden text-sm font-medium leading-6 text-teal-50 sm:mt-2 sm:block">
               Utilisé côté ligne de conditionnement pour signaler une palette prête, une palette vide à fournir ou une zone à libérer.
             </p>
           </div>
@@ -300,8 +300,8 @@ export function LogisticsCallPage() {
                 <div className="space-y-2">
                   {requests.slice(0, 3).map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
-                      <span className="min-w-0 truncate font-semibold text-slate-800">{r.id} · {r.line}</span>
-                      <Badge tone={statusTone[r.status]}>{logisticsStatusLabels[r.status]}</Badge>
+                      <span className="min-w-0 truncate font-semibold text-slate-800">{r.id} · {r.line.replace('Ligne de conditionnement ', 'Ligne ')}</span>
+                      <span className="shrink-0"><Badge tone={statusTone[r.status]}>{logisticsStatusLabels[r.status]}</Badge></span>
                     </div>
                   ))}
                 </div>
@@ -311,10 +311,10 @@ export function LogisticsCallPage() {
         </section>
 
         <section className={`${mobileTab === 'logistics' ? 'block' : 'hidden'} rounded-2xl border-2 border-slate-500 bg-white p-2 shadow-md sm:p-4 lg:block`}>
-          <div className="mb-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
+          <div className="mb-3 rounded-xl bg-slate-900 px-3 py-3 text-white sm:px-4">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Écran logistique</p>
-            <h2 className="mt-1 text-xl font-black">Board de traitement</h2>
-            <p className="mt-2 text-sm font-medium leading-6 text-slate-200">
+            <h2 className="text-lg font-black sm:mt-1 sm:text-xl">Board de traitement</h2>
+            <p className="mt-1 hidden text-sm font-medium leading-6 text-slate-200 sm:mt-2 sm:block">
               Les demandes envoyées depuis les lignes apparaissent ici pour être vues, prises en charge, récupérées ou annulées.
             </p>
           </div>
@@ -337,10 +337,19 @@ export function LogisticsCallPage() {
               ) : null}
             </div>
 
-            <div className="mb-5 grid gap-3 sm:grid-cols-3">
-              <StatCard label="En attente" value={stats.waiting} />
-              <StatCard label="En cours" value={stats.inProgress} />
-              <StatCard label="Récupérées" value={stats.pickedUp} detail="Aujourd'hui" />
+            <div className="mb-4 grid grid-cols-3 gap-2 sm:mb-5 sm:gap-3">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-center sm:p-4">
+                <p className="text-[10px] font-semibold text-amber-700 sm:text-xs sm:uppercase sm:tracking-wide">Attente</p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">{stats.waiting}</p>
+              </div>
+              <div className="rounded-xl border border-teal-200 bg-teal-50 p-2 text-center sm:p-4">
+                <p className="text-[10px] font-semibold text-teal-700 sm:text-xs sm:uppercase sm:tracking-wide">En cours</p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">{stats.inProgress}</p>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-center sm:p-4">
+                <p className="text-[10px] font-semibold text-emerald-700 sm:text-xs sm:uppercase sm:tracking-wide">Récupérés</p>
+                <p className="mt-1 text-2xl font-bold text-slate-950">{stats.pickedUp}</p>
+              </div>
             </div>
 
             {activeRequests.length > 0 ? (

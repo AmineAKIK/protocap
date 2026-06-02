@@ -85,7 +85,7 @@ function DocList() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto scroll-px-3 pb-1">
+        <div className="flex flex-wrap gap-2">
           {knowledgeCategories.map((cat) => (
             <button
               key={cat}

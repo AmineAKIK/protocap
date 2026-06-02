@@ -18,7 +18,7 @@ const tones: Record<BadgeTone, string> = {
 
 export function Badge({ children, tone = 'slate' }: BadgeProps) {
   return (
-    <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ring-1 ${tones[tone]}`}>
+    <span className={`inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ring-1 ${tones[tone]}`}>
       {children}
     </span>
   );
