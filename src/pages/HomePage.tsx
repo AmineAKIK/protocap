@@ -1,10 +1,18 @@
-import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, Maximize2, RadioTower, Wifi } from 'lucide-react';
+import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, ListChecks, Maximize2, RadioTower, Wifi } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { PresentationMode } from '../components/PresentationMode';
 
 const modules = [
+  {
+    title: 'ShiftGuide',
+    description: "Guide pas à pas pour conducteur de ligne : badgeage, débuts/fins de poste et d'OC, production, tri — une action à la fois.",
+    to: '/shiftguide',
+    icon: ListChecks,
+    tag: 'Procédures · Guidage',
+    highlight: 'Zéro oubli, une action à la fois'
+  },
   {
     title: 'Expiry Check',
     description: 'Suivi de la validité du bloc de remplissage par ligne, board tournée laveur et traçabilité des recharges de cuves.',
@@ -133,7 +141,7 @@ export function HomePage() {
         </article>
 
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((module) => (
             <article
               key={module.title}
