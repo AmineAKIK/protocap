@@ -1,7 +1,61 @@
-import { AlertTriangle, ChevronLeft, Grid2x2, Image, RotateCcw, Send, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Grid2x2, Mic, MicOff, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
+
+// ─── Speech Recognition ───────────────────────────────────────────────────────
+
+interface ISpeechRecognitionEvent {
+  results: { [i: number]: { [j: number]: { transcript: string } } };
+}
+
+interface ISpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  onresult: ((e: ISpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
+
+type SpeechRecognitionCtor = new () => ISpeechRecognition;
+
+const w = window as unknown as Record<string, unknown>;
+const SpeechRecognitionAPI = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SpeechRecognitionCtor | undefined;
+
+function useSpeechInput(onResult: (text: string) => void) {
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<ISpeechRecognition | null>(null);
+
+  const toggle = () => {
+    if (!SpeechRecognitionAPI) return;
+
+    if (listening) {
+      recRef.current?.stop();
+      return;
+    }
+
+    const rec = new SpeechRecognitionAPI();
+    rec.lang = 'fr-FR';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+
+    rec.onresult = (e: ISpeechRecognitionEvent) => {
+      const transcript = e.results[0][0].transcript;
+      onResult(transcript);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  };
+
+  return { listening, toggle, supported: !!SpeechRecognitionAPI };
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,55 +72,41 @@ interface CelineMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  imageUrl?: string;
   checklist: ChecklistItem[];
   followUp: string | null;
   loading?: boolean;
 }
 
-type ApiContentPart =
-  | { type: 'text'; text: string }
-  | { type: 'image_url'; image_url: { url: string; detail: 'auto' } };
-
 interface ApiMessage {
   role: 'user' | 'assistant';
-  content: string | ApiContentPart[];
+  content: string;
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY: string = import.meta.env.VITE_OPENAI_API_KEY ?? '';
+const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
 
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
-    .map((m) => {
-      if (m.role === 'assistant') {
-        return {
-          role: 'assistant' as const,
-          content: JSON.stringify({ message: m.content, checklist: m.checklist, followUp: m.followUp }),
-        };
-      }
-      if (m.imageUrl) {
-        const parts: ApiContentPart[] = [
-          { type: 'image_url', image_url: { url: m.imageUrl, detail: 'auto' } },
-        ];
-        if (m.content) parts.push({ type: 'text', text: m.content });
-        return { role: 'user' as const, content: parts };
-      }
-      return { role: 'user' as const, content: m.content };
-    });
+    .map((m) => ({
+      role: m.role,
+      content:
+        m.role === 'assistant'
+          ? JSON.stringify({ message: m.content, checklist: m.checklist, followUp: m.followUp })
+          : m.content,
+    }));
 }
 
 async function callOpenAI(
   history: ApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'deepseek-chat',
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
       temperature: 0.2,
       response_format: { type: 'json_object' },
@@ -77,7 +117,7 @@ async function callOpenAI(
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
     try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_OPENAI_API_KEY.');
+    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
     if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
@@ -340,15 +380,12 @@ function MessageBubble({
       )}
 
       <div
-        className={`max-w-[88%] rounded-2xl overflow-hidden ${
+        className={`max-w-[88%] rounded-2xl px-4 py-3 ${
           isUser
             ? 'rounded-tr-sm bg-[#3b82f6] text-white'
             : 'rounded-tl-sm border border-slate-700/50 bg-[#1e293b] text-[#f1f5f9]'
         }`}
       >
-        {msg.imageUrl && (
-          <img src={msg.imageUrl} alt="photo envoyée" className="w-full max-h-64 object-cover" />
-        )}
         <div className="px-4 py-3">
           {msg.loading ? (
             <div className="flex items-center gap-2.5">
@@ -364,7 +401,7 @@ function MessageBubble({
               </div>
             </div>
           ) : (
-            msg.content && <p className="break-words text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+            <p className="break-words text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
           )}
         </div>
       </div>
@@ -390,20 +427,20 @@ export function CelinePage() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<CelineMessage[]>(loadHistory);
   const [input, setInput] = useState('');
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
-  // Track which message IDs have already triggered auto-continue
   const autoSentRef = useRef<Set<string>>(new Set());
-  // Always-current reference to sendMessage for use inside effects
   const sendMessageRef = useRef<(text: string) => void>(() => {});
+
+  const { listening, toggle: toggleMic, supported: micSupported } = useSpeechInput((transcript) => {
+    sendMessageRef.current(transcript);
+  });
 
   const messageCount = messages.length;
   useEffect(() => {
@@ -458,14 +495,7 @@ export function CelinePage() {
     setMessages([]);
     setLoading(false);
     setError(null);
-    setPendingImage(null);
     localStorage.removeItem(STORAGE_KEY_HISTORY);
-  };
-
-  const handleImageFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => setPendingImage(e.target?.result as string);
-    reader.readAsDataURL(file);
   };
 
   const handleItemAction = (msgId: string, itemId: string, action: 'done' | 'na') => {
@@ -484,24 +514,20 @@ export function CelinePage() {
     );
   };
 
-  const sendMessage = async (text: string, imageDataUrl?: string) => {
+  const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    const image = imageDataUrl ?? pendingImage ?? undefined;
-    if (!trimmed && !image) return;
-    if (pendingRef.current) return;
+    if (!trimmed || pendingRef.current) return;
     if (!API_KEY) {
-      setError('Clé API non configurée. Ajoute VITE_OPENAI_API_KEY dans les variables Railway et redéploie.');
+      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
       return;
     }
 
     const currentMessages = messages;
-    setPendingImage(null);
 
     const userMsg: CelineMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
       content: trimmed,
-      imageUrl: image,
       checklist: [],
       followUp: null,
     };
@@ -637,31 +663,7 @@ export function CelinePage() {
       )}
 
       <div className="flex-none border-t border-slate-800 bg-[#0f172a] px-4 py-3">
-        {pendingImage && (
-          <div className="relative mb-2 inline-block">
-            <img src={pendingImage} alt="aperçu" className="h-20 w-20 rounded-xl object-cover border border-slate-700" />
-            <button
-              onClick={() => setPendingImage(null)}
-              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-600 text-white hover:bg-slate-500"
-            >
-              <X size={11} />
-            </button>
-          </div>
-        )}
         <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = ''; }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
-          >
-            <Image size={18} />
-          </button>
           <div className="flex-1 rounded-2xl border border-slate-700/60 bg-[#1e293b] px-4 py-3 transition focus-within:border-[#3b82f6]/60">
             <input
               ref={inputRef}
@@ -669,14 +671,26 @@ export function CelinePage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(input); }}
-              placeholder="Décris ta situation…"
-              className="w-full bg-transparent text-sm text-[#f1f5f9] placeholder-slate-600 outline-none"
+              placeholder={listening ? 'Écoute en cours…' : 'Décris ta situation…'}
+              className="w-full bg-transparent text-sm text-[#f1f5f9] placeholder-slate-400 outline-none"
               autoComplete="off"
             />
           </div>
+          {micSupported && (
+            <button
+              onClick={toggleMic}
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition active:scale-90 ${
+                listening
+                  ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+              }`}
+            >
+              {listening ? <MicOff size={18} /> : <Mic size={18} />}
+            </button>
+          )}
           <button
             onClick={() => sendMessage(input)}
-            disabled={(!input.trim() && !pendingImage) || loading}
+            disabled={!input.trim() || loading}
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#3b82f6] text-white transition hover:bg-blue-400 active:scale-90 disabled:opacity-40"
           >
             <Send size={18} />
