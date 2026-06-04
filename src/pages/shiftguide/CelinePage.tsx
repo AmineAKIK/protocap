@@ -150,7 +150,7 @@ async function callOpenAI(
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-const PROMPT_VERSION = 'v7';
+const PROMPT_VERSION = 'v8';
 
 function isValidMessage(m: unknown): m is CelineMessage {
   if (!m || typeof m !== 'object') return false;
