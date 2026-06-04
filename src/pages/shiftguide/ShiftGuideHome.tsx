@@ -554,27 +554,21 @@ export function ShiftGuideHome() {
           <ContextView ctx={activeCtx} summaries={summaries} />
         )}
 
-        {/* Permanent bottom access */}
-        <div className="mx-4 mb-6 mt-2 grid grid-cols-2 gap-3 border-t border-slate-800 pt-6">
+        {/* Quick access */}
+        <div className="mx-4 mb-8 mt-4 flex gap-2">
           <Link
             to="/shiftguide/lexique"
-            className="flex items-center gap-3 rounded-xl bg-[#1e293b] p-3 transition hover:bg-[#283548] active:scale-95"
+            className="flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
           >
-            <BookOpen size={18} className="shrink-0 text-slate-400" />
-            <div>
-              <p className="text-sm font-bold text-[#f1f5f9]">Lexique</p>
-              <p className="text-xs text-slate-500">Sigles & définitions</p>
-            </div>
+            <BookOpen size={13} />
+            Lexique
           </Link>
           <Link
             to="/shiftguide/urgences"
-            className="flex items-center gap-3 rounded-xl border border-red-900/40 bg-[#1e293b] p-3 transition hover:bg-[#283548] active:scale-95"
+            className="flex items-center gap-1.5 rounded-full bg-red-900/30 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-900/50"
           >
-            <AlertTriangle size={18} className="shrink-0 text-red-500" />
-            <div>
-              <p className="text-sm font-bold text-red-400">Urgences</p>
-              <p className="text-xs text-slate-500">Règles d'Or</p>
-            </div>
+            <AlertTriangle size={13} />
+            Urgences
           </Link>
         </div>
       </main>

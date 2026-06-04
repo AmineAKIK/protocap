@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronLeft, Grid2x2, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useBlocker, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ interface ChecklistItem {
   note: string | null;
   module: string | null;
   done: boolean;
+  na: boolean;
 }
 
 interface CelineMessage {
@@ -44,7 +45,8 @@ function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
 }
 
 async function callDeepSeek(
-  history: ApiMessage[]
+  history: ApiMessage[],
+  signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
   const res = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -55,12 +57,13 @@ async function callDeepSeek(
       temperature: 0.2,
       response_format: { type: 'json_object' },
     }),
+    signal,
   });
 
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
     try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide.');
+    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
     if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
@@ -77,6 +80,7 @@ async function callDeepSeek(
         note: item.note ? String(item.note) : null,
         module: item.module ? String(item.module) : null,
         done: false,
+        na: false,
       })
     );
     return {
@@ -94,6 +98,28 @@ async function callDeepSeek(
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
 const PROMPT_VERSION = 'v5';
 
+function isValidMessage(m: unknown): m is CelineMessage {
+  if (!m || typeof m !== 'object') return false;
+  const msg = m as Record<string, unknown>;
+  return (
+    typeof msg.id === 'string' &&
+    (msg.role === 'user' || msg.role === 'assistant') &&
+    typeof msg.content === 'string' &&
+    Array.isArray(msg.checklist) &&
+    (msg.followUp === null || typeof msg.followUp === 'string')
+  );
+}
+
+function normalizeMessage(m: CelineMessage): CelineMessage {
+  return {
+    ...m,
+    checklist: m.checklist.map((item) => ({
+      ...item,
+      na: item.na ?? false,
+    })),
+  };
+}
+
 function loadHistory(): CelineMessage[] {
   try {
     if (localStorage.getItem('shiftguide_prompt_version') !== PROMPT_VERSION) {
@@ -102,7 +128,10 @@ function loadHistory(): CelineMessage[] {
       return [];
     }
     const saved = localStorage.getItem(STORAGE_KEY_HISTORY);
-    return saved ? (JSON.parse(saved) as CelineMessage[]) : [];
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isValidMessage).map(normalizeMessage);
   } catch {
     return [];
   }
@@ -146,138 +175,11 @@ function WelcomeScreen({ onSuggest }: { onSuggest: (text: string) => void }) {
             onClick={() => onSuggest(s.text)}
             className="flex items-center gap-3 rounded-xl bg-[#1e293b] px-4 py-3 text-left transition hover:bg-[#283548] active:scale-[0.98]"
           >
-            <span className="text-lg leading-none">{s.emoji}</span>
-            <span className="text-sm font-medium text-[#94a3b8]">{s.text}</span>
+            <span className="shrink-0 text-lg leading-none">{s.emoji}</span>
+            <span className="min-w-0 break-words text-sm font-medium text-[#94a3b8]">{s.text}</span>
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-// ─── Checklist ────────────────────────────────────────────────────────────────
-
-function Checklist({
-  items,
-  msgId,
-  onToggle,
-}: {
-  items: ChecklistItem[];
-  msgId: string;
-  onToggle: (msgId: string, itemId: string) => void;
-}) {
-  const done = items.filter((i) => i.done).length;
-  const total = items.length;
-  const pct = total > 0 ? (done / total) * 100 : 0;
-  const complete = done === total && total > 0;
-
-  return (
-    <div className="mt-2 overflow-hidden rounded-2xl border border-slate-700/50 bg-[#1e293b]">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5">
-        <span className="text-xs font-bold text-slate-500">{done} / {total} actions</span>
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-700">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${complete ? 'bg-green-500' : 'bg-[#2563eb]'}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="divide-y divide-slate-800/60">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onToggle(msgId, item.id)}
-            className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-800/40 active:scale-[0.99]"
-          >
-            <span
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${
-                item.done ? 'border-green-600 bg-green-600 text-white' : 'border-slate-600 text-transparent'
-              }`}
-            >
-              ✓
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className={`text-sm leading-snug transition-colors ${item.done ? 'text-slate-600 line-through' : 'text-[#f1f5f9]'}`}>
-                {item.text}
-              </p>
-              {item.note && (
-                <p className="mt-0.5 text-xs leading-snug text-slate-500">{item.note}</p>
-              )}
-              {item.module && (
-                <span className="mt-1.5 inline-block rounded-full bg-[#3b82f6]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3b82f6]">
-                  {item.module}
-                </span>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {complete && (
-        <div className="border-t border-green-800/40 bg-green-900/20 px-4 py-2 text-center text-xs font-bold text-green-400">
-          Tout est fait ✓
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── MessageBubble ────────────────────────────────────────────────────────────
-
-function MessageBubble({
-  msg,
-  onToggle,
-}: {
-  msg: CelineMessage;
-  onToggle: (msgId: string, itemId: string) => void;
-}) {
-  const isUser = msg.role === 'user';
-
-  return (
-    <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
-      {!isUser && (
-        <span className="px-1 text-xs font-bold uppercase tracking-widest text-[#3b82f6]">
-          Céline
-        </span>
-      )}
-
-      <div
-        className={`max-w-[88%] rounded-2xl px-4 py-3 ${
-          isUser
-            ? 'rounded-tr-sm bg-[#3b82f6] text-white'
-            : 'rounded-tl-sm border border-slate-700/50 bg-[#1e293b] text-[#f1f5f9]'
-        }`}
-      >
-        {msg.loading ? (
-          <div className="flex items-center gap-2.5">
-            <span className="text-sm text-slate-400">Céline réfléchit</span>
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm leading-relaxed">{msg.content}</p>
-        )}
-      </div>
-
-      {!msg.loading && msg.checklist.length > 0 && (
-        <div className="w-full max-w-[92%]">
-          <Checklist items={msg.checklist} msgId={msg.id} onToggle={onToggle} />
-        </div>
-      )}
-
-      {!msg.loading && msg.followUp && (
-        <div className="max-w-[88%] rounded-xl border border-slate-700/30 bg-slate-800/40 px-3 py-2">
-          <p className="text-xs italic text-slate-500">💬 {msg.followUp}</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -314,6 +216,155 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
   );
 }
 
+// ─── Checklist ────────────────────────────────────────────────────────────────
+
+function Checklist({
+  items,
+  msgId,
+  onAction,
+}: {
+  items: ChecklistItem[];
+  msgId: string;
+  onAction: (msgId: string, itemId: string, action: 'done' | 'na') => void;
+}) {
+  const treated = items.filter((i) => i.done || i.na).length;
+  const total = items.length;
+  const pct = total > 0 ? (treated / total) * 100 : 0;
+  const complete = treated === total && total > 0;
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-2xl border border-slate-700/50 bg-[#1e293b]">
+      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5">
+        <span className="text-xs font-bold text-slate-500">{treated} / {total} actions</span>
+        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-700">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${complete ? 'bg-green-500' : 'bg-[#2563eb]'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="divide-y divide-slate-800/60">
+        {items.map((item) => {
+          const treated = item.done || item.na;
+          return (
+            <div
+              key={item.id}
+              className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
+            >
+              {/* Done button */}
+              <button
+                onClick={() => onAction(msgId, item.id, 'done')}
+                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-all active:scale-95 ${
+                  item.done
+                    ? 'border-green-600 bg-green-600 text-white'
+                    : 'border-slate-600 text-transparent hover:border-green-700'
+                }`}
+              >
+                ✓
+              </button>
+
+              {/* Content */}
+              <div className="min-w-0 flex-1">
+                <p className={`break-words text-sm leading-snug transition-colors ${item.done ? 'text-slate-600 line-through' : item.na ? 'text-slate-600' : 'text-[#f1f5f9]'}`}>
+                  {item.text}
+                </p>
+                {item.note && (
+                  <p className="mt-0.5 break-words text-xs leading-snug text-slate-500">{item.note}</p>
+                )}
+                {item.module && (
+                  <span className="mt-1.5 inline-block rounded-full bg-[#3b82f6]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3b82f6]">
+                    {item.module}
+                  </span>
+                )}
+              </div>
+
+              {/* N/A button */}
+              <button
+                onClick={() => onAction(msgId, item.id, 'na')}
+                className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
+                  item.na
+                    ? 'bg-slate-600 text-slate-200'
+                    : 'text-slate-700 hover:bg-slate-700/60 hover:text-slate-400'
+                }`}
+              >
+                N/A
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {complete && (
+        <div className="flex items-center justify-center gap-2 border-t border-green-800/40 bg-green-900/20 px-4 py-2.5 text-xs font-bold text-green-400">
+          <span>Tout est traité</span>
+          <span className="animate-pulse">→</span>
+          <span className="text-green-500">Céline prépare la suite…</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MessageBubble ────────────────────────────────────────────────────────────
+
+function MessageBubble({
+  msg,
+  onAction,
+}: {
+  msg: CelineMessage;
+  onAction: (msgId: string, itemId: string, action: 'done' | 'na') => void;
+}) {
+  const isUser = msg.role === 'user';
+
+  return (
+    <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
+      {!isUser && (
+        <span className="px-1 text-xs font-bold uppercase tracking-widest text-[#3b82f6]">
+          Céline
+        </span>
+      )}
+
+      <div
+        className={`max-w-[88%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? 'rounded-tr-sm bg-[#3b82f6] text-white'
+            : 'rounded-tl-sm border border-slate-700/50 bg-[#1e293b] text-[#f1f5f9]'
+        }`}
+      >
+        {msg.loading ? (
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-slate-400">Céline réfléchit</span>
+            <div className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="break-words text-sm leading-relaxed">{msg.content}</p>
+        )}
+      </div>
+
+      {!msg.loading && msg.checklist.length > 0 && (
+        <div className="w-full max-w-[92%]">
+          <Checklist items={msg.checklist} msgId={msg.id} onAction={onAction} />
+        </div>
+      )}
+
+      {!msg.loading && msg.followUp && msg.checklist.length === 0 && (
+        <div className="max-w-[88%] rounded-xl border border-slate-700/30 bg-slate-800/40 px-3 py-2">
+          <p className="break-words text-xs italic text-slate-500">💬 {msg.followUp}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── CelinePage ───────────────────────────────────────────────────────────────
 
 export function CelinePage() {
@@ -322,10 +373,20 @@ export function CelinePage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmExit, setConfirmExit] = useState(false);
+  // Block all navigation away from /shiftguide/* when a conversation is active
+  const blocker = useBlocker(
+    ({ nextLocation }) =>
+      messages.length > 0 && !nextLocation.pathname.startsWith('/shiftguide')
+  );
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  // Track which message IDs have already triggered auto-continue
+  const autoSentRef = useRef<Set<string>>(new Set());
+  // Always-current reference to sendMessage for use inside effects
+  const sendMessageRef = useRef<(text: string) => void>(() => {});
 
   const messageCount = messages.length;
   useEffect(() => {
@@ -336,28 +397,65 @@ export function CelinePage() {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
 
+  // Auto-continue: when the last assistant checklist is fully treated, send next prompt
+  useEffect(() => {
+    if (loading || pendingRef.current) return;
+
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === 'assistant' && !m.loading && m.checklist.length > 0);
+
+    if (!lastAssistant) return;
+    if (autoSentRef.current.has(lastAssistant.id)) return;
+
+    const allTreated = lastAssistant.checklist.every((item) => item.done || item.na);
+    if (!allTreated) return;
+
+    autoSentRef.current.add(lastAssistant.id);
+    const text = 'C\'est fait.';
+
+    const timer = setTimeout(() => {
+      sendMessageRef.current(text);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [messages, loading]);
+
   const clearSession = () => {
+    abortRef.current?.abort();
+    pendingRef.current = false;
+    autoSentRef.current.clear();
     setMessages([]);
+    setLoading(false);
+    setError(null);
     localStorage.removeItem(STORAGE_KEY_HISTORY);
   };
 
-  const toggleItem = (msgId: string, itemId: string) => {
+  const handleItemAction = (msgId: string, itemId: string, action: 'done' | 'na') => {
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id !== msgId
-          ? m
-          : { ...m, checklist: m.checklist.map((item) => item.id === itemId ? { ...item, done: !item.done } : item) }
-      )
+      prev.map((m) => {
+        if (m.id !== msgId) return m;
+        return {
+          ...m,
+          checklist: m.checklist.map((item) => {
+            if (item.id !== itemId) return item;
+            if (action === 'done') return { ...item, done: !item.done, na: false };
+            return { ...item, na: !item.na, done: false };
+          }),
+        };
+      })
     );
   };
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || pendingRef.current) return;
     if (!API_KEY) {
       setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
       return;
     }
+
+    const currentMessages = messages;
 
     const userMsg: CelineMessage = {
       id: `user_${Date.now()}`,
@@ -375,6 +473,9 @@ export function CelinePage() {
       loading: true,
     };
 
+    pendingRef.current = true;
+    abortRef.current = new AbortController();
+
     setMessages((prev) => [...prev, userMsg, placeholder]);
     setInput('');
     setError(null);
@@ -382,7 +483,10 @@ export function CelinePage() {
     inputRef.current?.focus();
 
     try {
-      const result = await callDeepSeek(toApiHistory([...messages, userMsg]));
+      const result = await callDeepSeek(
+        toApiHistory([...currentMessages, userMsg]),
+        abortRef.current.signal
+      );
       setMessages((prev) => [
         ...prev.filter((m) => !m.loading),
         {
@@ -394,26 +498,32 @@ export function CelinePage() {
         },
       ]);
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
       setMessages((prev) => prev.filter((m) => !m.loading));
     } finally {
+      pendingRef.current = false;
       setLoading(false);
       inputRef.current?.focus();
     }
   };
 
+  // Keep ref in sync with latest sendMessage on every render
+  sendMessageRef.current = sendMessage;
+
   return (
     <div className="flex h-[100dvh] flex-col bg-[#0f172a] text-[#f1f5f9]">
-      {confirmExit && (
+      {blocker.state === 'blocked' && (
         <ConfirmModal
-          onConfirm={() => navigate('/')}
-          onCancel={() => setConfirmExit(false)}
+          onConfirm={() => blocker.proceed()}
+          onCancel={() => blocker.reset()}
         />
       )}
+
       <header className="sticky top-0 z-30 flex-none border-b border-slate-800 bg-[#0f172a]/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => messages.length === 0 ? navigate('/') : setConfirmExit(true)}
+            onClick={() => navigate('/')}
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
           >
             <ChevronLeft size={18} />
@@ -452,14 +562,14 @@ export function CelinePage() {
             <WelcomeScreen onSuggest={sendMessage} />
           ) : (
             messages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} onToggle={toggleItem} />
+              <MessageBubble key={msg.id} msg={msg} onAction={handleItemAction} />
             ))
           )}
 
           {error && (
             <div className="flex items-start gap-3 rounded-xl border border-red-800/60 bg-red-900/20 px-4 py-3">
               <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="break-words text-sm text-red-400">{error}</p>
             </div>
           )}
 
@@ -474,14 +584,13 @@ export function CelinePage() {
             className="flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-700 hover:text-slate-300"
           >
             <Trash2 size={11} />
-            Effacer
           </button>
           <button
             onClick={clearSession}
             className="flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-700 hover:text-slate-300"
           >
             <RotateCcw size={11} />
-            Nouveau poste
+            <span>Nouveau poste</span>
           </button>
         </div>
       )}
