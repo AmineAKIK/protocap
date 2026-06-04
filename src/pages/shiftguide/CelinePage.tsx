@@ -646,20 +646,20 @@ export function CelinePage() {
       )}
 
       <header className="sticky top-0 z-30 flex-none border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto grid h-14 w-full max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
           <button
             onClick={() => messages.length === 0 ? navigate('/') : setConfirmExit(true)}
-            className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+            className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
           >
             <ChevronLeft size={18} />
-            <span className="hidden sm:inline">Toolkit</span>
+            <span className="hidden min-[380px]:inline">Toolkit</span>
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10">
+          <div className="flex min-w-0 items-center justify-center gap-2">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10 sm:h-10 sm:w-10">
               <Bot size={17} />
             </span>
-            <span className="text-sm font-black text-zinc-950">Céline</span>
+            <span className="truncate text-sm font-black text-zinc-950">Céline</span>
             <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-black text-teal-700 ring-1 ring-teal-100">
               IA
             </span>
@@ -668,14 +668,16 @@ export function CelinePage() {
           <div className="flex items-center gap-2">
             <Link
               to="/shiftguide/modules"
-              className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-700 transition hover:bg-zinc-200"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="Modules"
             >
               <Grid2x2 size={13} />
               <span className="hidden sm:inline">Modules</span>
             </Link>
             <Link
               to="/shiftguide/urgences"
-              className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="Urgences"
             >
               <AlertTriangle size={13} />
               <span className="hidden sm:inline">Urgences</span>

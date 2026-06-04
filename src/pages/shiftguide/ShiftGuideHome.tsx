@@ -187,7 +187,7 @@ function getModuleById(id: string): SGModule | undefined {
 function StatusPill({ summary, idle = 'Prêt' }: { summary: ModuleSummary; idle?: string }) {
   if (summary.isComplete) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-black uppercase text-emerald-800">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-black uppercase text-emerald-800">
         <ShieldCheck size={11} />
         Terminé
       </span>
@@ -196,14 +196,14 @@ function StatusPill({ summary, idle = 'Prêt' }: { summary: ModuleSummary; idle?
 
   if (summary.treatedCount > 0) {
     return (
-      <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[11px] font-black uppercase text-cyan-800">
+      <span className="whitespace-nowrap rounded-full bg-cyan-100 px-2 py-0.5 text-[11px] font-black uppercase text-cyan-800">
         {Math.round(getProgressPct(summary))}%
       </span>
     );
   }
 
   return (
-    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-black uppercase text-zinc-500">
+    <span className="whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-black uppercase text-zinc-500">
       {idle}
     </span>
   );
@@ -305,7 +305,7 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
           <Link
             key={module.id}
             to={`/shiftguide/module/${module.id}`}
-            className="grid grid-cols-[auto_minmax(0,1fr)_7rem] items-center gap-3 border-b border-zinc-100 px-4 py-3 transition last:border-b-0 hover:bg-zinc-50"
+            className="grid grid-cols-[auto_minmax(0,1fr)_3.5rem] items-center gap-3 border-b border-zinc-100 px-3 py-3 transition last:border-b-0 hover:bg-zinc-50 sm:grid-cols-[auto_minmax(0,1fr)_7rem] sm:px-4"
           >
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200">
               <Icon size={17} />
@@ -313,7 +313,9 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="truncate text-sm font-black text-zinc-950">{module.title}</p>
-                <StatusPill summary={summary} />
+                <span className="hidden sm:inline-flex">
+                  <StatusPill summary={summary} />
+                </span>
               </div>
               <p className="mt-0.5 truncate text-xs font-medium text-zinc-500">{module.description}</p>
               <div className="mt-2">
@@ -321,10 +323,10 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-black tabular-nums text-zinc-950">
+              <p className="text-xs font-black tabular-nums text-zinc-950 sm:text-sm">
                 {summary.treatedCount}/{summary.totalActions}
               </p>
-              <p className="text-[11px] font-bold uppercase text-zinc-400">actions</p>
+              <p className="hidden text-[11px] font-bold uppercase text-zinc-400 sm:block">actions</p>
             </div>
           </Link>
         );
@@ -375,6 +377,40 @@ function ContextRail({
         })}
       </div>
     </aside>
+  );
+}
+
+function MobileContextBar({
+  activeId,
+  onSelect,
+}: {
+  activeId: ContextId | null;
+  onSelect: (id: ContextId) => void;
+}) {
+  return (
+    <div className="lg:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 py-3" style={{ scrollbarWidth: 'none' }}>
+        {CONTEXTS.map((ctx) => {
+          const Icon = ctx.icon;
+          const active = activeId === ctx.id;
+
+          return (
+            <button
+              key={ctx.id}
+              onClick={() => onSelect(ctx.id)}
+              className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-xs font-black transition ${
+                active
+                  ? 'bg-zinc-950 text-teal-300'
+                  : 'bg-white text-zinc-600 ring-1 ring-zinc-200'
+              }`}
+            >
+              <Icon size={14} />
+              {ctx.short}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -512,22 +548,22 @@ export function ShiftGuideHome() {
   return (
     <div className="min-h-screen bg-[#f3f5f7] text-zinc-950">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto grid h-14 max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
+            className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
           >
             <ChevronLeft size={17} />
-            Retour
+            <span className="hidden min-[380px]:inline">Retour</span>
           </button>
 
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10">
+          <div className="flex min-w-0 items-center justify-center gap-2 sm:gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10 sm:h-10 sm:w-10">
               <ListChecks size={19} />
             </span>
-            <div>
-              <p className="text-sm font-black text-zinc-950">ShiftGuide</p>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-zinc-950">ShiftGuide</p>
+              <p className="hidden text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400 sm:block">
                 Command surface
               </p>
             </div>
@@ -536,33 +572,38 @@ export function ShiftGuideHome() {
           <div className="flex items-center gap-2">
             <Link
               to="/shiftguide"
-              className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-2 text-xs font-black text-zinc-700 transition hover:bg-zinc-200"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="Céline"
             >
               <MessageSquare size={13} />
-              Céline
+              <span className="hidden sm:inline">Céline</span>
             </Link>
             <Link
               to="/shiftguide/urgences"
-              className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="Urgences"
             >
               <AlertTriangle size={13} />
-              Urgences
+              <span className="hidden sm:inline">Urgences</span>
             </Link>
           </div>
         </div>
+        <MobileContextBar activeId={contextId} onSelect={handleContextSelect} />
       </header>
 
       <main className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)_19rem] lg:px-8">
-        <ContextRail activeId={contextId} onSelect={handleContextSelect} />
+        <div className="hidden lg:block">
+          <ContextRail activeId={contextId} onSelect={handleContextSelect} />
+        </div>
 
         <section className="min-w-0 space-y-5">
           <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
             <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_18rem]">
-              <div className="border-b border-zinc-100 px-5 py-5 md:border-b-0 md:border-r">
+              <div className="border-b border-zinc-100 px-4 py-4 md:border-b-0 md:border-r sm:px-5 sm:py-5">
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-teal-700">
                   {activeCtx.label}
                 </p>
-                <h1 className="mt-1 text-3xl font-black tracking-tight text-zinc-950">
+                <h1 className="mt-1 text-2xl font-black tracking-tight text-zinc-950 sm:text-3xl">
                   Cockpit conducteur
                 </h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
@@ -570,12 +611,12 @@ export function ShiftGuideHome() {
                   aux modules, urgences et reprise.
                 </p>
               </div>
-              <div className="bg-zinc-950 p-5 text-white">
+              <div className="bg-zinc-950 p-4 text-white sm:p-5">
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-teal-300">
                   Avancement global
                 </p>
                 <div className="mt-4 flex items-end justify-between gap-4">
-                  <p className="text-5xl font-black tracking-tight">{completionPct}%</p>
+                  <p className="text-4xl font-black tracking-tight sm:text-5xl">{completionPct}%</p>
                   <p className="pb-1 text-right text-xs font-bold text-zinc-400">
                     {treatedActions}/{totalActions}
                     <br />
@@ -592,7 +633,7 @@ export function ShiftGuideHome() {
           <ContextView ctx={activeCtx} summaries={summaries} />
         </section>
 
-        <aside className="space-y-4">
+        <aside className="hidden space-y-4 lg:block">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
               Accès rapide

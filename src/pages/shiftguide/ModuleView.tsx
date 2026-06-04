@@ -433,18 +433,18 @@ export function ModuleView() {
     <div className="flex h-[100dvh] flex-col bg-slate-50 text-slate-950">
       {/* Header */}
       <header className="flex-none border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-3 sm:px-6">
-        <div className="flex items-center gap-1.5">
+        <div className="mx-auto grid h-14 max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-1.5">
           <button
             onClick={handleClose}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
           >
             <X size={20} />
           </button>
           {isChoice && selectedSub && (
             <button
               onClick={handleBackToChoice}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+              className="hidden items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 min-[380px]:flex"
             >
               <ChevronLeft size={14} />
               Types
@@ -452,15 +452,15 @@ export function ModuleView() {
           )}
         </div>
 
-        <div className="flex flex-col items-center">
-          <span className="flex items-center gap-2 text-sm font-bold text-slate-950">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
+        <div className="flex min-w-0 flex-col items-center">
+          <span className="flex min-w-0 max-w-full items-center gap-2 text-sm font-bold text-slate-950">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white">
               <ModuleIcon size={16} />
             </span>
-            {module.title}
+            <span className="truncate">{module.title}</span>
           </span>
           {isChoice && selectedSub && (
-            <span className="text-xs font-semibold text-teal-700">{selectedSub.title}</span>
+            <span className="max-w-full truncate text-xs font-semibold text-teal-700">{selectedSub.title}</span>
           )}
         </div>
 
