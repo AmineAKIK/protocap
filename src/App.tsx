@@ -7,6 +7,7 @@ import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { LogisticsCallPage } from './pages/LogisticsCallPage';
 import { OperationalReportPage } from './pages/OperationalReportPage';
 import { PackingCalculatorPage } from './pages/PackingCalculatorPage';
+import { CelinePage } from './pages/shiftguide/CelinePage';
 import { LexiquePage } from './pages/shiftguide/LexiquePage';
 import { ModuleView } from './pages/shiftguide/ModuleView';
 import { ShiftGuideHome } from './pages/shiftguide/ShiftGuideHome';
@@ -26,7 +27,8 @@ export function App() {
   return (
     <Routes>
       {/* ShiftGuide — full-screen dark experience, outside AppShell */}
-      <Route path="/shiftguide" element={<ShiftGuideHome />} />
+      <Route path="/shiftguide" element={<CelinePage />} />
+      <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
       <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
       <Route path="/shiftguide/lexique" element={<LexiquePage />} />
       <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
