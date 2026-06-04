@@ -286,12 +286,12 @@ function MessageBubble({
 
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-8 backdrop-blur-sm sm:items-center sm:pb-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700 bg-[#1e293b]">
         <div className="px-5 py-5">
           <p className="text-sm font-bold text-[#f1f5f9]">Quitter Céline ?</p>
           <p className="mt-1.5 text-sm leading-relaxed text-[#94a3b8]">
-            La conversation en cours sera perdue.
+            Tu veux vraiment quitter ? L'historique reste sauvegardé, tu pourras reprendre.
           </p>
         </div>
         <div className="flex border-t border-slate-700">
@@ -413,7 +413,7 @@ export function CelinePage() {
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
           >
             <ChevronLeft size={18} />
-            Toolkit
+            <span className="hidden sm:inline">Toolkit</span>
           </button>
 
           <div className="flex items-center gap-2">
@@ -426,17 +426,17 @@ export function CelinePage() {
           <div className="flex items-center gap-2">
             <Link
               to="/shiftguide/modules"
-              className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+              className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-2 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-700 hover:text-slate-200 sm:px-3"
             >
               <Grid2x2 size={13} />
-              Modules
+              <span className="hidden sm:inline">Modules</span>
             </Link>
             <Link
               to="/shiftguide/urgences"
-              className="flex items-center gap-1.5 rounded-lg bg-red-700/80 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:bg-red-600"
+              className="flex items-center gap-1.5 rounded-lg bg-red-700/80 px-2 py-1.5 text-xs font-bold text-red-100 transition hover:bg-red-600 sm:px-3"
             >
               <AlertTriangle size={13} />
-              Urgences
+              <span className="hidden sm:inline">Urgences</span>
             </Link>
           </div>
         </div>
