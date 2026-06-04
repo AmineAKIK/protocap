@@ -1,9 +1,46 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  BadgeCheck,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Factory,
+  Flag,
+  GitBranch,
+  IdCard,
+  Layers3,
+  ListChecks,
+  PackageCheck,
+  PlayCircle,
+  RotateCcw,
+  Waves,
+  X,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { SGAction, SGSubModule } from '../../data/shiftguideModules';
 import { sgModules } from '../../data/shiftguideModules';
 import { useModuleProgress } from '../../hooks/useModuleProgress';
+
+const moduleIconMap: Record<string, LucideIcon> = {
+  badgeage: IdCard,
+  debut_poste: ClipboardCheck,
+  fin_poste: Flag,
+  debut_oc: PlayCircle,
+  fin_oc: BadgeCheck,
+  changement_oc: GitBranch,
+  debut_cuve: Waves,
+  fin_cuve: PackageCheck,
+  production: Factory,
+  tri: Layers3,
+};
+
+function getModuleIcon(moduleId: string | undefined): LucideIcon {
+  if (!moduleId) return ListChecks;
+  return moduleIconMap[moduleId] ?? ListChecks;
+}
 
 // ─── Exit Warning Modal ──────────────────────────────────────────────────────
 
@@ -15,25 +52,25 @@ function ExitWarningModal({
   onLeave: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-[#1e293b] p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-[#f1f5f9]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <p className="mb-2 text-base font-bold text-slate-950">
           Module non terminé
         </p>
-        <p className="mb-6 text-sm leading-relaxed text-[#94a3b8]">
+        <p className="mb-6 text-sm leading-relaxed text-slate-500">
           Ce module n'est pas terminé. Ta progression est sauvegardée. Tu
           pourras reprendre où tu en es.
         </p>
         <div className="flex gap-3">
           <button
             onClick={onStay}
-            className="flex-1 rounded-xl bg-[#3b82f6] py-3 text-sm font-bold text-white transition hover:bg-blue-400 active:scale-95"
+            className="flex-1 rounded-xl bg-teal-700 py-3 text-sm font-bold text-white transition hover:bg-teal-600 active:scale-95"
           >
             Continuer
           </button>
           <button
             onClick={onLeave}
-            className="flex-1 rounded-xl bg-slate-700 py-3 text-sm font-bold text-slate-200 transition hover:bg-slate-600 active:scale-95"
+            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95"
           >
             Quitter
           </button>
@@ -53,18 +90,18 @@ function ResetConfirmModal({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-[#1e293b] p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-[#f1f5f9]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <p className="mb-2 text-base font-bold text-slate-950">
           Réinitialiser ?
         </p>
-        <p className="mb-6 text-sm leading-relaxed text-[#94a3b8]">
+        <p className="mb-6 text-sm leading-relaxed text-slate-500">
           Cela effacera toutes les validations de ce module.
         </p>
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 rounded-xl bg-slate-700 py-3 text-sm font-bold text-slate-200 transition hover:bg-slate-600 active:scale-95"
+            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95"
           >
             Annuler
           </button>
@@ -90,29 +127,39 @@ function ChoiceScreen({
   onSelect: (sub: SGSubModule) => void;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10">
-      <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500">
-        Choisir le type
-      </p>
-      {subModules.map((sub) => (
-        <button
-          key={sub.id}
-          onClick={() => onSelect(sub)}
-          className="flex w-full max-w-sm flex-col rounded-2xl bg-[#1e293b] p-5 text-left transition hover:bg-[#334155] active:scale-95"
-        >
-          {sub.description && (
-            <span className="mb-1 text-xs font-bold uppercase tracking-widest text-[#3b82f6]">
-              {sub.description}
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-4 py-8 sm:px-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Choisir le type</p>
+        <h2 className="mt-2 text-2xl font-bold text-slate-950">Quel scénario veux-tu suivre ?</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Le choix ouvre uniquement les actions adaptées au contexte terrain.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {subModules.map((sub) => (
+          <button
+            key={sub.id}
+            onClick={() => onSelect(sub)}
+            className="panel group flex min-h-36 flex-col p-5 text-left transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md active:scale-[0.99]"
+          >
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700 ring-1 ring-teal-100">
+              <GitBranch size={19} />
             </span>
-          )}
-          <span className="text-base font-bold text-[#f1f5f9]">
-            {sub.title}
-          </span>
-          <span className="mt-1 text-xs text-slate-400">
-            {sub.actions.length} action{sub.actions.length > 1 ? 's' : ''}
-          </span>
-        </button>
-      ))}
+            {sub.description && (
+              <span className="mt-4 text-xs font-bold uppercase tracking-widest text-teal-700">
+                {sub.description}
+              </span>
+            )}
+            <span className="mt-1 text-base font-bold text-slate-950 transition group-hover:text-teal-700">
+              {sub.title}
+            </span>
+            <span className="mt-2 text-xs font-semibold text-slate-500">
+              {sub.actions.length} action{sub.actions.length > 1 ? 's' : ''}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -182,17 +229,17 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
       )}
 
       {/* Progress bar */}
-      <div className="flex-none">
-        <div className="h-1.5 bg-slate-800">
+      <div className="flex-none border-b border-slate-200 bg-white">
+        <div className="h-1.5 bg-slate-100">
           <div
-            className="h-full bg-[#2563eb] transition-all duration-300"
+            className="h-full bg-teal-700 transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <p className="px-4 py-1.5 text-xs text-slate-500">
+        <p className="mx-auto max-w-5xl px-4 py-2 text-xs font-semibold text-slate-500 sm:px-6">
           {treatedCount} / {totalActions} actions traitées
           {isComplete && (
-            <span className="ml-2 font-bold text-green-400">· Terminé ✓</span>
+            <span className="ml-2 font-bold text-emerald-700">Terminé</span>
           )}
         </p>
       </div>
@@ -212,95 +259,95 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
           return (
             <div
               key={action.id}
-              className={`relative flex min-w-full snap-start flex-col justify-center px-6 py-8 transition-colors ${
+              className={`relative flex min-w-full snap-start flex-col justify-center px-4 py-8 transition-colors sm:px-6 ${
                 isValidated
-                  ? 'bg-[#14532d]/40'
-                  : 'bg-[#0f172a]'
+                  ? 'bg-emerald-50'
+                  : 'bg-slate-50'
               }`}
             >
-              {/* Status badge */}
-              {isValidated && (
-                <span className="absolute right-5 top-5 rounded-full bg-green-700 px-2.5 py-0.5 text-xs font-bold text-green-100">
-                  ✓
-                </span>
-              )}
-              {isNA && (
-                <span className="absolute right-5 top-5 rounded-full bg-slate-600 px-2.5 py-0.5 text-xs font-bold text-slate-300 line-through">
-                  N/A
-                </span>
-              )}
+              <article className="panel mx-auto flex w-full max-w-3xl flex-col p-6 shadow-sm sm:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                      Action {String(i + 1).padStart(2, '0')}
+                    </p>
+                    <p className="mt-3 text-xl font-bold leading-snug text-slate-950 sm:text-2xl">
+                      <span className={isNA ? 'text-slate-400 line-through' : ''}>
+                        {action.text}
+                      </span>
+                    </p>
+                  </div>
+                  {isValidated && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                      <Check size={12} />
+                      Validé
+                    </span>
+                  )}
+                  {isNA && (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
+                      N/A
+                    </span>
+                  )}
+                </div>
 
-              {/* Step number */}
-              <p className="mb-5 text-5xl font-black text-[#3b82f6] opacity-30">
-                {String(i + 1).padStart(2, '0')}
-              </p>
-
-              {/* Action text */}
-              <p
-                className={`text-xl font-bold leading-snug sm:text-2xl ${
-                  isNA ? 'text-slate-500 line-through' : 'text-[#f1f5f9]'
-                }`}
-              >
-                {action.text}
-              </p>
-
-              {/* Note */}
-              {action.note && (
-                <p className="mt-4 text-sm leading-relaxed text-[#94a3b8]">
-                  {action.note}
-                </p>
-              )}
+                {action.note && (
+                  <p className="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-500 ring-1 ring-slate-100">
+                    {action.note}
+                  </p>
+                )}
+              </article>
             </div>
           );
         })}
       </div>
 
       {/* Navigation arrows */}
-      <div className="flex-none flex items-center justify-between px-4 py-2">
+      <div className="mx-auto flex w-full max-w-5xl flex-none items-center justify-between px-4 py-2 sm:px-6">
         <button
           onClick={goPrev}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-slate-700 active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95"
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-sm font-semibold text-slate-500">
+        <span className="text-sm font-bold text-slate-500">
           {currentIndex + 1} / {actions.length}
         </span>
         <button
           onClick={goNext}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 text-slate-300 transition hover:bg-slate-700 active:scale-90"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95"
         >
           <ChevronRight size={20} />
         </button>
       </div>
 
       {/* Action buttons */}
-      <div className="flex-none flex gap-3 px-4 pb-3">
+      <div className="mx-auto flex w-full max-w-5xl flex-none gap-3 px-4 pb-3 sm:px-6">
         <button
           onClick={handleValidate}
-          className={`flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 ${
+          className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 ${
             currentStatus === 'validated'
-              ? 'bg-green-600 text-white ring-2 ring-green-400'
-              : 'bg-green-700 text-white hover:bg-green-600'
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
+              : 'bg-teal-700 text-white hover:bg-teal-600'
           }`}
         >
-          ✓ VALIDER
+          <Check size={17} />
+          Valider
         </button>
         <button
           onClick={handleNA}
           className={`flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 ${
             currentStatus === 'na'
-              ? 'bg-slate-500 text-white ring-2 ring-slate-300'
-              : 'bg-[#475569] text-white hover:bg-slate-500'
+              ? 'bg-slate-700 text-white ring-2 ring-slate-300'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
           }`}
         >
-          — N/A
+          N/A
         </button>
       </div>
 
       {/* Footer note */}
       {footerNote && (
-        <p className="flex-none px-4 pb-1 text-center text-xs text-slate-600">
+        <p className="flex-none px-4 pb-1 text-center text-xs font-semibold text-slate-500">
           {footerNote}
         </p>
       )}
@@ -309,8 +356,9 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
       <div className="flex-none pb-4 pt-1 text-center">
         <button
           onClick={() => setShowReset(true)}
-          className="text-xs text-slate-600 underline-offset-2 transition hover:text-slate-400 hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline"
         >
+          <RotateCcw size={12} />
           Réinitialiser la progression
         </button>
       </div>
@@ -364,7 +412,7 @@ export function ModuleView() {
         return;
       }
     }
-    navigate('/shiftguide/modules');
+    navigate(-1);
   };
 
   const handleBackToChoice = () => {
@@ -373,27 +421,30 @@ export function ModuleView() {
 
   if (!module) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0f172a] text-slate-400">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
         Module introuvable
       </div>
     );
   }
 
+  const ModuleIcon = getModuleIcon(module.id);
+
   return (
-    <div className="flex h-[100dvh] flex-col bg-[#0f172a] text-[#f1f5f9]">
+    <div className="flex h-[100dvh] flex-col bg-slate-50 text-slate-950">
       {/* Header */}
-      <header className="flex-none flex items-center justify-between border-b border-slate-800 px-3 py-2">
-        <div className="flex items-center gap-1">
+      <header className="flex-none border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-3 sm:px-6">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={handleClose}
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
           >
             <X size={20} />
           </button>
           {isChoice && selectedSub && (
             <button
               onClick={handleBackToChoice}
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
             >
               <ChevronLeft size={14} />
               Types
@@ -402,27 +453,31 @@ export function ModuleView() {
         </div>
 
         <div className="flex flex-col items-center">
-          <span className="text-sm font-bold text-[#f1f5f9]">
-            {module.icon} {module.title}
+          <span className="flex items-center gap-2 text-sm font-bold text-slate-950">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
+              <ModuleIcon size={16} />
+            </span>
+            {module.title}
           </span>
           {isChoice && selectedSub && (
-            <span className="text-xs text-[#3b82f6]">{selectedSub.title}</span>
+            <span className="text-xs font-semibold text-teal-700">{selectedSub.title}</span>
           )}
         </div>
 
         <Link
           to="/shiftguide/urgences"
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-800/40 text-red-400 transition hover:bg-red-700 hover:text-red-200"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
         >
           <AlertTriangle size={16} />
         </Link>
+        </div>
       </header>
 
       {/* Exit warning modal */}
       {showExitWarning && (
         <ExitWarningModal
           onStay={() => setShowExitWarning(false)}
-          onLeave={() => navigate('/shiftguide/modules')}
+          onLeave={() => navigate(-1)}
         />
       )}
 

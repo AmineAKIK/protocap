@@ -26,7 +26,7 @@ function ScrollToTop() {
 export function App() {
   return (
     <Routes>
-      {/* ShiftGuide — full-screen dark experience, outside AppShell */}
+      {/* ShiftGuide — focused operational experience, outside AppShell */}
       <Route path="/shiftguide" element={<CelinePage />} />
       <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
       <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
