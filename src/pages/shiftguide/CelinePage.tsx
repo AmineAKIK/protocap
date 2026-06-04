@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronLeft, Grid2x2, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useBlocker, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -373,11 +373,7 @@ export function CelinePage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Block all navigation away from /shiftguide/* when a conversation is active
-  const blocker = useBlocker(
-    ({ nextLocation }) =>
-      messages.length > 0 && !nextLocation.pathname.startsWith('/shiftguide')
-  );
+  const [confirmExit, setConfirmExit] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -392,6 +388,19 @@ export function CelinePage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
+
+  // Intercept browser back gesture / OS back button when conversation is active
+  const hasMessages = messages.length > 0;
+  useEffect(() => {
+    if (!hasMessages) return;
+    window.history.pushState(null, '', window.location.href);
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href);
+      setConfirmExit(true);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [hasMessages]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
@@ -513,17 +522,17 @@ export function CelinePage() {
 
   return (
     <div className="flex h-[100dvh] flex-col bg-[#0f172a] text-[#f1f5f9]">
-      {blocker.state === 'blocked' && (
+      {confirmExit && (
         <ConfirmModal
-          onConfirm={() => blocker.proceed()}
-          onCancel={() => blocker.reset()}
+          onConfirm={() => { setConfirmExit(false); navigate('/'); }}
+          onCancel={() => setConfirmExit(false)}
         />
       )}
 
       <header className="sticky top-0 z-30 flex-none border-b border-slate-800 bg-[#0f172a]/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => messages.length === 0 ? navigate('/') : setConfirmExit(true)}
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
           >
             <ChevronLeft size={18} />
