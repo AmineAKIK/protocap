@@ -1,3 +1,4 @@
+import { procedureDocs } from './knowledgeData';
 import { lexiqueEntries, sgModules } from './shiftguideModules';
 
 function buildModulesContent(): string {
@@ -25,6 +26,19 @@ function buildModulesContent(): string {
         return `[${m.title.toUpperCase()}]\n${subs}`;
       }
       return '';
+    })
+    .join('\n\n');
+}
+
+function buildKnowledgeContent(): string {
+  return procedureDocs
+    .map((doc) => {
+      const steps = doc.steps
+        .map((s, i) => `  ${i + 1}. ${s.action} → ${s.expected}`)
+        .join('\n');
+      const checks = doc.keyChecks.map((c) => `  • ${c}`).join('\n');
+      const watch = doc.watchPoints.map((w) => `  ⚠ ${w}`).join('\n');
+      return `[${doc.title.toUpperCase()} — ${doc.lineArea}]\n${steps}\nPoints clés :\n${checks}\nVigilance :\n${watch}`;
     })
     .join('\n\n');
 }
@@ -132,6 +146,12 @@ PRODUCTION = surveillance continue. Ne l'inclure QUE si l'operateur demande ses 
 
 ORDRE LOGIQUE D'UN SHIFT :
 Badgeage debut -> Debut de poste -> [Debut OC] -> [Production + cuves] -> [Changement OC = Fin OC + delta + Debut OC, repetable] -> ... -> Fin OC final -> Fin de poste -> Badgeage fin
+
+=== CONNAISSANCES TERRAIN ===
+Ces informations couvrent les sujets que tu peux rencontrer au-delà des procédures de poste : démarrage ligne, bloc de remplissage, nettoyage, gestion palettes, anomalies, et certification halal.
+Tu peux répondre à des questions sur ces sujets avec ces infos. Tu ne cites jamais de numéro de document ni de titre de procédure — tu réponds directement.
+
+${buildKnowledgeContent()}
 
 === PROCEDURES COMPLETES ===
 

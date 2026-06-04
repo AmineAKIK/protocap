@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, Grid2x2, RotateCcw, Send, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Grid2x2, Image, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
@@ -18,41 +18,55 @@ interface CelineMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
   checklist: ChecklistItem[];
   followUp: string | null;
   loading?: boolean;
 }
 
+type ApiContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail: 'auto' } };
+
 interface ApiMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | ApiContentPart[];
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
+const API_KEY: string = import.meta.env.VITE_OPENAI_API_KEY ?? '';
 
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
-    .map((m) => ({
-      role: m.role,
-      content:
-        m.role === 'assistant'
-          ? JSON.stringify({ message: m.content, checklist: m.checklist, followUp: m.followUp })
-          : m.content,
-    }));
+    .map((m) => {
+      if (m.role === 'assistant') {
+        return {
+          role: 'assistant' as const,
+          content: JSON.stringify({ message: m.content, checklist: m.checklist, followUp: m.followUp }),
+        };
+      }
+      if (m.imageUrl) {
+        const parts: ApiContentPart[] = [
+          { type: 'image_url', image_url: { url: m.imageUrl, detail: 'auto' } },
+        ];
+        if (m.content) parts.push({ type: 'text', text: m.content });
+        return { role: 'user' as const, content: parts };
+      }
+      return { role: 'user' as const, content: m.content };
+    });
 }
 
-async function callDeepSeek(
+async function callOpenAI(
   history: ApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'gpt-4o',
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
       temperature: 0.2,
       response_format: { type: 'json_object' },
@@ -63,7 +77,7 @@ async function callDeepSeek(
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
     try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
+    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_OPENAI_API_KEY.');
     if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
@@ -96,7 +110,7 @@ async function callDeepSeek(
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-const PROMPT_VERSION = 'v5';
+const PROMPT_VERSION = 'v7';
 
 function isValidMessage(m: unknown): m is CelineMessage {
   if (!m || typeof m !== 'object') return false;
@@ -326,28 +340,33 @@ function MessageBubble({
       )}
 
       <div
-        className={`max-w-[88%] rounded-2xl px-4 py-3 ${
+        className={`max-w-[88%] rounded-2xl overflow-hidden ${
           isUser
             ? 'rounded-tr-sm bg-[#3b82f6] text-white'
             : 'rounded-tl-sm border border-slate-700/50 bg-[#1e293b] text-[#f1f5f9]'
         }`}
       >
-        {msg.loading ? (
-          <div className="flex items-center gap-2.5">
-            <span className="text-sm text-slate-400">Céline réfléchit</span>
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="break-words text-sm leading-relaxed">{msg.content}</p>
+        {msg.imageUrl && (
+          <img src={msg.imageUrl} alt="photo envoyée" className="w-full max-h-64 object-cover" />
         )}
+        <div className="px-4 py-3">
+          {msg.loading ? (
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm text-slate-400">Céline réfléchit</span>
+              <div className="flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            msg.content && <p className="break-words text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+          )}
+        </div>
       </div>
 
       {!msg.loading && msg.checklist.length > 0 && (
@@ -371,9 +390,11 @@ export function CelinePage() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<CelineMessage[]>(loadHistory);
   const [input, setInput] = useState('');
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -437,7 +458,14 @@ export function CelinePage() {
     setMessages([]);
     setLoading(false);
     setError(null);
+    setPendingImage(null);
     localStorage.removeItem(STORAGE_KEY_HISTORY);
+  };
+
+  const handleImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => setPendingImage(e.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleItemAction = (msgId: string, itemId: string, action: 'done' | 'na') => {
@@ -456,20 +484,24 @@ export function CelinePage() {
     );
   };
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, imageDataUrl?: string) => {
     const trimmed = text.trim();
-    if (!trimmed || pendingRef.current) return;
+    const image = imageDataUrl ?? pendingImage ?? undefined;
+    if (!trimmed && !image) return;
+    if (pendingRef.current) return;
     if (!API_KEY) {
-      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
+      setError('Clé API non configurée. Ajoute VITE_OPENAI_API_KEY dans les variables Railway et redéploie.');
       return;
     }
 
     const currentMessages = messages;
+    setPendingImage(null);
 
     const userMsg: CelineMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
       content: trimmed,
+      imageUrl: image,
       checklist: [],
       followUp: null,
     };
@@ -492,7 +524,7 @@ export function CelinePage() {
     inputRef.current?.focus();
 
     try {
-      const result = await callDeepSeek(
+      const result = await callOpenAI(
         toApiHistory([...currentMessages, userMsg]),
         abortRef.current.signal
       );
@@ -605,7 +637,31 @@ export function CelinePage() {
       )}
 
       <div className="flex-none border-t border-slate-800 bg-[#0f172a] px-4 py-3">
+        {pendingImage && (
+          <div className="relative mb-2 inline-block">
+            <img src={pendingImage} alt="aperçu" className="h-20 w-20 rounded-xl object-cover border border-slate-700" />
+            <button
+              onClick={() => setPendingImage(null)}
+              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-600 text-white hover:bg-slate-500"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = ''; }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
+          >
+            <Image size={18} />
+          </button>
           <div className="flex-1 rounded-2xl border border-slate-700/60 bg-[#1e293b] px-4 py-3 transition focus-within:border-[#3b82f6]/60">
             <input
               ref={inputRef}
@@ -620,7 +676,7 @@ export function CelinePage() {
           </div>
           <button
             onClick={() => sendMessage(input)}
-            disabled={!input.trim() || loading}
+            disabled={(!input.trim() && !pendingImage) || loading}
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#3b82f6] text-white transition hover:bg-blue-400 active:scale-90 disabled:opacity-40"
           >
             <Send size={18} />
