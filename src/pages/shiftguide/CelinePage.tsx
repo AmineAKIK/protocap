@@ -29,7 +29,7 @@ interface ApiMessage {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY as string;
+const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
 
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
@@ -354,6 +354,10 @@ export function CelinePage() {
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
+    if (!API_KEY) {
+      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
+      return;
+    }
 
     const userMsg: CelineMessage = {
       id: `user_${Date.now()}`,
