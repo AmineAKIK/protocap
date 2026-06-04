@@ -26,7 +26,7 @@ export function LexiquePage() {
       {/* Header */}
       <header className="flex-none flex items-center gap-2 border-b border-slate-800 px-3 py-3">
         <button
-          onClick={() => navigate('/shiftguide')}
+          onClick={() => navigate('/shiftguide/modules')}
           className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
         >
           <ChevronLeft size={20} />

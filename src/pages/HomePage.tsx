@@ -7,11 +7,11 @@ import { PresentationMode } from '../components/PresentationMode';
 const modules = [
   {
     title: 'ShiftGuide',
-    description: "Guide pas à pas pour conducteur de ligne : badgeage, débuts/fins de poste et d'OC, production, tri — une action à la fois.",
+    description: "Céline, l'assistante IA opérationnelle : elle guide le conducteur en temps réel selon sa situation — prise de poste, changement d'OC, cuve, fin de poste.",
     to: '/shiftguide',
     icon: ListChecks,
-    tag: 'Procédures · Guidage',
-    highlight: 'Zéro oubli, une action à la fois'
+    tag: 'IA · Guidage terrain',
+    highlight: "Céline guide, l'opérateur décide"
   },
   {
     title: 'Expiry Check',

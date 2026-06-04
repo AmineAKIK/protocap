@@ -364,7 +364,7 @@ export function ModuleView() {
         return;
       }
     }
-    navigate('/shiftguide');
+    navigate('/shiftguide/modules');
   };
 
   const handleBackToChoice = () => {
@@ -422,7 +422,7 @@ export function ModuleView() {
       {showExitWarning && (
         <ExitWarningModal
           onStay={() => setShowExitWarning(false)}
-          onLeave={() => navigate('/shiftguide')}
+          onLeave={() => navigate('/shiftguide/modules')}
         />
       )}
 

@@ -119,9 +119,9 @@ export const sgModules: SGModule[] = [
     id: 'fin_poste',
     title: 'Fin de poste',
     icon: '🏁',
-    description: '6 actions de clôture',
+    description: '5 actions de clôture',
     type: 'standard',
-    footerNote: 'La ligne reste en production le temps du passage de consigne',
+    footerNote: 'La ligne reste en production le temps du passage de consigne. Toujours enchaîner avec Badgeage fin.',
     actions: [
       {
         id: 'fp_01',
@@ -130,8 +130,7 @@ export const sgModules: SGModule[] = [
       },
       { id: 'fp_02', text: 'Réalimenter la ligne en AC' },
       { id: 'fp_03', text: "Passer les consignes à l'opérateur suivant" },
-      { id: 'fp_04', text: "Se débadger sur SPI en cliquant « Fin d'équipe »" },
-      { id: 'fp_05', text: "Se déconnecter d'APRISO" },
+      { id: 'fp_04', text: "Se déconnecter d'APRISO" },
       {
         id: 'fp_06',
         text: "Si personne n'est affecté sur l'équipe suivante : arrêt complet",
@@ -260,6 +259,7 @@ export const sgModules: SGModule[] = [
         actions: [
           { id: 'chf_01', text: 'Modifier la formule' },
           { id: 'chf_02', text: 'Changer de kit et faire le lavage AD' },
+          { id: 'chf_03', text: 'Refaire les PZD concernés', note: 'Obligatoire après changement de formule' },
         ],
       },
       {
@@ -274,6 +274,7 @@ export const sgModules: SGModule[] = [
             text: 'Faire régler les machines par les techniciens',
           },
           { id: 'chfmt_03', text: 'Changer de kit et faire le lavage AD' },
+          { id: 'chfmt_04', text: 'Refaire les PZD concernés', note: 'Obligatoire après changement de format' },
         ],
       },
     ],
@@ -421,8 +422,7 @@ export const lexiqueEntries = [
   },
   { sigle: 'CTN', definition: 'Carton — Étuis' },
   { sigle: 'DDP', definition: 'Date De Péremption' },
-  { sigle: 'EPI', definition: 'Équipement de Protection Individuelle' },
-  { sigle: 'EPI', definition: 'Equipier de Première Intervention' },
+  { sigle: 'EPI', definition: 'Équipement de Protection Individuelle (gants, lunettes, chaussures…) — ou Equipier de Première Intervention selon le contexte' },
   { sigle: 'ESI', definition: 'Equipier de Seconde Intervention' },
   { sigle: 'FR', definition: 'Front — Étiquette recto' },
   { sigle: 'OC', definition: 'Ordre de Conditionnement' },

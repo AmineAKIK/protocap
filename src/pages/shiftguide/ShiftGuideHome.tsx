@@ -1,4 +1,4 @@
-import { AlertTriangle, BookOpen, ChevronLeft, HelpCircle } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChevronLeft, HelpCircle, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
@@ -506,13 +506,22 @@ export function ShiftGuideHome() {
             Toolkit
           </button>
           <span className="text-sm font-bold text-[#f1f5f9]">ShiftGuide</span>
-          <Link
-            to="/shiftguide/urgences"
-            className="flex items-center gap-1.5 rounded-lg bg-red-700/80 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:bg-red-600"
-          >
-            <AlertTriangle size={13} />
-            Urgences
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/shiftguide"
+              className="flex items-center gap-1.5 rounded-lg bg-[#3b82f6]/20 px-3 py-1.5 text-xs font-bold text-[#3b82f6] transition hover:bg-[#3b82f6]/30"
+            >
+              <MessageSquare size={13} />
+              Céline
+            </Link>
+            <Link
+              to="/shiftguide/urgences"
+              className="flex items-center gap-1.5 rounded-lg bg-red-700/80 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:bg-red-600"
+            >
+              <AlertTriangle size={13} />
+              Urgences
+            </Link>
+          </div>
         </div>
 
         {/* Context selector chips */}
