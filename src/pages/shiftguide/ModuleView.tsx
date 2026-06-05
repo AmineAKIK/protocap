@@ -259,15 +259,19 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
           return (
             <div
               key={action.id}
-              className={`relative flex min-w-full snap-start flex-col justify-center px-4 py-8 transition-colors sm:px-6 ${
-                isValidated
-                  ? 'bg-emerald-50'
-                  : 'bg-slate-50'
-              }`}
+              className="relative flex min-w-full snap-start flex-col justify-center bg-slate-50 px-4 py-8 sm:px-6"
             >
-              <article className="panel mx-auto flex w-full max-w-3xl flex-col p-6 shadow-sm sm:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+              <article
+                className={`panel mx-auto flex w-full max-w-3xl flex-col p-6 shadow-sm transition sm:p-8 ${
+                  isValidated
+                    ? 'border-emerald-300 ring-1 ring-emerald-100'
+                    : isNA
+                    ? 'border-slate-300 opacity-80'
+                    : ''
+                }`}
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                  <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                       Action {String(i + 1).padStart(2, '0')}
                     </p>
@@ -278,13 +282,16 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
                     </p>
                   </div>
                   {isValidated && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-                      <Check size={12} />
-                      Validé
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white ring-1 ring-emerald-200 sm:inline-flex sm:w-auto sm:gap-1.5 sm:px-2.5 sm:text-xs sm:font-bold sm:text-emerald-700 sm:bg-emerald-50"
+                      title="Validé"
+                    >
+                      <Check size={14} />
+                      <span className="hidden sm:inline">Validé</span>
                     </span>
                   )}
                   {isNA && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
                       N/A
                     </span>
                   )}
