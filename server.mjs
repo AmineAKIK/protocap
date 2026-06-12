@@ -47,6 +47,8 @@ app.post('/api/shiftguide/unlock', (req, res) => {
 app.use(express.static(DIST));
 
 app.get('/{*path}', (_req, res) => {
+  // Force le browser à vider cache + SW à chaque chargement de l'HTML
+  res.setHeader('Clear-Site-Data', '"cache", "storage"');
   res.sendFile(join(DIST, 'index.html'));
 });
 
