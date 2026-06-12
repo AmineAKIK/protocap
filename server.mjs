@@ -1,9 +1,16 @@
 import express from 'express';
-import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
+import { existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+// Cherche dist/ depuis __dirname ou process.cwd()
+const DIST = existsSync(join(__dirname, 'dist'))
+  ? join(__dirname, 'dist')
+  : resolve(process.cwd(), 'dist');
+
+console.log('Serving static from:', DIST);
+
 const app = express();
 app.use(express.json());
 
@@ -18,7 +25,6 @@ app.post('/api/shiftguide/unlock', (req, res) => {
     return res.status(401).json({ error: 'Code incorrect.' });
   }
 
-  // Lire les données depuis les variables d'environnement Railway
   let modules, lexique, systemPromptExtra, urgences;
   try {
     modules = JSON.parse(process.env.SG_MODULES ?? 'null');
@@ -38,16 +44,10 @@ app.post('/api/shiftguide/unlock', (req, res) => {
 
 // ── Static SPA ────────────────────────────────────────────────────────────────
 
-app.use(express.static(join(__dirname, 'dist'), {
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
-    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
-  }
-}));
+app.use(express.static(DIST));
 
 app.get('/{*path}', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.sendFile(join(__dirname, 'dist', 'index.html'));
+  res.sendFile(join(DIST, 'index.html'));
 });
 
 app.listen(PORT, () => {
