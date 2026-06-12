@@ -10,6 +10,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null,
+      selfDestroying: true,
       includeAssets: ['pwa-icon.svg'],
       manifest: {
         name: 'LineOps Toolkit',
