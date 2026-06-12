@@ -38,8 +38,15 @@ app.post('/api/shiftguide/unlock', (req, res) => {
 
 // ── Static SPA ────────────────────────────────────────────────────────────────
 
-app.use(express.static(join(__dirname, 'dist')));
+app.use(express.static(join(__dirname, 'dist'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+  }
+}));
+
 app.get('/{*path}', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
