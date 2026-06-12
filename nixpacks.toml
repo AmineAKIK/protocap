@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["rm -rf dist", "npm run build", "ls -la dist/assets/"]
 
 [start]
 cmd = "node server.mjs"
