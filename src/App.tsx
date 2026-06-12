@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ExpiryCheckPage } from './pages/ExpiryCheckPage';
@@ -11,7 +11,9 @@ import { CelinePage } from './pages/shiftguide/CelinePage';
 import { LexiquePage } from './pages/shiftguide/LexiquePage';
 import { ModuleView } from './pages/shiftguide/ModuleView';
 import { ShiftGuideHome } from './pages/shiftguide/ShiftGuideHome';
+import { ShiftGuideLock } from './pages/shiftguide/ShiftGuideLock';
 import { UrgencesPage } from './pages/shiftguide/UrgencesPage';
+import { isShiftGuideUnlocked } from './hooks/useShiftGuideAuth';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -23,15 +25,21 @@ function ScrollToTop() {
   return null;
 }
 
+function ShiftGuideGuard({ children }: { children: React.ReactNode }) {
+  const [unlocked, setUnlocked] = useState(isShiftGuideUnlocked);
+  if (!unlocked) return <ShiftGuideLock onUnlock={() => setUnlocked(true)} />;
+  return <>{children}</>;
+}
+
 export function App() {
   return (
     <Routes>
-      {/* ShiftGuide — focused operational experience, outside AppShell */}
-      <Route path="/shiftguide" element={<CelinePage />} />
-      <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
-      <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
-      <Route path="/shiftguide/lexique" element={<LexiquePage />} />
-      <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
+      {/* ShiftGuide — accès protégé par code */}
+      <Route path="/shiftguide" element={<ShiftGuideGuard><CelinePage /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/modules" element={<ShiftGuideGuard><ShiftGuideHome /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideGuard><ModuleView /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/lexique" element={<ShiftGuideGuard><LexiquePage /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/urgences" element={<ShiftGuideGuard><UrgencesPage /></ShiftGuideGuard>} />
 
       {/* Main app */}
       <Route
