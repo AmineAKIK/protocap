@@ -8,4 +8,4 @@ cmds = ["npm ci"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx serve@14 dist --single --listen $PORT"
+cmd = "node server.mjs"

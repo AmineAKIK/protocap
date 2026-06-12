@@ -1,7 +1,7 @@
 import { ChevronLeft, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { lexiqueEntries } from '../../data/shiftguideModules';
+import { getLexiqueEntries } from '../../data/shiftguideModules';
 
 export function LexiquePage() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export function LexiquePage() {
     inputRef.current?.focus();
   }, []);
 
+  const lexiqueEntries = getLexiqueEntries();
   const q = query.trim().toLowerCase();
   const filtered = q
     ? lexiqueEntries.filter(

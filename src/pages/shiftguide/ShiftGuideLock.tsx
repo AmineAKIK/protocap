@@ -4,16 +4,25 @@ import { unlockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
   const [code, setCode] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const attempt = () => {
-    if (unlockShiftGuide(code.trim())) {
+  const attempt = async () => {
+    const trimmed = code.trim();
+    if (!trimmed || loading) return;
+    setLoading(true);
+    setError(null);
+
+    const result = await unlockShiftGuide(trimmed);
+
+    if (result.ok) {
       onUnlock();
     } else {
-      setError(true);
+      setError(result.error ?? 'Code incorrect.');
       setCode('');
-      setTimeout(() => setError(false), 1800);
+      setLoading(false);
+      setTimeout(() => setError(null), 2500);
       inputRef.current?.focus();
     }
   };
@@ -38,7 +47,9 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
 
           <div
             className={`mt-5 overflow-hidden rounded-xl border transition ${
-              error ? 'border-red-400 ring-4 ring-red-100' : 'border-zinc-200 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10'
+              error
+                ? 'border-red-400 ring-4 ring-red-100'
+                : 'border-zinc-200 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10'
             } bg-white`}
           >
             <input
@@ -46,10 +57,11 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
               type="password"
               value={code}
               autoFocus
+              disabled={loading}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') attempt(); }}
               placeholder="Code d'accès"
-              className="w-full bg-transparent px-4 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none"
+              className="w-full bg-transparent px-4 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50"
               autoComplete="off"
             />
           </div>
@@ -57,16 +69,16 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
           {error && (
             <div className="mt-3 flex items-center gap-2 text-xs font-bold text-red-600">
               <ShieldAlert size={13} />
-              Code incorrect. Réessaie.
+              {error}
             </div>
           )}
 
           <button
             onClick={attempt}
-            disabled={!code.trim()}
+            disabled={!code.trim() || loading}
             className="mt-4 w-full rounded-xl bg-zinc-950 py-3.5 text-sm font-black text-teal-300 transition hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-40"
           >
-            Déverrouiller
+            {loading ? 'Vérification…' : 'Déverrouiller'}
           </button>
         </div>
       </div>

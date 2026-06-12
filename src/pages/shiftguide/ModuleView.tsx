@@ -21,7 +21,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { SGAction, SGSubModule } from '../../data/shiftguideModules';
-import { sgModules } from '../../data/shiftguideModules';
+import { getSgModules } from '../../data/shiftguideModules';
 import { useModuleProgress } from '../../hooks/useModuleProgress';
 
 const moduleIconMap: Record<string, LucideIcon> = {
@@ -379,7 +379,7 @@ export function ModuleView() {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
 
-  const module = sgModules.find((m) => m.id === moduleId);
+  const module = getSgModules().find((m) => m.id === moduleId);
 
   const [selectedSub, setSelectedSub] = useState<SGSubModule | null>(null);
   const [showExitWarning, setShowExitWarning] = useState(false);

@@ -24,7 +24,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
-import { sgModules } from '../../data/shiftguideModules';
+import { getSgModules } from '../../data/shiftguideModules';
 import { getModuleProgressSummary } from '../../hooks/useModuleProgress';
 
 type ContextId =
@@ -140,7 +140,7 @@ function getModuleIcon(module: SGModule): LucideIcon {
 function getAllSummaries(): Record<string, ModuleSummary> {
   const result: Record<string, ModuleSummary> = {};
 
-  for (const module of sgModules) {
+  for (const module of getSgModules()) {
     if (module.type === 'choice' && module.subModules) {
       const subSummaries = module.subModules.map((sub) =>
         getModuleProgressSummary(
@@ -181,7 +181,7 @@ function getProgressPct(summary: ModuleSummary) {
 }
 
 function getModuleById(id: string): SGModule | undefined {
-  return sgModules.find((module) => module.id === id);
+  return getSgModules().find((module) => module.id === id);
 }
 
 function StatusPill({ summary, idle = 'Prêt' }: { summary: ModuleSummary; idle?: string }) {
@@ -427,7 +427,7 @@ function SectionHeader({ label, title, detail }: { label: string; title: string;
 }
 
 function RepriseView({ summaries }: { summaries: Record<string, ModuleSummary> }) {
-  const sorted = [...sgModules].sort((a, b) => {
+  const sorted = [...getSgModules()].sort((a, b) => {
     const sa = getSummary(a, summaries);
     const sb = getSummary(b, summaries);
     const scoreOf = (summary: ModuleSummary) => (summary.isComplete ? 2 : summary.treatedCount > 0 ? 0 : 1);
@@ -477,7 +477,7 @@ function ContextView({
   const priorityModules = ctx.priority.map(getModuleById).filter(Boolean) as SGModule[];
   const secondaryModules = ctx.secondary.map(getModuleById).filter(Boolean) as SGModule[];
   const usedIds = new Set([...ctx.priority, ...ctx.secondary]);
-  const restModules = sgModules.filter((module) => !usedIds.has(module.id));
+  const restModules = getSgModules().filter((module) => !usedIds.has(module.id));
 
   return (
     <div className="space-y-6">
