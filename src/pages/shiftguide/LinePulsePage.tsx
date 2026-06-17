@@ -465,13 +465,13 @@ function ViewToggle({ active, onChange }: { active: ViewMode; onChange: (mode: V
             key={item.id}
             onClick={() => onChange(item.id)}
             className={classNames(
-              'inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-xs font-black transition',
+              'inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-1 text-[11px] font-black transition',
               selected ? 'bg-zinc-950 text-white shadow-lg shadow-zinc-950/10' : 'text-zinc-500 hover:bg-white hover:text-zinc-950'
             )}
             title={item.label}
           >
-            <Icon size={15} />
-            <span className="hidden 2xl:inline">{item.label}</span>
+            <Icon size={14} className="shrink-0" />
+            <span className="hidden whitespace-nowrap 2xl:inline">{item.label}</span>
           </button>
         );
       })}
