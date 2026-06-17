@@ -228,12 +228,72 @@
     { "time": "07:41", "line": "Ligne 3", "event": "Assistance changement format", "severity": "orange" }
   ],
   "weeklyStability": [
-    { "day": "Lun", "value": 86, "alerts": 5 },
-    { "day": "Mar", "value": 91, "alerts": 3 },
-    { "day": "Mer", "value": 84, "alerts": 6 },
-    { "day": "Jeu", "value": 88, "alerts": 4 },
-    { "day": "Ven", "value": 79, "alerts": 8 },
-    { "day": "Sam", "value": 82, "alerts": 5 },
-    { "day": "Dim", "value": 90, "alerts": 2 }
-  ]
+    { "day": "Lun", "value": 86, "alerts": 5, "supports": 4 },
+    { "day": "Mar", "value": 91, "alerts": 3, "supports": 2 },
+    { "day": "Mer", "value": 84, "alerts": 6, "supports": 5 },
+    { "day": "Jeu", "value": 88, "alerts": 4, "supports": 3 },
+    { "day": "Ven", "value": 79, "alerts": 8, "supports": 6 },
+    { "day": "Sam", "value": 82, "alerts": 5, "supports": 3 },
+    { "day": "Dim", "value": 90, "alerts": 2, "supports": 1 }
+  ],
+  "eventStream": [
+    { "time": "07:22", "line": "Ligne 9", "event": "Passe en vigilance : liberation MP attendue.", "severity": "orange", "type": "Statut" },
+    { "time": "07:24", "line": "Ligne 6", "event": "Maintenance demandee sur la boucheuse.", "severity": "orange", "type": "Support" },
+    { "time": "07:31", "line": "Ligne 4", "event": "Validation qualite effectuee sur le decor primaire.", "severity": "green", "type": "Resolution" },
+    { "time": "07:40", "line": "Ligne 8", "event": "Alerte logistique : rupture projetee a 08:30.", "severity": "red", "type": "Alerte" },
+    { "time": "07:42", "line": "Ligne 3", "event": "Nouveau statut publie avant changement de format.", "severity": "orange", "type": "Publication" }
+  ],
+  "recommendations": [
+    {
+      "id": "REC-08",
+      "line": "Ligne 8",
+      "priority": "Critique",
+      "deadline": "Avant 08:00",
+      "decision": "Contacter logistique et securiser les pompes doseuses avant la rupture projetee.",
+      "impact": "Eviter un arret estime a 45 minutes.",
+      "owner": "Animateur"
+    },
+    {
+      "id": "REC-12",
+      "line": "Ligne 12",
+      "priority": "Critique",
+      "deadline": "Immediat",
+      "decision": "Declencher un diagnostic automatisme sur le parametrage vision.",
+      "impact": "Permettre le demarrage de l'OC-47241.",
+      "owner": "Technique"
+    },
+    {
+      "id": "REC-03",
+      "line": "Ligne 3",
+      "priority": "Haute",
+      "deadline": "Avant 08:20",
+      "decision": "Valider les reglages techniques avant le changement 50 ml vers 100 ml.",
+      "impact": "Reduire le risque de derive au redemarrage.",
+      "owner": "Technicien"
+    },
+    {
+      "id": "REC-04",
+      "line": "Ligne 4",
+      "priority": "Haute",
+      "deadline": "Avant 08:00",
+      "decision": "Prioriser le passage qualite pour liberer la serie packaging.",
+      "impact": "Eviter un decalage du demarrage serie.",
+      "owner": "Qualite"
+    }
+  ],
+  "operationalImpact": {
+    "collectionTimeSaved": "1h18",
+    "targetedRounds": 5,
+    "resolvedAlerts": 4,
+    "continuityIndex": 92,
+    "globalRisk": "Modere",
+    "weekendVisibility": 100,
+    "weekendCoverage": "Meme processus applique avec effectif reduit."
+  },
+  "executive": {
+    "operationalAvailability": 88,
+    "linesUnderWatch": 4,
+    "criticalBlocks": 2,
+    "decisionsToday": 3
+  }
 }

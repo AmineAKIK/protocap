@@ -1,9 +1,12 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   ArrowDownRight,
   BarChart3,
   BellRing,
+  Building2,
+  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ClipboardCheck,
@@ -12,20 +15,27 @@ import {
   History,
   Layers3,
   LineChart,
+  MonitorCheck,
   RadioTower,
+  Route,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
+  Sparkles,
+  Target,
+  TimerReset,
   TrendingUp,
   UserRound,
+  Wifi,
   Wrench,
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import linePulseMock from '../../data/linePulseMock.json';
 
-type ViewMode = 'driver' | 'supervisor' | 'manager';
+type ViewMode = 'driver' | 'supervisor' | 'manager' | 'executive' | 'value';
 type LineStatus = 'green' | 'orange' | 'red';
 type ComponentState = 'Disponible' | 'Risque identifie' | 'Non disponible';
 type SupportType = 'Aucun' | 'Technique' | 'Qualite' | 'Logistique' | 'Maintenance';
@@ -60,6 +70,38 @@ interface WeeklyPoint {
   day: string;
   value: number;
   alerts: number;
+  supports: number;
+}
+
+interface EventStreamItem extends AlertHistoryItem {
+  type: string;
+}
+
+interface Recommendation {
+  id: string;
+  line: string;
+  priority: 'Critique' | 'Haute';
+  deadline: string;
+  decision: string;
+  impact: string;
+  owner: string;
+}
+
+interface OperationalImpact {
+  collectionTimeSaved: string;
+  targetedRounds: number;
+  resolvedAlerts: number;
+  continuityIndex: number;
+  globalRisk: string;
+  weekendVisibility: number;
+  weekendCoverage: string;
+}
+
+interface ExecutiveData {
+  operationalAvailability: number;
+  linesUnderWatch: number;
+  criticalBlocks: number;
+  decisionsToday: number;
 }
 
 interface LinePulseData {
@@ -69,6 +111,10 @@ interface LinePulseData {
   lines: ProductionLine[];
   alertsHistory: AlertHistoryItem[];
   weeklyStability: WeeklyPoint[];
+  eventStream: EventStreamItem[];
+  recommendations: Recommendation[];
+  operationalImpact: OperationalImpact;
+  executive: ExecutiveData;
 }
 
 const DATA = linePulseMock as LinePulseData;
@@ -184,15 +230,232 @@ function MetricTile({
   );
 }
 
+function OperationalImpactStrip({ impact }: { impact: OperationalImpact }) {
+  const metrics = [
+    {
+      label: 'Collecte evitee',
+      value: impact.collectionTimeSaved,
+      detail: "Temps restitue aujourd'hui",
+      icon: TimerReset,
+      tone: 'bg-cyan-50 text-cyan-700 ring-cyan-100',
+    },
+    {
+      label: 'Tournees ciblees',
+      value: `${impact.targetedRounds}/12`,
+      detail: 'Lignes a voir en priorite',
+      icon: Route,
+      tone: 'bg-indigo-50 text-indigo-700 ring-indigo-100',
+    },
+    {
+      label: 'Alertes resolues',
+      value: impact.resolvedAlerts,
+      detail: 'Avant impact production',
+      icon: CheckCircle2,
+      tone: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    },
+    {
+      label: 'Continuite',
+      value: `${impact.continuityIndex}%`,
+      detail: `Risque global ${impact.globalRisk.toLowerCase()}`,
+      icon: Gauge,
+      tone: 'bg-amber-50 text-amber-700 ring-amber-100',
+    },
+  ];
+
+  return (
+    <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.35fr]">
+      {metrics.map((metric) => {
+        const Icon = metric.icon;
+
+        return (
+          <div key={metric.label} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">{metric.label}</p>
+                <p className="mt-2 text-2xl font-black tracking-tight text-zinc-950">{metric.value}</p>
+              </div>
+              <span className={classNames('grid h-9 w-9 shrink-0 place-items-center rounded-xl ring-1', metric.tone)}>
+                <Icon size={16} />
+              </span>
+            </div>
+            <p className="mt-2 text-xs font-bold text-zinc-500">{metric.detail}</p>
+          </div>
+        );
+      })}
+
+      <div className="relative overflow-hidden rounded-2xl border border-teal-800 bg-zinc-950 p-4 text-white shadow-lg shadow-zinc-950/10 md:col-span-2 xl:col-span-1">
+        <div className="absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-teal-400/10" />
+        <div className="relative flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-teal-300">Visibilite week-end</p>
+            <p className="mt-2 text-3xl font-black">{impact.weekendVisibility}%</p>
+          </div>
+          <CalendarDays size={19} className="text-teal-300" />
+        </div>
+        <p className="relative mt-2 text-xs font-bold leading-5 text-zinc-400">{impact.weekendCoverage}</p>
+        <p className="relative mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-teal-300">
+          Sans dependance animateur
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function RecommendationsPanel({
+  recommendations,
+  limit,
+  dark = false,
+}: {
+  recommendations: Recommendation[];
+  limit?: number;
+  dark?: boolean;
+}) {
+  const [assigned, setAssigned] = useState<string[]>([]);
+  const visible = typeof limit === 'number' ? recommendations.slice(0, limit) : recommendations;
+
+  return (
+    <section className={classNames('rounded-3xl p-5 shadow-sm', dark ? 'border border-zinc-800 bg-zinc-950 text-white' : 'border border-zinc-200 bg-white')}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className={classNames('text-[11px] font-black uppercase tracking-[0.18em]', dark ? 'text-teal-300' : 'text-teal-700')}>
+            Decisions suggerees
+          </p>
+          <h3 className={classNames('mt-1 text-xl font-black tracking-tight', dark ? 'text-white' : 'text-zinc-950')}>
+            Que faire maintenant ?
+          </h3>
+        </div>
+        <span className={classNames('rounded-full px-3 py-1.5 text-xs font-black ring-1', dark ? 'bg-white/5 text-zinc-300 ring-white/10' : 'bg-teal-50 text-teal-700 ring-teal-100')}>
+          {recommendations.length} decisions
+        </span>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {visible.map((recommendation, index) => {
+          const isAssigned = assigned.includes(recommendation.id);
+
+          return (
+            <article
+              key={recommendation.id}
+              className={classNames(
+                'group rounded-2xl p-4 ring-1 transition',
+                dark ? 'bg-white/[0.04] ring-white/10 hover:bg-white/[0.07]' : 'bg-zinc-50 ring-zinc-200 hover:bg-white hover:shadow-md'
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <span className={classNames(
+                  'grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-black',
+                  recommendation.priority === 'Critique' ? 'bg-red-500 text-white' : 'bg-amber-400 text-zinc-950'
+                )}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={classNames('text-sm font-black', dark ? 'text-white' : 'text-zinc-950')}>{recommendation.line}</p>
+                    <span className={classNames(
+                      'rounded-full px-2 py-0.5 text-[10px] font-black uppercase',
+                      recommendation.priority === 'Critique' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                    )}>
+                      {recommendation.priority}
+                    </span>
+                    <span className={classNames('text-[10px] font-black uppercase tracking-[0.12em]', dark ? 'text-zinc-500' : 'text-zinc-400')}>
+                      {recommendation.deadline}
+                    </span>
+                  </div>
+                  <p className={classNames('mt-2 text-sm font-bold leading-6', dark ? 'text-zinc-300' : 'text-zinc-700')}>
+                    {recommendation.decision}
+                  </p>
+                  <p className={classNames('mt-2 text-xs font-bold', dark ? 'text-teal-300' : 'text-teal-700')}>
+                    Impact : {recommendation.impact}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className={classNames('text-[10px] font-black uppercase tracking-[0.14em]', dark ? 'text-zinc-500' : 'text-zinc-400')}>
+                      Responsable · {recommendation.owner}
+                    </span>
+                    <button
+                      onClick={() => setAssigned((current) => isAssigned ? current.filter((id) => id !== recommendation.id) : [...current, recommendation.id])}
+                      className={classNames(
+                        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black transition',
+                        isAssigned
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : dark
+                            ? 'bg-teal-400 text-zinc-950 hover:bg-teal-300'
+                            : 'bg-zinc-950 text-white hover:bg-zinc-800'
+                      )}
+                    >
+                      {isAssigned ? <CheckCircle2 size={13} /> : <ArrowRight size={13} />}
+                      {isAssigned ? 'Assignee' : 'Assigner'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function EventCenter({ events, compact = false }: { events: EventStreamItem[]; compact?: boolean }) {
+  const [pulseIndex, setPulseIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setPulseIndex((current) => (current + 1) % events.length);
+    }, 3500);
+    return () => window.clearInterval(interval);
+  }, [events.length]);
+
+  const orderedEvents = [...events.slice(pulseIndex), ...events.slice(0, pulseIndex)].reverse();
+  const visibleEvents = compact ? orderedEvents.slice(0, 4) : orderedEvents;
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-black text-zinc-950">
+            <Wifi size={15} className="text-teal-600" />
+            Centre d'evenements
+          </p>
+          <p className="mt-1 text-xs font-bold text-zinc-500">Activite terrain consolidee en temps reel</p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+          Live
+        </span>
+      </div>
+      <div className="divide-y divide-zinc-100">
+        {visibleEvents.map((event, index) => (
+          <div key={`${event.time}-${event.line}`} className={classNames('grid grid-cols-[3.25rem_minmax(0,1fr)] gap-3 px-5 py-3 transition-all', index === 0 && 'animate-slide-in bg-teal-50/50')}>
+            <span className="pt-0.5 text-xs font-black tabular-nums text-zinc-400">{index === 0 ? 'LIVE' : event.time}</span>
+            <div className="min-w-0 border-l border-zinc-200 pl-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={classNames('h-2 w-2 rounded-full', statusConfig[event.severity].dot)} />
+                <p className="text-sm font-black text-zinc-950">{event.line}</p>
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-zinc-500">
+                  {event.type}
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-bold leading-5 text-zinc-600">{event.event}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ViewToggle({ active, onChange }: { active: ViewMode; onChange: (mode: ViewMode) => void }) {
   const items: Array<{ id: ViewMode; label: string; icon: LucideIcon }> = [
     { id: 'driver', label: 'Conducteur', icon: UserRound },
     { id: 'supervisor', label: 'Superviseur', icon: RadioTower },
     { id: 'manager', label: 'Manager', icon: BarChart3 },
+    { id: 'executive', label: 'Executive', icon: Building2 },
+    { id: 'value', label: 'Valeur', icon: Sparkles },
   ];
 
   return (
-    <div className="grid grid-cols-3 rounded-2xl bg-zinc-100 p-1 ring-1 ring-zinc-200">
+    <div className="grid grid-cols-5 rounded-2xl bg-zinc-100 p-1 ring-1 ring-zinc-200">
       {items.map((item) => {
         const Icon = item.icon;
         const selected = active === item.id;
@@ -202,12 +465,13 @@ function ViewToggle({ active, onChange }: { active: ViewMode; onChange: (mode: V
             key={item.id}
             onClick={() => onChange(item.id)}
             className={classNames(
-              'inline-flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-black transition sm:text-sm',
+              'inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-xs font-black transition',
               selected ? 'bg-zinc-950 text-white shadow-lg shadow-zinc-950/10' : 'text-zinc-500 hover:bg-white hover:text-zinc-950'
             )}
+            title={item.label}
           >
             <Icon size={15} />
-            <span className="hidden min-[420px]:inline">{item.label}</span>
+            <span className="hidden 2xl:inline">{item.label}</span>
           </button>
         );
       })}
@@ -241,7 +505,7 @@ function ChipGroup<T extends string>({
                 ? tone === 'status'
                   ? 'bg-zinc-950 text-white ring-zinc-950 shadow-lg shadow-zinc-950/10'
                   : 'bg-teal-600 text-white ring-teal-600 shadow-lg shadow-teal-600/20'
-                : 'bg-white text-zinc-650 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-950'
+                : 'bg-white text-zinc-600 ring-zinc-200 hover:bg-zinc-50 hover:text-zinc-950'
             )}
           >
             {option}
@@ -331,7 +595,7 @@ function DriverPulse({ lines }: { lines: ProductionLine[] }) {
                     onClick={() => setStatus(item)}
                     className={classNames(
                       'flex min-h-14 items-center gap-3 rounded-2xl px-4 text-left text-sm font-black transition ring-1',
-                      selected ? 'bg-zinc-950 text-white ring-zinc-950 shadow-xl shadow-zinc-950/10' : 'bg-white text-zinc-650 ring-zinc-200 hover:bg-zinc-50'
+                      selected ? 'bg-zinc-950 text-white ring-zinc-950 shadow-xl shadow-zinc-950/10' : 'bg-white text-zinc-600 ring-zinc-200 hover:bg-zinc-50'
                     )}
                   >
                     <span className={classNames('h-3 w-3 rounded-full', config.dot)} />
@@ -540,7 +804,17 @@ function SupervisorTable({ lines }: { lines: ProductionLine[] }) {
   );
 }
 
-function SupervisorPulse({ lines }: { lines: ProductionLine[] }) {
+function SupervisorPulse({
+  lines,
+  recommendations,
+  events,
+  impact,
+}: {
+  lines: ProductionLine[];
+  recommendations: Recommendation[];
+  events: EventStreamItem[];
+  impact: OperationalImpact;
+}) {
   const counts = statusCounts(lines);
   const actionLines = lines.filter(needsAction);
   const stability = stabilityIndex(lines);
@@ -577,6 +851,13 @@ function SupervisorPulse({ lines }: { lines: ProductionLine[] }) {
           tone="bg-cyan-400/10 text-cyan-300 ring-cyan-400/20"
         />
       </section>
+
+      <OperationalImpactStrip impact={impact} />
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+        <RecommendationsPanel recommendations={recommendations} limit={3} />
+        <EventCenter events={events} compact />
+      </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <SupervisorTable lines={lines} />
@@ -627,30 +908,148 @@ function SupervisorPulse({ lines }: { lines: ProductionLine[] }) {
 
 function MiniBarChart({ points }: { points: WeeklyPoint[] }) {
   const maxAlerts = Math.max(...points.map((point) => point.alerts));
+  const maxSupports = Math.max(...points.map((point) => point.supports));
 
   return (
-    <div className="flex h-44 items-end gap-3 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
-      {points.map((point) => (
-        <div key={point.day} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-          <div className="relative flex h-full w-full items-end justify-center">
-            <div
-              className="w-full max-w-9 rounded-t-xl bg-zinc-950 transition-all"
-              style={{ height: `${Math.max(18, (point.value / 100) * 100)}%` }}
-              title={`${point.value}%`}
-            />
-            <div
-              className="absolute bottom-0 w-full max-w-9 rounded-t-xl bg-teal-400/80"
-              style={{ height: `${Math.max(8, (point.alerts / maxAlerts) * 36)}%` }}
-            />
+    <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex flex-wrap gap-3 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-950" /> Stabilite</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" /> Alertes</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-teal-400" /> Supports</span>
+      </div>
+      <div className="flex h-40 items-end gap-3">
+        {points.map((point) => (
+          <div key={point.day} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+            <div className="flex h-full w-full items-end justify-center gap-1">
+              <div
+                className="w-2.5 rounded-t-lg bg-zinc-950 transition-all duration-700 sm:w-3"
+                style={{ height: `${Math.max(18, point.value)}%` }}
+                title={`Stabilite ${point.value}%`}
+              />
+              <div
+                className="w-2.5 rounded-t-lg bg-amber-400 transition-all duration-700 sm:w-3"
+                style={{ height: `${Math.max(10, (point.alerts / maxAlerts) * 82)}%` }}
+                title={`${point.alerts} alertes`}
+              />
+              <div
+                className="w-2.5 rounded-t-lg bg-teal-400 transition-all duration-700 sm:w-3"
+                style={{ height: `${Math.max(10, (point.supports / maxSupports) * 72)}%` }}
+                title={`${point.supports} demandes support`}
+              />
+            </div>
+            <span className="text-xs font-black text-zinc-500">{point.day}</span>
           </div>
-          <span className="text-xs font-black text-zinc-500">{point.day}</span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
 
-function ManagerPulse({ lines, alertsHistory, weeklyStability }: { lines: ProductionLine[]; alertsHistory: AlertHistoryItem[]; weeklyStability: WeeklyPoint[] }) {
+function ManagerPhone({
+  lines,
+  recommendations,
+  risk,
+}: {
+  lines: ProductionLine[];
+  recommendations: Recommendation[];
+  risk: string;
+}) {
+  const counts = statusCounts(lines);
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">Vue mobile manager</p>
+          <p className="mt-1 text-sm font-black text-zinc-950">Situation comprise en moins de 5 secondes</p>
+        </div>
+        <Smartphone size={18} className="text-zinc-400" />
+      </div>
+      <div className="mx-auto max-w-[21rem] rounded-[2.4rem] border-[7px] border-zinc-950 bg-zinc-950 p-2 shadow-2xl shadow-zinc-950/25">
+        <div className="overflow-hidden rounded-[1.8rem] bg-[#f5f7f8]">
+          <div className="bg-zinc-950 px-4 pb-5 pt-3 text-white">
+            <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-white/20" />
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-teal-300">LinePulse · 07:42</p>
+                <p className="mt-1 text-lg font-black">Bonjour, direction site</p>
+              </div>
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-400 text-zinc-950">
+                <RadioTower size={17} />
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {[
+                { label: 'OK', value: counts.green, tone: 'text-emerald-300' },
+                { label: 'Vigilance', value: counts.orange, tone: 'text-amber-300' },
+                { label: 'Blocages', value: counts.red, tone: 'text-red-300' },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-white/[0.06] px-2 py-3 text-center ring-1 ring-white/10">
+                  <p className={classNames('text-xl font-black', item.tone)}>{item.value}</p>
+                  <p className="mt-1 text-[8px] font-black uppercase tracking-[0.1em] text-zinc-500">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 p-3">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-amber-700">Risque du jour</p>
+              <div className="mt-1 flex items-end justify-between gap-3">
+                <p className="text-xl font-black text-amber-950">{risk}</p>
+                <AlertTriangle size={18} className="text-amber-600" />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-400">Top 3 priorites</p>
+              <div className="mt-3 space-y-3">
+                {recommendations.slice(0, 3).map((recommendation, index) => (
+                  <div key={recommendation.id} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+                    <span className={classNames(
+                      'grid h-6 w-6 place-items-center rounded-lg text-[10px] font-black',
+                      recommendation.priority === 'Critique' ? 'bg-red-500 text-white' : 'bg-amber-400 text-zinc-950'
+                    )}>
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-black text-zinc-950">{recommendation.line}</p>
+                        <p className="text-[8px] font-black uppercase text-zinc-400">{recommendation.deadline}</p>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-[10px] font-bold leading-4 text-zinc-600">{recommendation.decision}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 py-3 text-xs font-black text-white">
+              Ouvrir les decisions
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ManagerPulse({
+  lines,
+  alertsHistory,
+  weeklyStability,
+  recommendations,
+  events,
+  impact,
+}: {
+  lines: ProductionLine[];
+  alertsHistory: AlertHistoryItem[];
+  weeklyStability: WeeklyPoint[];
+  recommendations: Recommendation[];
+  events: EventStreamItem[];
+  impact: OperationalImpact;
+}) {
   const counts = statusCounts(lines);
   const stability = stabilityIndex(lines);
   const actionLines = lines.filter(needsAction);
@@ -663,6 +1062,8 @@ function ManagerPulse({ lines, alertsHistory, weeklyStability }: { lines: Produc
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section className="space-y-5">
+        <OperationalImpactStrip impact={impact} />
+
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 text-white shadow-2xl shadow-zinc-950/10">
             <div className="flex items-start justify-between gap-4">
@@ -762,9 +1163,13 @@ function ManagerPulse({ lines, alertsHistory, weeklyStability }: { lines: Produc
             ))}
           </div>
         </div>
+
+        <RecommendationsPanel recommendations={recommendations} />
       </section>
 
       <aside className="space-y-5">
+        <ManagerPhone lines={lines} recommendations={recommendations} risk={impact.globalRisk} />
+
         <div className="rounded-3xl border border-red-100 bg-red-50 p-5 shadow-sm">
           <p className="flex items-center gap-2 text-sm font-black text-red-950">
             <ArrowDownRight size={16} />
@@ -777,6 +1182,8 @@ function ManagerPulse({ lines, alertsHistory, weeklyStability }: { lines: Produc
             Les tournees terrain peuvent etre orientees vers les lignes a plus fort impact.
           </p>
         </div>
+
+        <EventCenter events={events} compact />
 
         <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
           <p className="flex items-center gap-2 text-sm font-black text-zinc-950">
@@ -813,12 +1220,270 @@ function ManagerPulse({ lines, alertsHistory, weeklyStability }: { lines: Produc
   );
 }
 
+function ExecutiveOverview({
+  lines,
+  recommendations,
+  events,
+  impact,
+  executive,
+}: {
+  lines: ProductionLine[];
+  recommendations: Recommendation[];
+  events: EventStreamItem[];
+  impact: OperationalImpact;
+  executive: ExecutiveData;
+}) {
+  const majorRisks = lines.filter((line) => line.status === 'red' || line.status === 'orange').slice(0, 4);
+  const metrics = [
+    {
+      label: 'Disponibilite operationnelle',
+      value: `${executive.operationalAvailability}%`,
+      detail: 'Capacite disponible sur le poste',
+      icon: Gauge,
+      tone: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    },
+    {
+      label: 'Lignes sous surveillance',
+      value: executive.linesUnderWatch,
+      detail: 'Suivi renforce sans blocage',
+      icon: MonitorCheck,
+      tone: 'bg-amber-50 text-amber-700 ring-amber-100',
+    },
+    {
+      label: 'Blocages critiques',
+      value: executive.criticalBlocks,
+      detail: 'Arbitrage requis maintenant',
+      icon: BellRing,
+      tone: 'bg-red-50 text-red-700 ring-red-100',
+    },
+    {
+      label: 'Decisions aujourd hui',
+      value: executive.decisionsToday,
+      detail: 'Decisions a impact production',
+      icon: Target,
+      tone: 'bg-indigo-50 text-indigo-700 ring-indigo-100',
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/15">
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="p-6 sm:p-8">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-teal-400/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-teal-300 ring-1 ring-teal-400/20">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-teal-300" />
+                Executive live brief
+              </span>
+            </div>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Etat du site en moins de 10 secondes</p>
+            <h2 className="mt-2 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">
+              Le site reste operationnel. Deux blocages exigent une decision avant 08:00.
+            </h2>
+            <p className="mt-4 max-w-3xl text-sm font-bold leading-7 text-zinc-400">
+              Les risques sont localises, les responsables sont identifies et les actions recommandees sont deja priorisees.
+            </p>
+          </div>
+          <div className="border-t border-white/10 bg-white/[0.03] p-6 lg:border-l lg:border-t-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Decision prioritaire</p>
+            <p className="mt-3 text-xl font-black">Securiser Ligne 8 avant la rupture composants.</p>
+            <div className="mt-5 rounded-2xl bg-red-500/10 p-4 ring-1 ring-red-400/20">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red-300">Fenetre de decision</p>
+              <p className="mt-1 text-3xl font-black">18 min</p>
+              <p className="mt-2 text-xs font-bold text-zinc-400">Avant escalation en arret de production.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <MetricTile key={metric.label} {...metric} />
+        ))}
+      </section>
+
+      <OperationalImpactStrip impact={impact} />
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+        <RecommendationsPanel recommendations={recommendations} limit={3} dark />
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">Risques majeurs</p>
+                <h3 className="mt-1 text-xl font-black tracking-tight text-zinc-950">Surveillance direction</h3>
+              </div>
+              <AlertTriangle size={18} className="text-amber-500" />
+            </div>
+            <div className="mt-5 space-y-3">
+              {majorRisks.map((line) => (
+                <div key={line.id} className="flex items-start gap-3 rounded-2xl bg-zinc-50 p-3 ring-1 ring-zinc-200">
+                  <span className={classNames('mt-1 h-2.5 w-2.5 shrink-0 rounded-full', statusConfig[line.status].dot)} />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-black text-zinc-950">{line.name}</p>
+                      <span className="text-[10px] font-black uppercase text-zinc-400">{line.support}</span>
+                    </div>
+                    <p className="mt-1 text-xs font-bold leading-5 text-zinc-600">{line.risk}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <EventCenter events={events} compact />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WhyLinePulse({ impact }: { impact: OperationalImpact }) {
+  const before = [
+    'Animateur et technicien parcourent toutes les lignes.',
+    'Informations principalement orales et dispersees.',
+    'Priorites identifiees tardivement ou selon les personnes presentes.',
+    'Visibilite variable le week-end et en equipe reduite.',
+    'Peu de donnees exploitables pour comprendre les tendances.',
+  ];
+  const after = [
+    'Information instantanee, structuree et partagee.',
+    'Tournees orientees vers les lignes qui en ont reellement besoin.',
+    'Decisions suggerees avec echeance, responsable et impact.',
+    'Meme niveau de visibilite semaine et week-end.',
+    'Historique transformant les signaux terrain en connaissance.',
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="max-w-4xl">
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">Pourquoi LinePulse ?</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-zinc-950 sm:text-5xl">
+            Conserver le terrain. Eliminer les angles morts.
+          </h2>
+          <p className="mt-4 text-sm font-bold leading-7 text-zinc-600 sm:text-base">
+            LinePulse ne remplace ni l'animateur, ni le technicien, ni les echanges en ligne. Il donne a chacun la meme lecture
+            de la situation avant d'agir, puis conserve la trace de ce qui a ete compris et decide.
+          </p>
+        </div>
+      </section>
+
+      <section className="grid overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200/50 lg:grid-cols-2">
+        <div className="border-b border-zinc-200 bg-zinc-100 p-6 lg:border-b-0 lg:border-r sm:p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">Avant</p>
+              <h3 className="mt-1 text-2xl font-black tracking-tight text-zinc-950">Une information qui circule</h3>
+            </div>
+            <Route size={22} className="text-zinc-400" />
+          </div>
+          <div className="mt-6 space-y-4">
+            {before.map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-zinc-200 text-zinc-500">
+                  <ArrowRight size={13} />
+                </span>
+                <p className="text-sm font-bold leading-6 text-zinc-600">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-zinc-950 p-6 text-white sm:p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-teal-300">Avec LinePulse</p>
+              <h3 className="mt-1 text-2xl font-black tracking-tight">Une information qui fait agir</h3>
+            </div>
+            <Zap size={22} className="text-teal-300" />
+          </div>
+          <div className="mt-6 space-y-4">
+            {after.map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-teal-400 text-zinc-950">
+                  <CheckCircle2 size={13} />
+                </span>
+                <p className="text-sm font-bold leading-6 text-zinc-300">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <OperationalImpactStrip impact={impact} />
+
+      <section className="grid gap-4 md:grid-cols-3">
+        {[
+          {
+            label: 'Comprendre',
+            title: 'Une situation lisible immediatement',
+            detail: 'Chaque profil voit uniquement les signaux utiles a sa decision.',
+            icon: MonitorCheck,
+          },
+          {
+            label: 'Decider',
+            title: 'Une action proposee avant impact',
+            detail: 'La recommandation precise qui agit, avant quand et pour quel gain.',
+            icon: Target,
+          },
+          {
+            label: 'Apprendre',
+            title: 'Une connaissance qui reste',
+            detail: 'Les tendances rendent enfin les informations terrain exploitables.',
+            icon: TrendingUp,
+          },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-50 text-teal-700 ring-1 ring-teal-100">
+                <Icon size={19} />
+              </span>
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-teal-700">{item.label}</p>
+              <h3 className="mt-1 text-lg font-black text-zinc-950">{item.title}</h3>
+              <p className="mt-2 text-sm font-bold leading-6 text-zinc-500">{item.detail}</p>
+            </div>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
 export function LinePulsePage() {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<ViewMode>('supervisor');
   const lines = DATA.lines;
   const counts = statusCounts(lines);
   const stability = stabilityIndex(lines);
+  const narratives: Record<ViewMode, { eyebrow: string; title: string; detail: string }> = {
+    driver: {
+      eyebrow: 'Signal terrain',
+      title: 'Publier une situation claire avant que le besoin ne devienne une urgence.',
+      detail: "Le conducteur partage l'essentiel en moins de 30 secondes. Le terrain reste la source, toute l'organisation gagne en anticipation.",
+    },
+    supervisor: {
+      eyebrow: 'Decision operationnelle',
+      title: 'Voir ou agir maintenant, avant que les signaux faibles ne deviennent des arrets.',
+      detail: 'Les remontees terrain deviennent des priorites, des recommandations et des tournees ciblees.',
+    },
+    manager: {
+      eyebrow: 'Pilotage du poste',
+      title: 'Comprendre la situation du site en quelques secondes, sur ordinateur comme sur mobile.',
+      detail: 'Le manager voit les risques, les decisions attendues et leur impact sans parcourir plusieurs sources.',
+    },
+    executive: {
+      eyebrow: 'Executive overview',
+      title: 'Lier la disponibilite du site aux decisions qui protegent la production.',
+      detail: "Une lecture synthetique pour arbitrer rapidement les risques majeurs et suivre la continuite operationnelle.",
+    },
+    value: {
+      eyebrow: 'Valeur operationnelle',
+      title: 'Conserver les tournees terrain, tout en eliminant les angles morts entre deux passages.',
+      detail: "LinePulse transforme une information orale et ponctuelle en visibilite continue, partagee et exploitable.",
+    },
+  };
+  const narrative = narratives[activeView];
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] text-zinc-950">
@@ -857,7 +1522,7 @@ export function LinePulsePage() {
 
       <main className="mx-auto max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8">
         <section className="overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/10">
-          <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_28rem]">
+          <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_34rem]">
             <div className="p-5 sm:p-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full bg-teal-400/10 px-3 py-1.5 text-xs font-black text-teal-300 ring-1 ring-teal-400/20">
@@ -871,12 +1536,12 @@ export function LinePulsePage() {
                   Poste {DATA.shift}
                 </span>
               </div>
-              <h1 className="mt-5 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">
-                Une vision commune de la situation production, avant que les signaux faibles ne deviennent des arrets.
+              <p className="mt-5 text-[11px] font-black uppercase tracking-[0.22em] text-teal-300">{narrative.eyebrow}</p>
+              <h1 className="mt-2 max-w-4xl text-3xl font-black tracking-tight sm:text-5xl">
+                {narrative.title}
               </h1>
               <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-zinc-400 sm:text-base">
-                LinePulse transforme les remontees de terrain en visibilite operationnelle partagee, sans se substituer
-                aux tournees. Le terrain reste la source, le cockpit rend la decision plus rapide.
+                {narrative.detail}
               </p>
             </div>
             <div className="border-t border-white/10 bg-white/[0.03] p-5 sm:p-7 xl:border-l xl:border-t-0">
@@ -908,10 +1573,34 @@ export function LinePulsePage() {
 
         <div className="mt-6">
           {activeView === 'driver' && <DriverPulse lines={lines} />}
-          {activeView === 'supervisor' && <SupervisorPulse lines={lines} />}
-          {activeView === 'manager' && (
-            <ManagerPulse lines={lines} alertsHistory={DATA.alertsHistory} weeklyStability={DATA.weeklyStability} />
+          {activeView === 'supervisor' && (
+            <SupervisorPulse
+              lines={lines}
+              recommendations={DATA.recommendations}
+              events={DATA.eventStream}
+              impact={DATA.operationalImpact}
+            />
           )}
+          {activeView === 'manager' && (
+            <ManagerPulse
+              lines={lines}
+              alertsHistory={DATA.alertsHistory}
+              weeklyStability={DATA.weeklyStability}
+              recommendations={DATA.recommendations}
+              events={DATA.eventStream}
+              impact={DATA.operationalImpact}
+            />
+          )}
+          {activeView === 'executive' && (
+            <ExecutiveOverview
+              lines={lines}
+              recommendations={DATA.recommendations}
+              events={DATA.eventStream}
+              impact={DATA.operationalImpact}
+              executive={DATA.executive}
+            />
+          )}
+          {activeView === 'value' && <WhyLinePulse impact={DATA.operationalImpact} />}
         </div>
       </main>
     </div>
