@@ -16,6 +16,7 @@ import {
   MessageSquare,
   PackageCheck,
   PlayCircle,
+  RadioTower,
   RotateCcw,
   ShieldCheck,
   Waves,
@@ -571,6 +572,14 @@ export function ShiftGuideHome() {
 
           <div className="flex items-center gap-2">
             <Link
+              to="/shiftguide/linepulse"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-xs font-black text-teal-300 transition hover:bg-zinc-800 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="LinePulse"
+            >
+              <RadioTower size={13} />
+              <span className="hidden sm:inline">Pulse</span>
+            </Link>
+            <Link
               to="/shiftguide"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="Céline"
@@ -639,6 +648,13 @@ export function ShiftGuideHome() {
               Accès rapide
             </p>
             <div className="mt-3 grid gap-2">
+              <Link
+                to="/shiftguide/linepulse"
+                className="flex items-center gap-3 rounded-xl bg-zinc-950 px-3 py-3 text-sm font-black text-teal-300 transition hover:bg-zinc-800"
+              >
+                <RadioTower size={16} />
+                Ouvrir LinePulse
+              </Link>
               <Link
                 to="/shiftguide"
                 className="flex items-center gap-3 rounded-xl bg-teal-50 px-3 py-3 text-sm font-black text-teal-800 ring-1 ring-teal-100 transition hover:bg-teal-100"

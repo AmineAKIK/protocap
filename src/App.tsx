@@ -9,6 +9,7 @@ import { OperationalReportPage } from './pages/OperationalReportPage';
 import { PackingCalculatorPage } from './pages/PackingCalculatorPage';
 import { CelinePage } from './pages/shiftguide/CelinePage';
 import { LexiquePage } from './pages/shiftguide/LexiquePage';
+import { LinePulsePage } from './pages/shiftguide/LinePulsePage';
 import { ModuleView } from './pages/shiftguide/ModuleView';
 import { ShiftGuideHome } from './pages/shiftguide/ShiftGuideHome';
 import { ShiftGuideLock } from './pages/shiftguide/ShiftGuideLock';
@@ -31,12 +32,14 @@ function ShiftGuideGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+
 export function App() {
   return (
     <Routes>
       {/* ShiftGuide — accès protégé par code */}
       <Route path="/shiftguide" element={<ShiftGuideGuard><CelinePage /></ShiftGuideGuard>} />
       <Route path="/shiftguide/modules" element={<ShiftGuideGuard><ShiftGuideHome /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/linepulse" element={<ShiftGuideGuard><LinePulsePage /></ShiftGuideGuard>} />
       <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideGuard><ModuleView /></ShiftGuideGuard>} />
       <Route path="/shiftguide/lexique" element={<ShiftGuideGuard><LexiquePage /></ShiftGuideGuard>} />
       <Route path="/shiftguide/urgences" element={<ShiftGuideGuard><UrgencesPage /></ShiftGuideGuard>} />

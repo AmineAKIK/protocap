@@ -14,6 +14,7 @@ import {
   Mic,
   MicOff,
   PlayCircle,
+  RadioTower,
   RotateCcw,
   Send,
   Sparkles,
@@ -667,6 +668,14 @@ export function CelinePage() {
 
           <div className="flex items-center gap-2">
             <Link
+              to="/shiftguide/linepulse"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-xs font-black text-teal-300 transition hover:bg-zinc-800 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="LinePulse"
+            >
+              <RadioTower size={13} />
+              <span className="hidden sm:inline">Pulse</span>
+            </Link>
+            <Link
               to="/shiftguide/modules"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="Modules"
@@ -701,6 +710,7 @@ export function CelinePage() {
               </div>
               <div className="divide-y divide-white/10">
                 {[
+                  { to: '/shiftguide/linepulse', icon: RadioTower, label: 'LinePulse temps reel' },
                   { to: '/shiftguide/modules', icon: ClipboardCheck, label: 'Modules terrain' },
                   { to: '/shiftguide/modules', icon: Factory, label: 'Contexte ligne' },
                   { to: '/shiftguide/urgences', icon: AlertTriangle, label: 'Urgences' },
