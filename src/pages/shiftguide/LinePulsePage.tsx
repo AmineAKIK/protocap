@@ -169,17 +169,17 @@ function MetricTile({
   tone: string;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-2xl shadow-zinc-950/10 backdrop-blur">
+    <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg shadow-zinc-200/60">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</p>
-          <p className="mt-2 text-3xl font-black tracking-tight text-white">{value}</p>
+          <p className="mt-2 text-3xl font-black tracking-tight text-zinc-950">{value}</p>
         </div>
         <span className={classNames('grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1', tone)}>
           <Icon size={18} />
         </span>
       </div>
-      <p className="mt-3 text-xs font-bold leading-5 text-zinc-400">{detail}</p>
+      <p className="mt-3 text-xs font-bold leading-5 text-zinc-500">{detail}</p>
     </div>
   );
 }
