@@ -367,14 +367,14 @@ function RecommendationsPanel({
                   <p className={classNames('mt-2 text-xs font-bold', dark ? 'text-teal-300' : 'text-teal-700')}>
                     Impact : {recommendation.impact}
                   </p>
-                  <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <span className={classNames('text-[10px] font-black uppercase tracking-[0.14em]', dark ? 'text-zinc-500' : 'text-zinc-400')}>
                       Responsable · {recommendation.owner}
                     </span>
                     <button
                       onClick={() => setAssigned((current) => isAssigned ? current.filter((id) => id !== recommendation.id) : [...current, recommendation.id])}
                       className={classNames(
-                        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-black transition',
+                        'inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-xs font-black transition sm:w-auto',
                         isAssigned
                           ? 'bg-emerald-100 text-emerald-800'
                           : dark
