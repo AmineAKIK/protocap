@@ -263,7 +263,7 @@ function OperationalImpactStrip({ impact }: { impact: OperationalImpact }) {
   ];
 
   return (
-    <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.35fr]">
+    <section className="grid min-w-0 max-w-full gap-3 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_1.35fr]">
       {metrics.map((metric) => {
         const Icon = metric.icon;
 
@@ -314,9 +314,9 @@ function RecommendationsPanel({
   const visible = typeof limit === 'number' ? recommendations.slice(0, limit) : recommendations;
 
   return (
-    <section className={classNames('rounded-3xl p-5 shadow-sm', dark ? 'border border-zinc-800 bg-zinc-950 text-white' : 'border border-zinc-200 bg-white')}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <section className={classNames('min-w-0 max-w-full rounded-3xl p-3 shadow-sm sm:p-5', dark ? 'border border-zinc-800 bg-zinc-950 text-white' : 'border border-zinc-200 bg-white')}>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <p className={classNames('text-[11px] font-black uppercase tracking-[0.18em]', dark ? 'text-teal-300' : 'text-teal-700')}>
             Decisions suggerees
           </p>
@@ -324,7 +324,7 @@ function RecommendationsPanel({
             Que faire maintenant ?
           </h3>
         </div>
-        <span className={classNames('rounded-full px-3 py-1.5 text-xs font-black ring-1', dark ? 'bg-white/5 text-zinc-300 ring-white/10' : 'bg-teal-50 text-teal-700 ring-teal-100')}>
+        <span className={classNames('w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-black ring-1', dark ? 'bg-white/5 text-zinc-300 ring-white/10' : 'bg-teal-50 text-teal-700 ring-teal-100')}>
           {recommendations.length} decisions
         </span>
       </div>
@@ -337,7 +337,7 @@ function RecommendationsPanel({
             <article
               key={recommendation.id}
               className={classNames(
-                'group rounded-2xl p-4 ring-1 transition',
+                'group min-w-0 rounded-2xl p-3 ring-1 transition sm:p-4',
                 dark ? 'bg-white/[0.04] ring-white/10 hover:bg-white/[0.07]' : 'bg-zinc-50 ring-zinc-200 hover:bg-white hover:shadow-md'
               )}
             >
@@ -410,23 +410,23 @@ function EventCenter({ events, compact = false }: { events: EventStreamItem[]; c
   const visibleEvents = compact ? orderedEvents.slice(0, 4) : orderedEvents;
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
-        <div>
+    <section className="min-w-0 max-w-full overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+      <div className="flex min-w-0 flex-col gap-3 border-b border-zinc-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-black text-zinc-950">
             <Wifi size={15} className="text-teal-600" />
             Centre d'evenements
           </p>
           <p className="mt-1 text-xs font-bold text-zinc-500">Activite terrain consolidee en temps reel</p>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
+        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
           Live
         </span>
       </div>
       <div className="divide-y divide-zinc-100">
         {visibleEvents.map((event, index) => (
-          <div key={`${event.time}-${event.line}`} className={classNames('grid grid-cols-[3.25rem_minmax(0,1fr)] gap-3 px-5 py-3 transition-all', index === 0 && 'animate-slide-in bg-teal-50/50')}>
+          <div key={`${event.time}-${event.line}`} className={classNames('grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] gap-2 px-4 py-3 transition-all sm:grid-cols-[3.25rem_minmax(0,1fr)] sm:gap-3 sm:px-5', index === 0 && 'animate-slide-in bg-teal-50/50')}>
             <span className="pt-0.5 text-xs font-black tabular-nums text-zinc-400">{index === 0 ? 'LIVE' : event.time}</span>
             <div className="min-w-0 border-l border-zinc-200 pl-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -820,7 +820,7 @@ function SupervisorPulse({
   const stability = stabilityIndex(lines);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           label="Lignes vertes"
@@ -854,12 +854,12 @@ function SupervisorPulse({
 
       <OperationalImpactStrip impact={impact} />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+      <div className="grid min-w-0 max-w-full gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
         <RecommendationsPanel recommendations={recommendations} limit={3} />
         <EventCenter events={events} compact />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid min-w-0 max-w-full gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <SupervisorTable lines={lines} />
 
         <aside className="space-y-4">
@@ -1060,8 +1060,8 @@ function ManagerPulse({
     .filter((item) => item.count > 0);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <section className="space-y-5">
+    <div className="grid min-w-0 max-w-full gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <section className="min-w-0 space-y-5">
         <OperationalImpactStrip impact={impact} />
 
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
@@ -1167,7 +1167,7 @@ function ManagerPulse({
         <RecommendationsPanel recommendations={recommendations} />
       </section>
 
-      <aside className="space-y-5">
+      <aside className="min-w-0 space-y-5">
         <ManagerPhone lines={lines} recommendations={recommendations} risk={impact.globalRisk} />
 
         <div className="rounded-3xl border border-red-100 bg-red-50 p-5 shadow-sm">
@@ -1266,7 +1266,7 @@ function ExecutiveOverview({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <section className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/15">
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="p-6 sm:p-8">
@@ -1304,7 +1304,7 @@ function ExecutiveOverview({
 
       <OperationalImpactStrip impact={impact} />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+      <div className="grid min-w-0 max-w-full gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <RecommendationsPanel recommendations={recommendations} limit={3} dark />
         <div className="space-y-5">
           <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -1354,7 +1354,7 @@ function WhyLinePulse({ impact }: { impact: OperationalImpact }) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="max-w-4xl">
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">Pourquoi LinePulse ?</p>
@@ -1486,7 +1486,7 @@ export function LinePulsePage() {
   const narrative = narratives[activeView];
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-zinc-950">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#f4f6f8] text-zinc-950">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto grid min-h-16 max-w-[1540px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 sm:px-6 lg:px-8">
           <button
@@ -1520,8 +1520,8 @@ export function LinePulsePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/10">
+      <main className="mx-auto w-full min-w-0 max-w-[1540px] px-3 py-5 sm:px-6 lg:px-8">
+        <section className="min-w-0 max-w-full overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/10">
           <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_34rem]">
             <div className="p-5 sm:p-7">
               <div className="flex flex-wrap items-center gap-2">
@@ -1571,7 +1571,7 @@ export function LinePulsePage() {
           </div>
         </section>
 
-        <div className="mt-6">
+        <div className="mt-6 min-w-0 max-w-full">
           {activeView === 'driver' && <DriverPulse lines={lines} />}
           {activeView === 'supervisor' && (
             <SupervisorPulse
