@@ -15,6 +15,13 @@ import { ShiftGuideHome } from './pages/shiftguide/ShiftGuideHome';
 import { ShiftGuideLock } from './pages/shiftguide/ShiftGuideLock';
 import { UrgencesPage } from './pages/shiftguide/UrgencesPage';
 import { isShiftGuideUnlocked } from './hooks/useShiftGuideAuth';
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt';
+
+const FillingGoldRoot = React.lazy(() =>
+  import('./features/filling/ui/FillingGoldRoot').then((module) => ({
+    default: module.FillingGoldRoot,
+  })),
+);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -35,6 +42,7 @@ function ShiftGuideGuard({ children }: { children: React.ReactNode }) {
 
 export function App() {
   return (
+    <>
     <Routes>
       {/* ShiftGuide — accès protégé par code */}
       <Route path="/shiftguide" element={<ShiftGuideGuard><CelinePage /></ShiftGuideGuard>} />
@@ -43,6 +51,7 @@ export function App() {
       <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideGuard><ModuleView /></ShiftGuideGuard>} />
       <Route path="/shiftguide/lexique" element={<ShiftGuideGuard><LexiquePage /></ShiftGuideGuard>} />
       <Route path="/shiftguide/urgences" element={<ShiftGuideGuard><UrgencesPage /></ShiftGuideGuard>} />
+      <Route path="/shiftguide/remplissage/*" element={<ShiftGuideGuard><React.Suspense fallback={<div className="grid min-h-screen place-items-center bg-slate-950 text-sm font-black text-white">Ouverture de la Gold…</div>}><FillingGoldRoot /></React.Suspense></ShiftGuideGuard>} />
 
       {/* Main app */}
       <Route
@@ -62,5 +71,7 @@ export function App() {
         }
       />
     </Routes>
+    <PwaUpdatePrompt />
+    </>
   );
 }

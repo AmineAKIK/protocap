@@ -7,6 +7,7 @@ import {
   Clock3,
   Factory,
   Flag,
+  Gauge,
   GitBranch,
   Grid2x2,
   HelpCircle,
@@ -19,7 +20,6 @@ import {
   Send,
   Sparkles,
   Trash2,
-  UserRound,
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -108,8 +108,6 @@ interface ApiMessage {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
-
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
@@ -122,18 +120,16 @@ function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
     }));
 }
 
-async function callOpenAI(
+async function callCelineApi(
   history: ApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const res = await fetch('/api/shiftguide/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
-      model: 'deepseek-chat',
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
     }),
     signal,
   });
@@ -141,7 +137,7 @@ async function callOpenAI(
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
     try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
+    if (res.status === 401) throw new Error('La session ShiftGuide a expiré. Recharge la page pour te reconnecter.');
     if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
@@ -576,11 +572,6 @@ export function CelinePage() {
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
-    if (!API_KEY) {
-      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
-      return;
-    }
-
     const currentMessages = messages;
 
     const userMsg: CelineMessage = {
@@ -609,7 +600,7 @@ export function CelinePage() {
     inputRef.current?.focus();
 
     try {
-      const result = await callOpenAI(
+      const result = await callCelineApi(
         toApiHistory([...currentMessages, userMsg]),
         abortRef.current.signal
       );
@@ -711,6 +702,7 @@ export function CelinePage() {
               <div className="divide-y divide-white/10">
                 {[
                   { to: '/shiftguide/linepulse', icon: RadioTower, label: 'LinePulse temps reel' },
+                  { to: '/shiftguide/remplissage', icon: Gauge, label: 'Réglage remplissage Gold' },
                   { to: '/shiftguide/modules', icon: ClipboardCheck, label: 'Modules terrain' },
                   { to: '/shiftguide/modules', icon: Factory, label: 'Contexte ligne' },
                   { to: '/shiftguide/urgences', icon: AlertTriangle, label: 'Urgences' },

@@ -9,6 +9,7 @@ import {
   Factory,
   Flag,
   GitBranch,
+  Gauge,
   History,
   IdCard,
   Layers3,
@@ -639,6 +640,21 @@ export function ShiftGuideHome() {
             </div>
           </div>
 
+          <Link
+            to="/shiftguide/remplissage"
+            className="group grid gap-4 overflow-hidden rounded-2xl border-2 border-teal-300 bg-gradient-to-br from-teal-950 to-slate-950 p-5 text-white shadow-lg transition hover:-translate-y-0.5 hover:border-teal-200 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+          >
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-teal-300 text-slate-950 shadow-lg shadow-teal-950/20">
+              <Gauge size={27} />
+            </span>
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-[0.2em] text-teal-300">Gold personnelle · coffre local</span>
+              <span className="mt-1 block text-xl font-black">Assistant de réglage remplissage</span>
+              <span className="mt-1 block text-sm font-semibold leading-6 text-slate-300">Cibles NET/BRUT, pesées, décision, correction plafonnée et historique — sans envoyer les données à l’IA.</span>
+            </span>
+            <span className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-4 text-sm font-black text-slate-950 transition group-hover:bg-teal-100">Ouvrir</span>
+          </Link>
+
           <ContextView ctx={activeCtx} summaries={summaries} />
         </section>
 
@@ -668,6 +684,13 @@ export function ShiftGuideHome() {
               >
                 <BookOpen size={16} />
                 Lexique
+              </Link>
+              <Link
+                to="/shiftguide/remplissage"
+                className="flex items-center gap-3 rounded-xl bg-teal-700 px-3 py-3 text-sm font-black text-white transition hover:bg-teal-800"
+              >
+                <Gauge size={16} />
+                Réglage remplissage
               </Link>
               <button
                 onClick={() => handleContextSelect('reprise')}

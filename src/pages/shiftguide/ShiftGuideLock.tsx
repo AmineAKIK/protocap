@@ -1,5 +1,5 @@
 import { LockKeyhole, ShieldAlert } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { unlockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
@@ -8,7 +8,8 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const attempt = async () => {
+  const attempt = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     const trimmed = code.trim();
     if (!trimmed || loading) return;
     setLoading(true);
@@ -22,8 +23,7 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
       setError(result.error ?? 'Code incorrect.');
       setCode('');
       setLoading(false);
-      setTimeout(() => setError(null), 2500);
-      inputRef.current?.focus();
+      window.requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
@@ -34,53 +34,71 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
           <span className="grid h-12 w-12 place-items-center rounded-xl bg-teal-500/15 ring-1 ring-teal-400/20">
             <LockKeyhole size={22} className="text-teal-300" />
           </span>
-          <p className="mt-4 text-xl font-black">ShiftGuide</p>
+          <h1 className="mt-4 text-xl font-black">ShiftGuide</h1>
           <p className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-teal-300">
             Accès restreint
           </p>
         </div>
 
-        <div className="px-6 py-6">
+        <form className="px-6 py-6" onSubmit={attempt} noValidate>
           <p className="text-sm font-bold text-zinc-600">
             Cette section est protégée. Entre le code d'accès pour continuer.
           </p>
 
+          <label htmlFor="shiftguide-access-code" className="mt-5 block text-xs font-black uppercase tracking-wide text-zinc-500">
+            Code d'accès
+          </label>
+
           <div
-            className={`mt-5 overflow-hidden rounded-xl border transition ${
+            className={`mt-2 overflow-hidden rounded-xl border transition ${
               error
                 ? 'border-red-400 ring-4 ring-red-100'
                 : 'border-zinc-200 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10'
             } bg-white`}
           >
             <input
+              id="shiftguide-access-code"
               ref={inputRef}
               type="password"
+              name="shiftguide-access-code"
               value={code}
               autoFocus
               disabled={loading}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') attempt(); }}
+              maxLength={256}
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Code d'accès"
               className="w-full bg-transparent px-4 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50"
-              autoComplete="off"
+              autoComplete="current-password"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? 'shiftguide-access-error' : undefined}
             />
           </div>
 
           {error && (
-            <div className="mt-3 flex items-center gap-2 text-xs font-bold text-red-600">
+            <div
+              id="shiftguide-access-error"
+              role="alert"
+              aria-live="assertive"
+              className="mt-3 flex items-center gap-2 text-xs font-bold text-red-600"
+            >
               <ShieldAlert size={13} />
               {error}
             </div>
           )}
 
           <button
-            onClick={attempt}
+            type="submit"
             disabled={!code.trim() || loading}
             className="mt-4 w-full rounded-xl bg-zinc-950 py-3.5 text-sm font-black text-teal-300 transition hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-40"
           >
             {loading ? 'Vérification…' : 'Déverrouiller'}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

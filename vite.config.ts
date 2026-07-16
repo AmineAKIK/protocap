@@ -9,9 +9,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: null,
-      selfDestroying: true,
+      registerType: 'prompt',
+      injectRegister: 'auto',
       includeAssets: ['pwa-icon.svg'],
       manifest: {
         name: 'LineOps Toolkit',
@@ -32,7 +31,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}']
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        cleanupOutdatedCaches: true,
       }
     })
   ]
