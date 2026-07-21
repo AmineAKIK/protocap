@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Clock3,
   Factory,
+  FileSearch,
   Flag,
   GitBranch,
   Grid2x2,
@@ -668,6 +669,14 @@ export function CelinePage() {
 
           <div className="flex items-center gap-2">
             <Link
+              to="/shiftguide/analyse-ligne"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-xs font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 sm:w-auto sm:gap-2 sm:px-3"
+              aria-label="Analyse de ligne"
+            >
+              <FileSearch size={13} />
+              <span className="hidden lg:inline">Analyse</span>
+            </Link>
+            <Link
               to="/shiftguide/linepulse"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-xs font-black text-teal-300 transition hover:bg-zinc-800 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="LinePulse"
@@ -711,6 +720,7 @@ export function CelinePage() {
               <div className="divide-y divide-white/10">
                 {[
                   { to: '/shiftguide/linepulse', icon: RadioTower, label: 'LinePulse temps reel' },
+                  { to: '/shiftguide/analyse-ligne', icon: FileSearch, label: 'Analyse de ligne 101' },
                   { to: '/shiftguide/modules', icon: ClipboardCheck, label: 'Modules terrain' },
                   { to: '/shiftguide/modules', icon: Factory, label: 'Contexte ligne' },
                   { to: '/shiftguide/urgences', icon: AlertTriangle, label: 'Urgences' },
