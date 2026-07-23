@@ -1,7 +1,23 @@
-node_modules
-# dist committed for Railway — do not ignore
-.DS_Store
-*.local
+# Dependencies
+node_modules/
+
+# Environment and local overrides
 .env
-.env.local
+.env.*
+!.env.example
+*.local
+
+# Logs
+*.log
 npm-debug.log*
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
+
+# TypeScript and test caches
+*.tsbuildinfo
+coverage/
+
+# dist/ is intentionally committed for Railway deployments.
