@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   ArrowRight,
   ChevronLeft,
   Eye,
