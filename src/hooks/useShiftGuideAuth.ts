@@ -5,17 +5,29 @@ export interface ShiftGuideData {
   urgences: unknown;
 }
 
+interface ShiftGuideUnlockResponse extends ShiftGuideData {
+  token: string;
+}
+
 const SESSION_KEY = 'shiftguide_auth_token';
 const DATA_KEY = 'shiftguide_data';
 
+export function getShiftGuideToken(): string | null {
+  return sessionStorage.getItem(SESSION_KEY);
+}
+
 export function isShiftGuideUnlocked(): boolean {
-  return !!sessionStorage.getItem(SESSION_KEY);
+  return !!getShiftGuideToken() && !!sessionStorage.getItem(DATA_KEY);
 }
 
 export function getShiftGuideData(): ShiftGuideData | null {
   const raw = sessionStorage.getItem(DATA_KEY);
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 export async function unlockShiftGuide(code: string): Promise<{ ok: boolean; error?: string }> {
@@ -31,8 +43,11 @@ export async function unlockShiftGuide(code: string): Promise<{ ok: boolean; err
       return { ok: false, error: body.error ?? 'Code incorrect.' };
     }
 
-    const data: ShiftGuideData = await res.json();
-    sessionStorage.setItem(SESSION_KEY, '1');
+    const response: ShiftGuideUnlockResponse = await res.json();
+    if (!response.token) return { ok: false, error: 'Session invalide.' };
+
+    const { token, ...data } = response;
+    sessionStorage.setItem(SESSION_KEY, token);
     sessionStorage.setItem(DATA_KEY, JSON.stringify(data));
     return { ok: true };
   } catch {
