@@ -3,10 +3,6 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
-const unusedDebtFiles = [
-  'src/pages/shiftguide/LineAnalysisReportPage.tsx',
-];
-
 export default tseslint.config(
   { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
   eslint.configs.recommended,
@@ -28,13 +24,6 @@ export default tseslint.config(
         ...globals.node,
         ...globals.es2022,
       },
-    },
-  },
-  // Explicit baseline for the one remaining pre-existing unused-code file.
-  {
-    files: unusedDebtFiles,
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 );
