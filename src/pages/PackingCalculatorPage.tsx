@@ -63,7 +63,7 @@ export function PackingCalculatorPage() {
     if (!input) return null;
     const exact = calculateExactPacking(input);
     const options = calculatePackingOptions(input);
-    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);
+    const recommendation = getPackingRecommendation(options);
     const selected = options.find((option) => option.policy === form.policy) ?? options[0];
     return { exact, options, recommendation, selected };
   }, [form.policy, input]);
