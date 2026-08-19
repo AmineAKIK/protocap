@@ -26,7 +26,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { buildSystemPrompt } from '../../data/celineSystemPrompt';
 import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 // ─── Speech Recognition ───────────────────────────────────────────────────────
@@ -135,9 +134,7 @@ async function callOpenAI(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
-    }),
+    body: JSON.stringify({ messages: history }),
     signal,
   });
 
