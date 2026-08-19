@@ -6,9 +6,6 @@ const base = process.env.VITE_BASE_PATH || '/';
 
 export default defineConfig({
   base,
-  define: {
-    'import.meta.env.VITE_DEEPSEEK_API_KEY': JSON.stringify('server-proxy'),
-  },
   plugins: [
     react(),
     VitePWA({

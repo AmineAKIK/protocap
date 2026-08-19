@@ -27,6 +27,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
+import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 // ─── Speech Recognition ───────────────────────────────────────────────────────
 
@@ -109,8 +110,6 @@ interface ApiMessage {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
-
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
@@ -127,23 +126,32 @@ async function callOpenAI(
   history: ApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const token = getShiftGuideToken();
+  if (!token) throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
+
+  const res = await fetch('/api/celine/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
-      model: 'deepseek-chat',
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
     }),
     signal,
   });
 
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
-    try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
-    if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
+    try {
+      const body = await res.json();
+      errMsg = typeof body?.error === 'string' ? body.error : errMsg;
+    } catch { /* ignore */ }
+    if (res.status === 401) {
+      lockShiftGuide();
+      throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
+    }
+    if (res.status === 429) throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
 
@@ -577,10 +585,6 @@ export function CelinePage() {
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
-    if (!API_KEY) {
-      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
-      return;
-    }
 
     const currentMessages = messages;
 
