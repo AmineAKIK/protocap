@@ -21,60 +21,57 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Apply targeted fixes
+      - name: Apply lint cleanup
         run: |
           python3 <<'PY'
           from pathlib import Path
           import re
 
-          def replace(path, old, new, count=None):
+          def transform(path, fn):
               p = Path(path)
-              text = p.read_text()
-              occurrences = text.count(old)
-              expected = count if count is not None else 1
-              if occurrences < expected:
-                  raise SystemExit(f'{path}: expected at least {expected} occurrence(s), found {occurrences}: {old[:100]!r}')
-              text = text.replace(old, new, expected)
-              p.write_text(text)
+              p.write_text(fn(p.read_text()))
 
-          # ExpiryCheck: remove dead import and derive modal opening from the selection action.
-          replace('src/pages/ExpiryCheckPage.tsx', "import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';")
-          replace('src/pages/ExpiryCheckPage.tsx', "import { StatCard } from '../components/StatCard';\n", '')
-          replace('src/pages/ExpiryCheckPage.tsx', "  const [blockedModalOpen, setBlockedModalOpen] = useState(false);", "  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>\n    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false\n  );")
-          replace('src/pages/ExpiryCheckPage.tsx', "  useEffect(() => {\n    if (isBlocked) setBlockedModalOpen(true);\n    else setBlockedModalOpen(false);\n  }, [selectedLineId, isBlocked]);\n", "  function handleLineSelect(line: ConditioningLine) {\n    setSelectedLineId(line.id);\n    setBlockedModalOpen(getLineStatus(line) === 'nonConform');\n  }\n")
-          replace('src/pages/ExpiryCheckPage.tsx', "onClick={() => setSelectedLineId(line.id)}", "onClick={() => handleLineSelect(line)}")
+          def repl(text, old, new, count=-1):
+              return text.replace(old, new, count)
 
-          # Dead code/imports found by ESLint.
-          replace('src/pages/KnowledgeBasePage.tsx', "import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';", "import type { StandardStatus, StandardType } from '../types/knowledge';")
-          replace('src/pages/KnowledgeBasePage.tsx', "\n  const Icon = typeIcon[doc.type];\n", "\n")
-          replace('src/pages/LogisticsCallPage.tsx', "import { StatCard } from '../components/StatCard';\n", '')
-          replace('src/pages/LogisticsCallPage.tsx', "function urgencyClass(request: LogisticsRequest, now: Date): string {\n  if (request.status !== 'waiting') return '';\n  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;\n  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';\n  return '';\n}\n\n", '')
-          replace('src/pages/shiftguide/CelinePage.tsx', "  UserRound,\n", '')
-          replace('src/pages/shiftguide/UrgencesPage.tsx', "  AlertTriangle,\n", '')
+          transform('src/pages/ExpiryCheckPage.tsx', lambda s:
+              repl(repl(repl(repl(repl(s,
+                "import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';"),
+                "import { StatCard } from '../components/StatCard';\n", ""),
+                "  const [blockedModalOpen, setBlockedModalOpen] = useState(false);",
+                "  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>\n    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false\n  );"),
+                "  useEffect(() => {\n    if (isBlocked) setBlockedModalOpen(true);\n    else setBlockedModalOpen(false);\n  }, [selectedLineId, isBlocked]);",
+                "  function handleLineSelect(line: ConditioningLine) {\n    setSelectedLineId(line.id);\n    setBlockedModalOpen(getLineStatus(line) === 'nonConform');\n  }"),
+                "onClick={() => setSelectedLineId(line.id)}", "onClick={() => handleLineSelect(line)}"))
 
-          # Celine: synchronize the callback ref after render rather than mutating a ref during render.
-          replace('src/pages/shiftguide/CelinePage.tsx', "  // Keep ref in sync with latest sendMessage on every render\n  sendMessageRef.current = sendMessage;", "  useEffect(() => {\n    sendMessageRef.current = sendMessage;\n  }, [sendMessage]);")
+          transform('src/pages/KnowledgeBasePage.tsx', lambda s:
+              repl(repl(s,
+                "import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';",
+                "import type { StandardStatus, StandardType } from '../types/knowledge';"),
+                "\n  const Icon = typeIcon[doc.type];\n", "\n"))
 
-          # LineAnalysisReport: strip only the imports ESLint identified from the initial lucide block.
-          p = Path('src/pages/shiftguide/LineAnalysisReportPage.tsx')
-          text = p.read_text()
-          start = text.index("import {")
-          end = text.index("} from 'lucide-react';", start) + len("} from 'lucide-react';")
-          block = text[start:end]
-          for name in ['BarChart3', 'BookOpen', 'CircleDot', 'Factory', 'Layers3', 'Search', 'Sparkles']:
-              block, n = re.subn(rf'\s*{name}\s*,?', '', block, count=1)
-              if n != 1:
-                  raise SystemExit(f'LineAnalysisReportPage: could not remove {name}')
-          text = text[:start] + block + text[end:]
-          p.write_text(text)
+          transform('src/pages/LogisticsCallPage.tsx', lambda s:
+              repl(repl(s, "import { StatCard } from '../components/StatCard';\n", ""),
+                "function urgencyClass(request: LogisticsRequest, now: Date): string {\n  if (request.status !== 'waiting') return '';\n  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;\n  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';\n  return '';\n}\n\n", ""))
 
-          # ModuleView: avoid creating a component type during render.
-          replace('src/pages/shiftguide/ModuleView.tsx', "import type { LucideIcon } from 'lucide-react';\n", '')
-          replace('src/pages/shiftguide/ModuleView.tsx', "import { useCallback, useEffect, useRef, useState } from 'react';", "import { useCallback, useRef, useState } from 'react';")
-          p = Path('src/pages/shiftguide/ModuleView.tsx')
-          text = p.read_text()
-          pattern = re.compile(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?function getModuleIcon\(moduleId: string \| undefined\): LucideIcon \{.*?\n\}", re.S)
-          replacement = """function ModuleGlyph({ moduleId, size }: { moduleId: string | undefined; size: number }) {
+          transform('src/pages/shiftguide/CelinePage.tsx', lambda s:
+              repl(repl(s, "  UserRound,\n", ""),
+                "  // Keep ref in sync with latest sendMessage on every render\n  sendMessageRef.current = sendMessage;",
+                "  useEffect(() => {\n    sendMessageRef.current = sendMessage;\n  }, [sendMessage]);"))
+
+          def clean_line_analysis(s):
+              first_end = s.find("} from 'lucide-react';")
+              if first_end < 0: return s
+              head, tail = s[:first_end], s[first_end:]
+              for name in ['BarChart3', 'BookOpen', 'CircleDot', 'Factory', 'Layers3', 'Search', 'Sparkles']:
+                  head = re.sub(rf'\s*{name}\s*,?', '', head, count=1)
+              return head + tail
+          transform('src/pages/shiftguide/LineAnalysisReportPage.tsx', clean_line_analysis)
+
+          def module_view(s):
+              s = s.replace("import type { LucideIcon } from 'lucide-react';\n", '')
+              s = s.replace("import { useCallback, useEffect, useRef, useState } from 'react';", "import { useCallback, useRef, useState } from 'react';")
+              s = re.sub(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?\n\};\n\nfunction getModuleIcon\(moduleId: string \| undefined\): LucideIcon \{.*?\n\}", """function renderModuleIcon(moduleId: string | undefined, size: number) {
   switch (moduleId) {
     case 'badgeage': return <IdCard size={size} />;
     case 'debut_poste': return <ClipboardCheck size={size} />;
@@ -88,22 +85,15 @@ jobs:
     case 'tri': return <Layers3 size={size} />;
     default: return <ListChecks size={size} />;
   }
-}"""
-          text, n = pattern.subn(replacement, text, count=1)
-          if n != 1:
-              raise SystemExit('ModuleView: icon map block not found')
-          text = text.replace("  const ModuleIcon = getModuleIcon(module.id);\n\n", '', 1)
-          if '<ModuleIcon size={16} />' not in text:
-              raise SystemExit('ModuleView: ModuleIcon usage not found')
-          text = text.replace('<ModuleIcon size={16} />', '<ModuleGlyph moduleId={module.id} size={16} />', 1)
-          p.write_text(text)
+}""", s, count=1, flags=re.S)
+              s = s.replace("  const ModuleIcon = getModuleIcon(module.id);\n\n", '')
+              s = s.replace('<ModuleIcon size={16} />', '{renderModuleIcon(module.id, 16)}')
+              return s
+          transform('src/pages/shiftguide/ModuleView.tsx', module_view)
 
-          # ShiftGuideHome: same static-component cleanup, preserving ContextDef.icon typing.
-          replace('src/pages/shiftguide/ShiftGuideHome.tsx', "import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';")
-          p = Path('src/pages/shiftguide/ShiftGuideHome.tsx')
-          text = p.read_text()
-          pattern = re.compile(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?function getModuleIcon\(module: SGModule\): LucideIcon \{.*?\n\}", re.S)
-          replacement = """function ModuleGlyph({ moduleId, size }: { moduleId: string; size: number }) {
+          def shift_home(s):
+              s = s.replace("import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';")
+              s = re.sub(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?\n\};\n\nfunction getModuleIcon\(module: SGModule\): LucideIcon \{.*?\n\}", """function renderModuleIcon(moduleId: string, size: number) {
   switch (moduleId) {
     case 'badgeage': return <IdCard size={size} />;
     case 'debut_poste': return <ClipboardCheck size={size} />;
@@ -117,45 +107,35 @@ jobs:
     case 'tri': return <Layers3 size={size} />;
     default: return <ListChecks size={size} />;
   }
-}"""
-          text, n = pattern.subn(replacement, text, count=1)
-          if n != 1:
-              raise SystemExit('ShiftGuideHome: icon map block not found')
-          # Exactly two module-card locals are dead/dynamic component aliases.
-          if text.count("  const Icon = getModuleIcon(module);\n\n") != 2:
-              raise SystemExit('ShiftGuideHome: expected two dynamic module icon aliases')
-          text = text.replace("  const Icon = getModuleIcon(module);\n\n", '', 2)
-          priority_start = text.index('function PriorityModuleCard')
-          compact_start = text.index('function CompactModuleCard')
-          priority = text[priority_start:compact_start]
-          if '<Icon size={18} />' not in priority:
-              raise SystemExit('ShiftGuideHome: priority icon usage not found')
-          priority = priority.replace('<Icon size={18} />', '<ModuleGlyph moduleId={module.id} size={18} />', 1)
-          text = text[:priority_start] + priority + text[compact_start:]
-          compact_start = text.index('function CompactModuleCard')
-          compact_end = text.index('\nfunction ', compact_start + 10)
-          compact = text[compact_start:compact_end]
-          if '<Icon size={17} />' not in compact:
-              raise SystemExit('ShiftGuideHome: compact icon usage not found')
-          compact = compact.replace('<Icon size={17} />', '<ModuleGlyph moduleId={module.id} size={17} />', 1)
-          text = text[:compact_start] + compact + text[compact_end:]
-          old_state = "  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});\n\n  useEffect(() => {\n    setSummaries(getAllSummaries());\n  }, []);"
-          if old_state not in text:
-              raise SystemExit('ShiftGuideHome: summary initialization block not found')
-          text = text.replace(old_state, "  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);", 1)
-          p.write_text(text)
+}""", s, count=1, flags=re.S)
+              s = s.replace("  const Icon = getModuleIcon(module);\n\n", '', 2)
+              s = s.replace('<Icon size={18} />', '{renderModuleIcon(module.id, 18)}', 1)
+              # Find the compact-card dynamic icon after its function declaration.
+              marker = 'function CompactModuleCard'
+              idx = s.find(marker)
+              if idx >= 0:
+                  before, after = s[:idx], s[idx:]
+                  after = after.replace('<Icon size={17} />', '{renderModuleIcon(module.id, 17)}', 1)
+                  s = before + after
+              s = s.replace("  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});\n\n  useEffect(() => {\n    setSummaries(getAllSummaries());\n  }, []);", "  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);")
+              return s
+          transform('src/pages/shiftguide/ShiftGuideHome.tsx', shift_home)
 
-          # Packing recommendation had two parameters that never influenced the result.
-          replace('src/utils/packing.ts', "export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {", "export function getPackingRecommendation(options: PackingOption[]): PackingOption {")
-          replace('src/pages/PackingCalculatorPage.tsx', "    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);", "    const recommendation = getPackingRecommendation(options);")
+          transform('src/pages/shiftguide/UrgencesPage.tsx', lambda s: s.replace("  AlertTriangle,\n", '', 1))
+          transform('src/utils/packing.ts', lambda s: s.replace(
+              "export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {",
+              "export function getPackingRecommendation(options: PackingOption[]): PackingOption {", 1))
+          transform('src/pages/PackingCalculatorPage.tsx', lambda s: s.replace(
+              "    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);",
+              "    const recommendation = getPackingRecommendation(options);", 1))
           PY
           git diff --check
-      - name: Commit targeted fixes
+      - name: Commit lint cleanup
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src
           git commit -m 'refactor: resolve lint findings [skip ci]'
           git push
-      - name: Validate committed fixes
+      - name: Validate cleanup
         run: npm run check
