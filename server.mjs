@@ -3,6 +3,7 @@ import express from 'express';
 import { existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { buildCelineSystemPrompt } from './server/celinePrompt.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = existsSync(join(__dirname, 'dist'))
@@ -13,10 +14,48 @@ const PORT = process.env.PORT || 3000;
 const SHIFTGUIDE_CODE = process.env.SHIFTGUIDE_CODE ?? process.env.VITE_SHIFTGUIDE_CODE ?? '';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY ?? process.env.VITE_DEEPSEEK_API_KEY ?? '';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const UNLOCK_WINDOW_MS = 10 * 60 * 1000;
+const UNLOCK_MAX_ATTEMPTS = 10;
+const CHAT_WINDOW_MS = 60 * 1000;
+const CHAT_MAX_REQUESTS = 30;
+
+function parseJsonEnv(name, fallback = null) {
+  const raw = process.env[name];
+  if (raw == null || raw === '') return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`${name} must contain valid JSON.`, { cause: error });
+  }
+}
+
+const shiftGuideData = {
+  modules: parseJsonEnv('SG_MODULES'),
+  lexique: parseJsonEnv('SG_LEXIQUE'),
+  systemPromptExtra: process.env.SG_SYSTEM_PROMPT ?? null,
+  urgences: parseJsonEnv('SG_URGENCES'),
+};
+
+if (SHIFTGUIDE_CODE && (!Array.isArray(shiftGuideData.modules) || !Array.isArray(shiftGuideData.lexique))) {
+  throw new Error('ShiftGuide is enabled but SG_MODULES or SG_LEXIQUE is missing or invalid.');
+}
+
+const celineSystemPrompt =
+  Array.isArray(shiftGuideData.modules) && Array.isArray(shiftGuideData.lexique)
+    ? buildCelineSystemPrompt(shiftGuideData)
+    : null;
+
 const sessions = new Map();
+const unlockAttempts = new Map();
+const chatRequests = new Map();
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '128kb' }));
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 function issueSession() {
   const token = randomBytes(32).toString('base64url');
@@ -29,73 +68,123 @@ function getSessionToken(req) {
   return authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
 }
 
-function hasValidSession(req) {
-  const token = getSessionToken(req);
+function hasValidSessionToken(token) {
   if (!token) return false;
 
   const expiresAt = sessions.get(token);
   if (!expiresAt) return false;
   if (expiresAt <= Date.now()) {
     sessions.delete(token);
+    chatRequests.delete(token);
     return false;
   }
 
   return true;
 }
 
-function isValidChatMessages(messages) {
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return false;
+function takeRateLimit(store, key, maxRequests, windowMs) {
+  const now = Date.now();
+  const current = store.get(key);
 
-  return messages.every((message, index) => {
-    if (!message || typeof message !== 'object') return false;
-    if (!['system', 'user', 'assistant'].includes(message.role)) return false;
-    if (index === 0 && message.role !== 'system') return false;
-    if (index > 0 && message.role === 'system') return false;
-    return typeof message.content === 'string' && message.content.length <= 20_000;
-  });
+  if (!current || current.resetAt <= now) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (current.count >= maxRequests) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+    };
+  }
+
+  current.count += 1;
+  return { allowed: true, retryAfterSeconds: 0 };
 }
+
+function normalizeChatHistory(messages) {
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
+
+  const history = messages[0]?.role === 'system' ? messages.slice(1) : messages;
+  if (history.length === 0) return null;
+
+  const valid = history.every((message) => {
+    if (!message || typeof message !== 'object') return false;
+    if (!['user', 'assistant'].includes(message.role)) return false;
+    return typeof message.content === 'string' && message.content.length > 0 && message.content.length <= 20_000;
+  });
+
+  return valid ? history : null;
+}
+
+function cleanupExpiredState() {
+  const now = Date.now();
+
+  for (const [token, expiresAt] of sessions) {
+    if (expiresAt <= now) {
+      sessions.delete(token);
+      chatRequests.delete(token);
+    }
+  }
+
+  for (const [key, entry] of unlockAttempts) {
+    if (entry.resetAt <= now) unlockAttempts.delete(key);
+  }
+
+  for (const [key, entry] of chatRequests) {
+    if (entry.resetAt <= now && !sessions.has(key)) chatRequests.delete(key);
+  }
+}
+
+const cleanupTimer = setInterval(cleanupExpiredState, 15 * 60 * 1000);
+cleanupTimer.unref();
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.post('/api/shiftguide/unlock', (req, res) => {
-  if (!SHIFTGUIDE_CODE) {
+  if (!SHIFTGUIDE_CODE || !celineSystemPrompt) {
     return res.status(503).json({ error: 'Accès ShiftGuide non configuré.' });
   }
 
+  const clientKey = req.ip || 'unknown';
+  const limit = takeRateLimit(unlockAttempts, clientKey, UNLOCK_MAX_ATTEMPTS, UNLOCK_WINDOW_MS);
+  if (!limit.allowed) {
+    res.set('Retry-After', String(limit.retryAfterSeconds));
+    return res.status(429).json({ error: 'Trop de tentatives. Réessaie plus tard.' });
+  }
+
   const { code } = req.body ?? {};
-  if (!code || code !== SHIFTGUIDE_CODE) {
+  if (typeof code !== 'string' || code !== SHIFTGUIDE_CODE) {
     return res.status(401).json({ error: 'Code incorrect.' });
   }
 
-  let modules, lexique, systemPromptExtra, urgences;
-  try {
-    modules = JSON.parse(process.env.SG_MODULES ?? 'null');
-    lexique = JSON.parse(process.env.SG_LEXIQUE ?? 'null');
-    systemPromptExtra = process.env.SG_SYSTEM_PROMPT ?? null;
-    urgences = JSON.parse(process.env.SG_URGENCES ?? 'null');
-  } catch {
-    return res.status(500).json({ error: 'Données non configurées sur le serveur.' });
-  }
-
-  if (!modules || !lexique) {
-    return res.status(500).json({ error: 'Données non configurées sur le serveur.' });
-  }
-
+  unlockAttempts.delete(clientKey);
   const token = issueSession();
-  return res.json({ token, modules, lexique, systemPromptExtra, urgences });
+  return res.json({ token, ...shiftGuideData });
 });
 
 app.post('/api/celine/chat', async (req, res) => {
-  if (!hasValidSession(req)) {
+  const token = getSessionToken(req);
+  if (!hasValidSessionToken(token)) {
     return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
   }
 
-  if (!DEEPSEEK_API_KEY) {
+  const limit = takeRateLimit(chatRequests, token, CHAT_MAX_REQUESTS, CHAT_WINDOW_MS);
+  if (!limit.allowed) {
+    res.set('Retry-After', String(limit.retryAfterSeconds));
+    return res.status(429).json({ error: 'Trop de requêtes. Réessaie dans un moment.' });
+  }
+
+  if (!DEEPSEEK_API_KEY || !celineSystemPrompt) {
     return res.status(503).json({ error: 'Service IA non configuré.' });
   }
 
-  const { messages } = req.body ?? {};
-  if (!isValidChatMessages(messages)) {
+  const history = normalizeChatHistory(req.body?.messages);
+  if (!history) {
     return res.status(400).json({ error: 'Requête IA invalide.' });
   }
 
@@ -108,7 +197,7 @@ app.post('/api/celine/chat', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
-        messages,
+        messages: [{ role: 'system', content: celineSystemPrompt }, ...history],
         temperature: 0.2,
         response_format: { type: 'json_object' },
       }),
@@ -116,6 +205,7 @@ app.post('/api/celine/chat', async (req, res) => {
     });
 
     if (!upstream.ok) {
+      console.error('DeepSeek upstream request failed', { status: upstream.status });
       if (upstream.status === 429) {
         return res.status(429).json({ error: 'Service IA temporairement saturé.' });
       }
@@ -128,6 +218,9 @@ app.post('/api/celine/chat', async (req, res) => {
     if (error instanceof Error && error.name === 'TimeoutError') {
       return res.status(504).json({ error: 'Service IA trop lent.' });
     }
+    console.error('DeepSeek request failed', {
+      error: error instanceof Error ? error.name : 'UnknownError',
+    });
     return res.status(502).json({ error: 'Service IA indisponible.' });
   }
 });
