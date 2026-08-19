@@ -27,84 +27,135 @@ jobs:
           from pathlib import Path
           import re
 
-          def edit(path, replacements=(), regex_replacements=()):
+          def replace(path, old, new, count=None):
               p = Path(path)
               text = p.read_text()
-              for old, new in replacements:
-                  if old not in text:
-                      raise SystemExit(f'Missing expected text in {path}: {old[:120]!r}')
-                  text = text.replace(old, new)
-              for pattern, repl, count in regex_replacements:
-                  text, n = re.subn(pattern, repl, text, count=count, flags=re.S)
-                  if n != count:
-                      raise SystemExit(f'Expected {count} regex replacements in {path}, got {n}: {pattern}')
+              occurrences = text.count(old)
+              expected = count if count is not None else 1
+              if occurrences < expected:
+                  raise SystemExit(f'{path}: expected at least {expected} occurrence(s), found {occurrences}: {old[:100]!r}')
+              text = text.replace(old, new, expected)
               p.write_text(text)
 
-          edit('src/pages/ExpiryCheckPage.tsx', [
-              ("import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';"),
-              ("import { StatCard } from '../components/StatCard';\n", ""),
-              ("  const [blockedModalOpen, setBlockedModalOpen] = useState(false);", "  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>\n    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false\n  );"),
-              ("  useEffect(() => {\n    if (isBlocked) setBlockedModalOpen(true);\n    else setBlockedModalOpen(false);\n  }, [selectedLineId, isBlocked]);\n\n", "  function handleLineSelect(line: ConditioningLine) {\n    setSelectedLineId(line.id);\n    setBlockedModalOpen(getLineStatus(line) === 'nonConform');\n  }\n\n"),
-              ("                  onClick={() => setSelectedLineId(line.id)}", "                  onClick={() => handleLineSelect(line)}"),
-          ])
+          # ExpiryCheck: remove dead import and derive modal opening from the selection action.
+          replace('src/pages/ExpiryCheckPage.tsx', "import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';")
+          replace('src/pages/ExpiryCheckPage.tsx', "import { StatCard } from '../components/StatCard';\n", '')
+          replace('src/pages/ExpiryCheckPage.tsx', "  const [blockedModalOpen, setBlockedModalOpen] = useState(false);", "  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>\n    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false\n  );")
+          replace('src/pages/ExpiryCheckPage.tsx', "  useEffect(() => {\n    if (isBlocked) setBlockedModalOpen(true);\n    else setBlockedModalOpen(false);\n  }, [selectedLineId, isBlocked]);\n", "  function handleLineSelect(line: ConditioningLine) {\n    setSelectedLineId(line.id);\n    setBlockedModalOpen(getLineStatus(line) === 'nonConform');\n  }\n")
+          replace('src/pages/ExpiryCheckPage.tsx', "onClick={() => setSelectedLineId(line.id)}", "onClick={() => handleLineSelect(line)}")
 
-          edit('src/pages/KnowledgeBasePage.tsx', [
-              ("import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';", "import type { StandardStatus, StandardType } from '../types/knowledge';"),
-              ("\n  const Icon = typeIcon[doc.type];\n", ""),
-          ])
+          # Dead code/imports found by ESLint.
+          replace('src/pages/KnowledgeBasePage.tsx', "import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';", "import type { StandardStatus, StandardType } from '../types/knowledge';")
+          replace('src/pages/KnowledgeBasePage.tsx', "\n  const Icon = typeIcon[doc.type];\n", "\n")
+          replace('src/pages/LogisticsCallPage.tsx', "import { StatCard } from '../components/StatCard';\n", '')
+          replace('src/pages/LogisticsCallPage.tsx', "function urgencyClass(request: LogisticsRequest, now: Date): string {\n  if (request.status !== 'waiting') return '';\n  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;\n  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';\n  return '';\n}\n\n", '')
+          replace('src/pages/shiftguide/CelinePage.tsx', "  UserRound,\n", '')
+          replace('src/pages/shiftguide/UrgencesPage.tsx', "  AlertTriangle,\n", '')
 
-          edit('src/pages/LogisticsCallPage.tsx', [
-              ("import { StatCard } from '../components/StatCard';\n", ""),
-              ("function urgencyClass(request: LogisticsRequest, now: Date): string {\n  if (request.status !== 'waiting') return '';\n  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;\n  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';\n  return '';\n}\n\n", ""),
-          ])
+          # Celine: synchronize the callback ref after render rather than mutating a ref during render.
+          replace('src/pages/shiftguide/CelinePage.tsx', "  // Keep ref in sync with latest sendMessage on every render\n  sendMessageRef.current = sendMessage;", "  useEffect(() => {\n    sendMessageRef.current = sendMessage;\n  }, [sendMessage]);")
 
-          edit('src/pages/shiftguide/CelinePage.tsx', [
-              ("  UserRound,\n", ""),
-              ("  // Keep ref in sync with latest sendMessage on every render\n  sendMessageRef.current = sendMessage;\n", "  useEffect(() => {\n    sendMessageRef.current = sendMessage;\n  }, [sendMessage]);\n"),
-          ])
-
+          # LineAnalysisReport: strip only the imports ESLint identified from the initial lucide block.
           p = Path('src/pages/shiftguide/LineAnalysisReportPage.tsx')
           text = p.read_text()
+          start = text.index("import {")
+          end = text.index("} from 'lucide-react';", start) + len("} from 'lucide-react';")
+          block = text[start:end]
           for name in ['BarChart3', 'BookOpen', 'CircleDot', 'Factory', 'Layers3', 'Search', 'Sparkles']:
-              text, n = re.subn(rf'\s*{name},?', '', text, count=1)
+              block, n = re.subn(rf'\s*{name}\s*,?', '', block, count=1)
               if n != 1:
-                  raise SystemExit(f'Could not remove {name} from LineAnalysisReportPage.tsx')
+                  raise SystemExit(f'LineAnalysisReportPage: could not remove {name}')
+          text = text[:start] + block + text[end:]
           p.write_text(text)
 
-          edit('src/pages/shiftguide/ModuleView.tsx', [
-              ("import { useCallback, useEffect, useRef, useState } from 'react';", "import { useCallback, useRef, useState } from 'react';"),
-              ("const moduleIconMap: Record<string, LucideIcon> = {\n  badgeage: IdCard,\n  debut_poste: ClipboardCheck,\n  fin_poste: Flag,\n  debut_oc: PlayCircle,\n  fin_oc: BadgeCheck,\n  changement_oc: GitBranch,\n  debut_cuve: Waves,\n  fin_cuve: PackageCheck,\n  production: Factory,\n  tri: Layers3,\n};\n\nfunction getModuleIcon(moduleId: string | undefined): LucideIcon {\n  if (!moduleId) return ListChecks;\n  return moduleIconMap[moduleId] ?? ListChecks;\n}\n", "function ModuleGlyph({ moduleId, size }: { moduleId: string | undefined; size: number }) {\n  switch (moduleId) {\n    case 'badgeage': return <IdCard size={size} />;\n    case 'debut_poste': return <ClipboardCheck size={size} />;\n    case 'fin_poste': return <Flag size={size} />;\n    case 'debut_oc': return <PlayCircle size={size} />;\n    case 'fin_oc': return <BadgeCheck size={size} />;\n    case 'changement_oc': return <GitBranch size={size} />;\n    case 'debut_cuve': return <Waves size={size} />;\n    case 'fin_cuve': return <PackageCheck size={size} />;\n    case 'production': return <Factory size={size} />;\n    case 'tri': return <Layers3 size={size} />;\n    default: return <ListChecks size={size} />;\n  }\n}\n"),
-              ("  const ModuleIcon = getModuleIcon(module.id);\n\n", ""),
-              ("              <ModuleIcon size={16} />", "              <ModuleGlyph moduleId={module.id} size={16} />"),
-          ])
-          # LucideIcon type is no longer needed in ModuleView after replacing the component map.
-          edit('src/pages/shiftguide/ModuleView.tsx', [("import type { LucideIcon } from 'lucide-react';\n", "")])
+          # ModuleView: avoid creating a component type during render.
+          replace('src/pages/shiftguide/ModuleView.tsx', "import type { LucideIcon } from 'lucide-react';\n", '')
+          replace('src/pages/shiftguide/ModuleView.tsx', "import { useCallback, useEffect, useRef, useState } from 'react';", "import { useCallback, useRef, useState } from 'react';")
+          p = Path('src/pages/shiftguide/ModuleView.tsx')
+          text = p.read_text()
+          pattern = re.compile(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?function getModuleIcon\(moduleId: string \| undefined\): LucideIcon \{.*?\n\}", re.S)
+          replacement = """function ModuleGlyph({ moduleId, size }: { moduleId: string | undefined; size: number }) {
+  switch (moduleId) {
+    case 'badgeage': return <IdCard size={size} />;
+    case 'debut_poste': return <ClipboardCheck size={size} />;
+    case 'fin_poste': return <Flag size={size} />;
+    case 'debut_oc': return <PlayCircle size={size} />;
+    case 'fin_oc': return <BadgeCheck size={size} />;
+    case 'changement_oc': return <GitBranch size={size} />;
+    case 'debut_cuve': return <Waves size={size} />;
+    case 'fin_cuve': return <PackageCheck size={size} />;
+    case 'production': return <Factory size={size} />;
+    case 'tri': return <Layers3 size={size} />;
+    default: return <ListChecks size={size} />;
+  }
+}"""
+          text, n = pattern.subn(replacement, text, count=1)
+          if n != 1:
+              raise SystemExit('ModuleView: icon map block not found')
+          text = text.replace("  const ModuleIcon = getModuleIcon(module.id);\n\n", '', 1)
+          if '<ModuleIcon size={16} />' not in text:
+              raise SystemExit('ModuleView: ModuleIcon usage not found')
+          text = text.replace('<ModuleIcon size={16} />', '<ModuleGlyph moduleId={module.id} size={16} />', 1)
+          p.write_text(text)
 
-          edit('src/pages/shiftguide/ShiftGuideHome.tsx', [
-              ("import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';"),
-              ("const moduleIconMap: Record<string, LucideIcon> = {\n  badgeage: IdCard,\n  debut_poste: ClipboardCheck,\n  fin_poste: Flag,\n  debut_oc: PlayCircle,\n  fin_oc: BadgeCheck,\n  changement_oc: GitBranch,\n  debut_cuve: Waves,\n  fin_cuve: PackageCheck,\n  production: Factory,\n  tri: Layers3,\n};\n\nfunction getModuleIcon(module: SGModule): LucideIcon {\n  return moduleIconMap[module.id] ?? ListChecks;\n}\n", "function ModuleGlyph({ moduleId, size }: { moduleId: string; size: number }) {\n  switch (moduleId) {\n    case 'badgeage': return <IdCard size={size} />;\n    case 'debut_poste': return <ClipboardCheck size={size} />;\n    case 'fin_poste': return <Flag size={size} />;\n    case 'debut_oc': return <PlayCircle size={size} />;\n    case 'fin_oc': return <BadgeCheck size={size} />;\n    case 'changement_oc': return <GitBranch size={size} />;\n    case 'debut_cuve': return <Waves size={size} />;\n    case 'fin_cuve': return <PackageCheck size={size} />;\n    case 'production': return <Factory size={size} />;\n    case 'tri': return <Layers3 size={size} />;\n    default: return <ListChecks size={size} />;\n  }\n}\n"),
-              ("  const Icon = getModuleIcon(module);\n\n  return (", "  return ("),
-              ("            <Icon size={18} />", "            <ModuleGlyph moduleId={module.id} size={18} />"),
-              ("  const Icon = getModuleIcon(module);\n\n  return (", "  return ("),
-              ("          <Icon size={17} />", "          <ModuleGlyph moduleId={module.id} size={17} />"),
-              ("  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});\n\n  useEffect(() => {\n    setSummaries(getAllSummaries());\n  }, []);", "  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);"),
-          ])
+          # ShiftGuideHome: same static-component cleanup, preserving ContextDef.icon typing.
+          replace('src/pages/shiftguide/ShiftGuideHome.tsx', "import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';")
+          p = Path('src/pages/shiftguide/ShiftGuideHome.tsx')
+          text = p.read_text()
+          pattern = re.compile(r"const moduleIconMap: Record<string, LucideIcon> = \{.*?function getModuleIcon\(module: SGModule\): LucideIcon \{.*?\n\}", re.S)
+          replacement = """function ModuleGlyph({ moduleId, size }: { moduleId: string; size: number }) {
+  switch (moduleId) {
+    case 'badgeage': return <IdCard size={size} />;
+    case 'debut_poste': return <ClipboardCheck size={size} />;
+    case 'fin_poste': return <Flag size={size} />;
+    case 'debut_oc': return <PlayCircle size={size} />;
+    case 'fin_oc': return <BadgeCheck size={size} />;
+    case 'changement_oc': return <GitBranch size={size} />;
+    case 'debut_cuve': return <Waves size={size} />;
+    case 'fin_cuve': return <PackageCheck size={size} />;
+    case 'production': return <Factory size={size} />;
+    case 'tri': return <Layers3 size={size} />;
+    default: return <ListChecks size={size} />;
+  }
+}"""
+          text, n = pattern.subn(replacement, text, count=1)
+          if n != 1:
+              raise SystemExit('ShiftGuideHome: icon map block not found')
+          # Exactly two module-card locals are dead/dynamic component aliases.
+          if text.count("  const Icon = getModuleIcon(module);\n\n") != 2:
+              raise SystemExit('ShiftGuideHome: expected two dynamic module icon aliases')
+          text = text.replace("  const Icon = getModuleIcon(module);\n\n", '', 2)
+          priority_start = text.index('function PriorityModuleCard')
+          compact_start = text.index('function CompactModuleCard')
+          priority = text[priority_start:compact_start]
+          if '<Icon size={18} />' not in priority:
+              raise SystemExit('ShiftGuideHome: priority icon usage not found')
+          priority = priority.replace('<Icon size={18} />', '<ModuleGlyph moduleId={module.id} size={18} />', 1)
+          text = text[:priority_start] + priority + text[compact_start:]
+          compact_start = text.index('function CompactModuleCard')
+          compact_end = text.index('\nfunction ', compact_start + 10)
+          compact = text[compact_start:compact_end]
+          if '<Icon size={17} />' not in compact:
+              raise SystemExit('ShiftGuideHome: compact icon usage not found')
+          compact = compact.replace('<Icon size={17} />', '<ModuleGlyph moduleId={module.id} size={17} />', 1)
+          text = text[:compact_start] + compact + text[compact_end:]
+          old_state = "  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});\n\n  useEffect(() => {\n    setSummaries(getAllSummaries());\n  }, []);"
+          if old_state not in text:
+              raise SystemExit('ShiftGuideHome: summary initialization block not found')
+          text = text.replace(old_state, "  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);", 1)
+          p.write_text(text)
 
-          edit('src/pages/shiftguide/UrgencesPage.tsx', [("  AlertTriangle,\n", "")])
-
-          edit('src/utils/packing.ts', [
-              ("export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {", "export function getPackingRecommendation(options: PackingOption[]): PackingOption {"),
-          ])
-          edit('src/pages/PackingCalculatorPage.tsx', [
-              ("    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);", "    const recommendation = getPackingRecommendation(options);"),
-          ])
+          # Packing recommendation had two parameters that never influenced the result.
+          replace('src/utils/packing.ts', "export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {", "export function getPackingRecommendation(options: PackingOption[]): PackingOption {")
+          replace('src/pages/PackingCalculatorPage.tsx', "    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);", "    const recommendation = getPackingRecommendation(options);")
           PY
-      - name: Validate fixes
-        run: npm run check
-      - name: Commit fixes
+          git diff --check
+      - name: Commit targeted fixes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src
           git commit -m 'refactor: resolve lint findings [skip ci]'
           git push
+      - name: Validate committed fixes
+        run: npm run check
