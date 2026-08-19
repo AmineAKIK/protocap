@@ -20,7 +20,6 @@ import {
   Send,
   Sparkles,
   Trash2,
-  UserRound,
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -636,8 +635,9 @@ export function CelinePage() {
     }
   };
 
-  // Keep ref in sync with latest sendMessage on every render
-  sendMessageRef.current = sendMessage;
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  });
 
   return (
     <div className="flex h-[100dvh] flex-col bg-[#f3f5f7] text-zinc-950">
