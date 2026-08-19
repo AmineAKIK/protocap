@@ -10,6 +10,7 @@ import {
   parseJsonEnvValue,
   takeRateLimit,
 } from './server/runtimeUtils.mjs';
+import { isValidShiftGuideConfig } from './server/shiftGuideValidation.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = existsSync(join(__dirname, 'dist'))
@@ -32,14 +33,14 @@ const shiftGuideData = {
   urgences: parseJsonEnvValue('SG_URGENCES', process.env.SG_URGENCES),
 };
 
-if (SHIFTGUIDE_CODE && (!Array.isArray(shiftGuideData.modules) || !Array.isArray(shiftGuideData.lexique))) {
-  throw new Error('ShiftGuide is enabled but SG_MODULES or SG_LEXIQUE is missing or invalid.');
+const hasValidShiftGuideConfig = isValidShiftGuideConfig(shiftGuideData);
+if (SHIFTGUIDE_CODE && !hasValidShiftGuideConfig) {
+  throw new Error('ShiftGuide is enabled but SG_MODULES or SG_LEXIQUE has an invalid structure.');
 }
 
-const celineSystemPrompt =
-  Array.isArray(shiftGuideData.modules) && Array.isArray(shiftGuideData.lexique)
-    ? buildCelineSystemPrompt(shiftGuideData)
-    : null;
+const celineSystemPrompt = hasValidShiftGuideConfig
+  ? buildCelineSystemPrompt(shiftGuideData)
+  : null;
 
 const sessions = new Map();
 const unlockAttempts = new Map();

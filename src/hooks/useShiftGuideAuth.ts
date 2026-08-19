@@ -1,9 +1,5 @@
-export interface ShiftGuideData {
-  modules: unknown;
-  lexique: unknown;
-  systemPromptExtra: string | null;
-  urgences: unknown;
-}
+import { isShiftGuideData } from '../types/shiftGuide';
+import type { ShiftGuideData } from '../types/shiftGuide';
 
 interface ShiftGuideUnlockResponse extends ShiftGuideData {
   token: string;
@@ -16,18 +12,19 @@ export function getShiftGuideToken(): string | null {
   return sessionStorage.getItem(SESSION_KEY);
 }
 
-export function isShiftGuideUnlocked(): boolean {
-  return !!getShiftGuideToken() && !!sessionStorage.getItem(DATA_KEY);
-}
-
 export function getShiftGuideData(): ShiftGuideData | null {
   const raw = sessionStorage.getItem(DATA_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
+    return isShiftGuideData(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+export function isShiftGuideUnlocked(): boolean {
+  return !!getShiftGuideToken() && !!getShiftGuideData();
 }
 
 export async function unlockShiftGuide(code: string): Promise<{ ok: boolean; error?: string }> {
@@ -43,11 +40,18 @@ export async function unlockShiftGuide(code: string): Promise<{ ok: boolean; err
       return { ok: false, error: body.error ?? 'Code incorrect.' };
     }
 
-    const response: ShiftGuideUnlockResponse = await res.json();
-    if (!response.token) return { ok: false, error: 'Session invalide.' };
+    const response: unknown = await res.json();
+    if (!response || typeof response !== 'object' || !('token' in response)) {
+      return { ok: false, error: 'Session invalide.' };
+    }
 
-    const { token, ...data } = response;
-    sessionStorage.setItem(SESSION_KEY, token);
+    const { token, ...data } = response as Record<string, unknown>;
+    if (typeof token !== 'string' || token.length === 0 || !isShiftGuideData(data)) {
+      return { ok: false, error: 'Données ShiftGuide invalides.' };
+    }
+
+    const validatedResponse: ShiftGuideUnlockResponse = { token, ...data };
+    sessionStorage.setItem(SESSION_KEY, validatedResponse.token);
     sessionStorage.setItem(DATA_KEY, JSON.stringify(data));
     return { ok: true };
   } catch {
