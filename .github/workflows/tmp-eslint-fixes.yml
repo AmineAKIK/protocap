@@ -1,0 +1,110 @@
+name: Temporary ESLint fixes
+
+on:
+  push:
+    branches:
+      - chore/eslint-foundation
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/eslint-foundation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply targeted fixes
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def edit(path, replacements=(), regex_replacements=()):
+              p = Path(path)
+              text = p.read_text()
+              for old, new in replacements:
+                  if old not in text:
+                      raise SystemExit(f'Missing expected text in {path}: {old[:120]!r}')
+                  text = text.replace(old, new)
+              for pattern, repl, count in regex_replacements:
+                  text, n = re.subn(pattern, repl, text, count=count, flags=re.S)
+                  if n != count:
+                      raise SystemExit(f'Expected {count} regex replacements in {path}, got {n}: {pattern}')
+              p.write_text(text)
+
+          edit('src/pages/ExpiryCheckPage.tsx', [
+              ("import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';"),
+              ("import { StatCard } from '../components/StatCard';\n", ""),
+              ("  const [blockedModalOpen, setBlockedModalOpen] = useState(false);", "  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>\n    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false\n  );"),
+              ("  useEffect(() => {\n    if (isBlocked) setBlockedModalOpen(true);\n    else setBlockedModalOpen(false);\n  }, [selectedLineId, isBlocked]);\n\n", "  function handleLineSelect(line: ConditioningLine) {\n    setSelectedLineId(line.id);\n    setBlockedModalOpen(getLineStatus(line) === 'nonConform');\n  }\n\n"),
+              ("                  onClick={() => setSelectedLineId(line.id)}", "                  onClick={() => handleLineSelect(line)}"),
+          ])
+
+          edit('src/pages/KnowledgeBasePage.tsx', [
+              ("import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';", "import type { StandardStatus, StandardType } from '../types/knowledge';"),
+              ("\n  const Icon = typeIcon[doc.type];\n", ""),
+          ])
+
+          edit('src/pages/LogisticsCallPage.tsx', [
+              ("import { StatCard } from '../components/StatCard';\n", ""),
+              ("function urgencyClass(request: LogisticsRequest, now: Date): string {\n  if (request.status !== 'waiting') return '';\n  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;\n  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';\n  return '';\n}\n\n", ""),
+          ])
+
+          edit('src/pages/shiftguide/CelinePage.tsx', [
+              ("  UserRound,\n", ""),
+              ("  // Keep ref in sync with latest sendMessage on every render\n  sendMessageRef.current = sendMessage;\n", "  useEffect(() => {\n    sendMessageRef.current = sendMessage;\n  }, [sendMessage]);\n"),
+          ])
+
+          p = Path('src/pages/shiftguide/LineAnalysisReportPage.tsx')
+          text = p.read_text()
+          for name in ['BarChart3', 'BookOpen', 'CircleDot', 'Factory', 'Layers3', 'Search', 'Sparkles']:
+              text, n = re.subn(rf'\s*{name},?', '', text, count=1)
+              if n != 1:
+                  raise SystemExit(f'Could not remove {name} from LineAnalysisReportPage.tsx')
+          p.write_text(text)
+
+          edit('src/pages/shiftguide/ModuleView.tsx', [
+              ("import { useCallback, useEffect, useRef, useState } from 'react';", "import { useCallback, useRef, useState } from 'react';"),
+              ("const moduleIconMap: Record<string, LucideIcon> = {\n  badgeage: IdCard,\n  debut_poste: ClipboardCheck,\n  fin_poste: Flag,\n  debut_oc: PlayCircle,\n  fin_oc: BadgeCheck,\n  changement_oc: GitBranch,\n  debut_cuve: Waves,\n  fin_cuve: PackageCheck,\n  production: Factory,\n  tri: Layers3,\n};\n\nfunction getModuleIcon(moduleId: string | undefined): LucideIcon {\n  if (!moduleId) return ListChecks;\n  return moduleIconMap[moduleId] ?? ListChecks;\n}\n", "function ModuleGlyph({ moduleId, size }: { moduleId: string | undefined; size: number }) {\n  switch (moduleId) {\n    case 'badgeage': return <IdCard size={size} />;\n    case 'debut_poste': return <ClipboardCheck size={size} />;\n    case 'fin_poste': return <Flag size={size} />;\n    case 'debut_oc': return <PlayCircle size={size} />;\n    case 'fin_oc': return <BadgeCheck size={size} />;\n    case 'changement_oc': return <GitBranch size={size} />;\n    case 'debut_cuve': return <Waves size={size} />;\n    case 'fin_cuve': return <PackageCheck size={size} />;\n    case 'production': return <Factory size={size} />;\n    case 'tri': return <Layers3 size={size} />;\n    default: return <ListChecks size={size} />;\n  }\n}\n"),
+              ("  const ModuleIcon = getModuleIcon(module.id);\n\n", ""),
+              ("              <ModuleIcon size={16} />", "              <ModuleGlyph moduleId={module.id} size={16} />"),
+          ])
+          # LucideIcon type is no longer needed in ModuleView after replacing the component map.
+          edit('src/pages/shiftguide/ModuleView.tsx', [("import type { LucideIcon } from 'lucide-react';\n", "")])
+
+          edit('src/pages/shiftguide/ShiftGuideHome.tsx', [
+              ("import { useEffect, useMemo, useState } from 'react';", "import { useMemo, useState } from 'react';"),
+              ("const moduleIconMap: Record<string, LucideIcon> = {\n  badgeage: IdCard,\n  debut_poste: ClipboardCheck,\n  fin_poste: Flag,\n  debut_oc: PlayCircle,\n  fin_oc: BadgeCheck,\n  changement_oc: GitBranch,\n  debut_cuve: Waves,\n  fin_cuve: PackageCheck,\n  production: Factory,\n  tri: Layers3,\n};\n\nfunction getModuleIcon(module: SGModule): LucideIcon {\n  return moduleIconMap[module.id] ?? ListChecks;\n}\n", "function ModuleGlyph({ moduleId, size }: { moduleId: string; size: number }) {\n  switch (moduleId) {\n    case 'badgeage': return <IdCard size={size} />;\n    case 'debut_poste': return <ClipboardCheck size={size} />;\n    case 'fin_poste': return <Flag size={size} />;\n    case 'debut_oc': return <PlayCircle size={size} />;\n    case 'fin_oc': return <BadgeCheck size={size} />;\n    case 'changement_oc': return <GitBranch size={size} />;\n    case 'debut_cuve': return <Waves size={size} />;\n    case 'fin_cuve': return <PackageCheck size={size} />;\n    case 'production': return <Factory size={size} />;\n    case 'tri': return <Layers3 size={size} />;\n    default: return <ListChecks size={size} />;\n  }\n}\n"),
+              ("  const Icon = getModuleIcon(module);\n\n  return (", "  return ("),
+              ("            <Icon size={18} />", "            <ModuleGlyph moduleId={module.id} size={18} />"),
+              ("  const Icon = getModuleIcon(module);\n\n  return (", "  return ("),
+              ("          <Icon size={17} />", "          <ModuleGlyph moduleId={module.id} size={17} />"),
+              ("  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});\n\n  useEffect(() => {\n    setSummaries(getAllSummaries());\n  }, []);", "  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);"),
+          ])
+
+          edit('src/pages/shiftguide/UrgencesPage.tsx', [("  AlertTriangle,\n", "")])
+
+          edit('src/utils/packing.ts', [
+              ("export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {", "export function getPackingRecommendation(options: PackingOption[]): PackingOption {"),
+          ])
+          edit('src/pages/PackingCalculatorPage.tsx', [
+              ("    const recommendation = getPackingRecommendation(options, form.policy, input.unitsPerCarton);", "    const recommendation = getPackingRecommendation(options);"),
+          ])
+          PY
+      - name: Validate fixes
+        run: npm run check
+      - name: Commit fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src
+          git commit -m 'refactor: resolve lint findings [skip ci]'
+          git push
