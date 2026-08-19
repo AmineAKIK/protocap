@@ -1,5 +1,5 @@
 node_modules
-# dist committed for Railway — do not ignore
+dist
 .DS_Store
 *.local
 .env
