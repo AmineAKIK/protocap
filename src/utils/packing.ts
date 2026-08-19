@@ -99,7 +99,7 @@ export function calculatePackingOptions(input: PackingInput): PackingOption[] {
   return [exactOption, roundCartonOption, roundPaletteOption];
 }
 
-export function getPackingRecommendation(options: PackingOption[], policy: PackingPolicy, unitsPerCarton: number): PackingOption {
+export function getPackingRecommendation(options: PackingOption[]): PackingOption {
   const exact = options.find((option) => option.policy === 'no-overrun') ?? options[0];
   const carton = options.find((option) => option.policy === 'round-carton') ?? exact;
 
