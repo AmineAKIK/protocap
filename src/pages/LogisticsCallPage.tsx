@@ -12,7 +12,6 @@ import {
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { StatCard } from '../components/StatCard';
 import { initialLogisticsRequests } from '../data/logisticsData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useNow } from '../hooks/useNow';
@@ -39,13 +38,6 @@ function elapsedLabel(createdAt: string, endAt: Date): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins > 0 ? `${hours} h ${mins} min` : `${hours} h`;
-}
-
-function urgencyClass(request: LogisticsRequest, now: Date): string {
-  if (request.status !== 'waiting') return '';
-  const minutes = (now.getTime() - new Date(request.createdAt).getTime()) / 60000;
-  if (request.priority === 'high' || minutes > 15) return 'border-rose-400 bg-rose-50';
-  return '';
 }
 
 interface RequestCardProps {

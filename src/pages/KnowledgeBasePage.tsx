@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react';
 import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { knowledgeCategories, procedureDocs } from '../data/knowledgeData';
-import type { ProcedureDoc, StandardStatus, StandardType } from '../types/knowledge';
+import type { StandardStatus, StandardType } from '../types/knowledge';
 import { formatDate } from '../utils/date';
 
 const typeLabel: Record<StandardType, string> = {
@@ -178,8 +178,6 @@ function DocDetail() {
       </div>
     );
   }
-
-  const Icon = typeIcon[doc.type];
 
   return (
     <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">

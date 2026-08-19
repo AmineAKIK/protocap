@@ -5,13 +5,9 @@ import tseslint from 'typescript-eslint';
 
 const unusedDebtFiles = [
   'src/pages/ExpiryCheckPage.tsx',
-  'src/pages/KnowledgeBasePage.tsx',
-  'src/pages/LogisticsCallPage.tsx',
   'src/pages/shiftguide/CelinePage.tsx',
   'src/pages/shiftguide/LineAnalysisReportPage.tsx',
   'src/pages/shiftguide/ModuleView.tsx',
-  'src/pages/shiftguide/UrgencesPage.tsx',
-  'src/utils/packing.ts',
 ];
 
 export default tseslint.config(
