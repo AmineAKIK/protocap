@@ -1,0 +1,93 @@
+name: Apply Céline server-proxy patch
+
+on:
+  push:
+    branches:
+      - fix/server-side-celine-auth
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/server-side-celine-auth
+
+      - name: Apply audited substitutions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/shiftguide/CelinePage.tsx')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  "import { buildSystemPrompt } from '../../data/celineSystemPrompt';\n",
+                  "import { buildSystemPrompt } from '../../data/celineSystemPrompt';\nimport { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';\n",
+              ),
+              (
+                  "const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';\n\n",
+                  "",
+              ),
+              (
+                  """  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+    }),
+    signal,
+  });
+""",
+                  """  const token = getShiftGuideToken();
+  if (!token) throw new Error('Session ShiftGuide expirée. Reconnecte-toi.');
+
+  const res = await fetch('/api/celine/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
+    }),
+    signal,
+  });
+""",
+              ),
+              (
+                  "    try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }\n    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');\n",
+                  "    try { const b = await res.json(); errMsg = b.error ?? b.error?.message ?? errMsg; } catch { /* ignore */ }\n    if (res.status === 401) {\n      lockShiftGuide();\n      throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');\n    }\n",
+              ),
+              (
+                  """    if (!API_KEY) {
+      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
+      return;
+    }
+
+""",
+                  "",
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one audited match, found {count}: {old[:80]!r}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/shiftguide/CelinePage.tsx
+          git commit -m "security: route Céline through server proxy"
+          git push origin HEAD:fix/server-side-celine-auth
