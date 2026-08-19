@@ -21,36 +21,43 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('src/pages/shiftguide/CelinePage.tsx')
           text = path.read_text()
 
-          def replace_literal(old: str, new: str, label: str) -> None:
-              global text
-              count = text.count(old)
+          def require_once(marker: str, label: str) -> None:
+              count = text.count(marker)
               if count != 1:
                   raise SystemExit(f'{label}: expected 1 match, found {count}')
+
+          def replace_once(old: str, new: str, label: str) -> None:
+              global text
+              require_once(old, label)
               text = text.replace(old, new, 1)
 
-          def replace_regex(pattern: str, replacement: str, label: str) -> None:
+          def replace_between(start: str, end: str, replacement: str, label: str) -> None:
               global text
-              text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
-              if count != 1:
-                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              require_once(start, f'{label} start')
+              require_once(end, f'{label} end')
+              start_index = text.index(start)
+              end_index = text.index(end, start_index)
+              text = text[:start_index] + replacement + text[end_index:]
 
-          replace_literal(
+          replace_once(
               "import { buildSystemPrompt } from '../../data/celineSystemPrompt';\n",
               "import { buildSystemPrompt } from '../../data/celineSystemPrompt';\nimport { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';\n",
               'auth import',
           )
-          replace_regex(
-              r"const API_KEY: string = import\.meta\.env\.VITE_DEEPSEEK_API_KEY \?\? '';\n\n",
+
+          replace_once(
+              "const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';\n\n",
               '',
               'client API key declaration',
           )
-          replace_regex(
-              r"  const res = await fetch\('https://api\.deepseek\.com/chat/completions', \{.*?\n  \}\);\n\n  if \(!res\.ok\)",
+
+          replace_between(
+              "  const res = await fetch('https://api.deepseek.com/chat/completions', {",
+              "\n\n  if (!res.ok) {",
               """  const token = getShiftGuideToken();
   if (!token) throw new Error('Session ShiftGuide expirée. Reconnecte-toi.');
 
@@ -61,28 +68,40 @@ jobs:
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
     }),
     signal,
-  });
-
-  if (!res.ok)""",
+  });""",
               'DeepSeek browser fetch',
           )
-          replace_regex(
-              r"    try \{ const b = await res\.json\(\); errMsg = b\.error\?\.message \?\? errMsg; \} catch \{ /\* ignore \*/ \}\n    if \(res\.status === 401\) throw new Error\('Clé API invalide\. Vérifie la variable VITE_DEEPSEEK_API_KEY\.'\);",
-              """    try { const b = await res.json(); errMsg = b.error ?? b.error?.message ?? errMsg; } catch { /* ignore */ }
+
+          replace_between(
+              "  if (!res.ok) {",
+              "\n\n  const data = await res.json();",
+              """  if (!res.ok) {
+    let errMsg = `Erreur ${res.status}`;
+    try {
+      const body = await res.json();
+      errMsg = typeof body?.error === 'string' ? body.error : errMsg;
+    } catch { /* ignore */ }
     if (res.status === 401) {
       lockShiftGuide();
       throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
-    }""",
+    }
+    if (res.status === 429) throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
+    throw new Error(errMsg);
+  }""",
               'proxy error handling',
           )
-          replace_regex(
-              r"    if \(!API_KEY\) \{\n      setError\('Clé API non configurée\..*?\n      return;\n    \}\n\n",
+
+          replace_between(
+              "    if (!API_KEY) {",
+              "\n\n    const currentMessages = messages;",
               '',
               'client API key guard',
           )
 
-          if 'VITE_DEEPSEEK_API_KEY' in text or 'api.deepseek.com' in text or 'API_KEY' in text:
-              raise SystemExit('Client-side DeepSeek secret path still present after patch')
+          forbidden = ['VITE_DEEPSEEK_API_KEY', 'api.deepseek.com', 'const API_KEY']
+          for value in forbidden:
+              if value in text:
+                  raise SystemExit(f'Forbidden client-side secret path remains: {value}')
 
           path.write_text(text)
           PY
