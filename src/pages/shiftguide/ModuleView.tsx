@@ -17,29 +17,26 @@ import {
   Waves,
   X,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { SGAction, SGSubModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
 import { useModuleProgress } from '../../hooks/useModuleProgress';
 
-const moduleIconMap: Record<string, LucideIcon> = {
-  badgeage: IdCard,
-  debut_poste: ClipboardCheck,
-  fin_poste: Flag,
-  debut_oc: PlayCircle,
-  fin_oc: BadgeCheck,
-  changement_oc: GitBranch,
-  debut_cuve: Waves,
-  fin_cuve: PackageCheck,
-  production: Factory,
-  tri: Layers3,
-};
-
-function getModuleIcon(moduleId: string | undefined): LucideIcon {
-  if (!moduleId) return ListChecks;
-  return moduleIconMap[moduleId] ?? ListChecks;
+function renderModuleIcon(moduleId: string | undefined, size: number) {
+  switch (moduleId) {
+    case 'badgeage': return <IdCard size={size} />;
+    case 'debut_poste': return <ClipboardCheck size={size} />;
+    case 'fin_poste': return <Flag size={size} />;
+    case 'debut_oc': return <PlayCircle size={size} />;
+    case 'fin_oc': return <BadgeCheck size={size} />;
+    case 'changement_oc': return <GitBranch size={size} />;
+    case 'debut_cuve': return <Waves size={size} />;
+    case 'fin_cuve': return <PackageCheck size={size} />;
+    case 'production': return <Factory size={size} />;
+    case 'tri': return <Layers3 size={size} />;
+    default: return <ListChecks size={size} />;
+  }
 }
 
 // ─── Exit Warning Modal ──────────────────────────────────────────────────────
@@ -228,7 +225,6 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         />
       )}
 
-      {/* Progress bar */}
       <div className="flex-none border-b border-slate-200 bg-white">
         <div className="h-1.5 bg-slate-100">
           <div
@@ -244,7 +240,6 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         </p>
       </div>
 
-      {/* Carousel */}
       <div
         ref={scrollRef}
         className="flex flex-1 snap-x snap-mandatory overflow-x-auto"
@@ -308,7 +303,6 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         })}
       </div>
 
-      {/* Navigation arrows */}
       <div className="mx-auto flex w-full max-w-5xl flex-none items-center justify-between px-4 py-2 sm:px-6">
         <button
           onClick={goPrev}
@@ -327,7 +321,6 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         </button>
       </div>
 
-      {/* Action buttons */}
       <div className="mx-auto flex w-full max-w-5xl flex-none gap-3 px-4 pb-3 sm:px-6">
         <button
           onClick={handleValidate}
@@ -352,14 +345,12 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         </button>
       </div>
 
-      {/* Footer note */}
       {footerNote && (
         <p className="flex-none px-4 pb-1 text-center text-xs font-semibold text-slate-500">
           {footerNote}
         </p>
       )}
 
-      {/* Reset */}
       <div className="flex-none pb-4 pt-1 text-center">
         <button
           onClick={() => setShowReset(true)}
@@ -372,8 +363,6 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
     </>
   );
 }
-
-// ─── ModuleView ───────────────────────────────────────────────────────────────
 
 export function ModuleView() {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -393,7 +382,6 @@ export function ModuleView() {
     : (module?.id ?? '');
   const activeFooterNote = isChoice ? selectedSub?.footerNote : module?.footerNote;
 
-  // We need progress count for exit warning, but only after actions are loaded
   const actionIds = activeActions.map((a) => a.id);
   const progressKey = `shiftguide_module_${activeModuleId}`;
 
@@ -434,11 +422,8 @@ export function ModuleView() {
     );
   }
 
-  const ModuleIcon = getModuleIcon(module.id);
-
   return (
     <div className="flex h-[100dvh] flex-col bg-slate-50 text-slate-950">
-      {/* Header */}
       <header className="flex-none border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto grid h-14 max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -462,7 +447,7 @@ export function ModuleView() {
         <div className="flex min-w-0 flex-col items-center">
           <span className="flex min-w-0 max-w-full items-center gap-2 text-sm font-bold text-slate-950">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white">
-              <ModuleIcon size={16} />
+              {renderModuleIcon(module.id, 16)}
             </span>
             <span className="truncate">{module.title}</span>
           </span>
@@ -480,7 +465,6 @@ export function ModuleView() {
         </div>
       </header>
 
-      {/* Exit warning modal */}
       {showExitWarning && (
         <ExitWarningModal
           onStay={() => setShowExitWarning(false)}
@@ -488,7 +472,6 @@ export function ModuleView() {
         />
       )}
 
-      {/* Content */}
       {isChoice && !selectedSub ? (
         <ChoiceScreen
           subModules={module.subModules ?? []}

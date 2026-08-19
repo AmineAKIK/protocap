@@ -23,7 +23,7 @@ import {
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
@@ -122,21 +122,20 @@ const CONTEXTS: ContextDef[] = [
   },
 ];
 
-const moduleIconMap: Record<string, LucideIcon> = {
-  badgeage: IdCard,
-  debut_poste: ClipboardCheck,
-  fin_poste: Flag,
-  debut_oc: PlayCircle,
-  fin_oc: BadgeCheck,
-  changement_oc: GitBranch,
-  debut_cuve: Waves,
-  fin_cuve: PackageCheck,
-  production: Factory,
-  tri: Layers3,
-};
-
-function getModuleIcon(module: SGModule): LucideIcon {
-  return moduleIconMap[module.id] ?? ListChecks;
+function renderModuleIcon(moduleId: string, size: number) {
+  switch (moduleId) {
+    case 'badgeage': return <IdCard size={size} />;
+    case 'debut_poste': return <ClipboardCheck size={size} />;
+    case 'fin_poste': return <Flag size={size} />;
+    case 'debut_oc': return <PlayCircle size={size} />;
+    case 'fin_oc': return <BadgeCheck size={size} />;
+    case 'changement_oc': return <GitBranch size={size} />;
+    case 'debut_cuve': return <Waves size={size} />;
+    case 'fin_cuve': return <PackageCheck size={size} />;
+    case 'production': return <Factory size={size} />;
+    case 'tri': return <Layers3 size={size} />;
+    default: return <ListChecks size={size} />;
+  }
 }
 
 function getAllSummaries(): Record<string, ModuleSummary> {
@@ -233,8 +232,6 @@ function PriorityModuleCard({
   summary: ModuleSummary;
   index: number;
 }) {
-  const Icon = getModuleIcon(module);
-
   return (
     <Link
       to={`/shiftguide/module/${module.id}`}
@@ -243,7 +240,7 @@ function PriorityModuleCard({
       <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-950 px-4 py-3 text-white">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-teal-500/15 text-teal-200 ring-1 ring-teal-400/20">
-            <Icon size={18} />
+            {renderModuleIcon(module.id, 18)}
           </span>
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-teal-200">
@@ -274,8 +271,6 @@ function PriorityModuleCard({
 }
 
 function CompactModuleCard({ module, summary }: { module: SGModule; summary: ModuleSummary }) {
-  const Icon = getModuleIcon(module);
-
   return (
     <Link
       to={`/shiftguide/module/${module.id}`}
@@ -283,7 +278,7 @@ function CompactModuleCard({ module, summary }: { module: SGModule; summary: Mod
     >
       <div className="flex items-start justify-between gap-3">
         <span className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200 transition group-hover:bg-teal-50 group-hover:text-teal-700">
-          <Icon size={17} />
+          {renderModuleIcon(module.id, 17)}
         </span>
         <StatusPill summary={summary} />
       </div>
@@ -301,7 +296,6 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
     <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
       {modules.map((module) => {
         const summary = getSummary(module, summaries);
-        const Icon = getModuleIcon(module);
 
         return (
           <Link
@@ -310,7 +304,7 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
             className="grid grid-cols-[auto_minmax(0,1fr)_3.5rem] items-center gap-3 border-b border-zinc-100 px-3 py-3 transition last:border-b-0 hover:bg-zinc-50 sm:grid-cols-[auto_minmax(0,1fr)_7rem] sm:px-4"
           >
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200">
-              <Icon size={17} />
+              {renderModuleIcon(module.id, 17)}
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -525,11 +519,7 @@ export function ShiftGuideHome() {
   const [contextId, setContextId] = useState<ContextId | null>(() => {
     return (localStorage.getItem('shiftguide_context') as ContextId) ?? 'debut_equipe';
   });
-  const [summaries, setSummaries] = useState<Record<string, ModuleSummary>>({});
-
-  useEffect(() => {
-    setSummaries(getAllSummaries());
-  }, []);
+  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);
 
   const activeCtx = CONTEXTS.find((ctx) => ctx.id === contextId) ?? CONTEXTS[0];
   const totalActions = useMemo(

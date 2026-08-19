@@ -4,10 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const unusedDebtFiles = [
-  'src/pages/ExpiryCheckPage.tsx',
-  'src/pages/shiftguide/CelinePage.tsx',
   'src/pages/shiftguide/LineAnalysisReportPage.tsx',
-  'src/pages/shiftguide/ModuleView.tsx',
 ];
 
 export default tseslint.config(
@@ -33,30 +30,11 @@ export default tseslint.config(
       },
     },
   },
-  // Explicit baseline for pre-existing debt discovered while introducing ESLint.
-  // Keep this list narrow: subsequent cleanup PRs remove entries/rules as they fix them.
+  // Explicit baseline for the one remaining pre-existing unused-code file.
   {
     files: unusedDebtFiles,
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',
-    },
-  },
-  {
-    files: ['src/pages/ExpiryCheckPage.tsx', 'src/pages/shiftguide/ShiftGuideHome.tsx'],
-    rules: {
-      'react-hooks/set-state-in-effect': 'off',
-    },
-  },
-  {
-    files: ['src/pages/shiftguide/CelinePage.tsx'],
-    rules: {
-      'react-hooks/refs': 'off',
-    },
-  },
-  {
-    files: ['src/pages/shiftguide/ModuleView.tsx', 'src/pages/shiftguide/ShiftGuideHome.tsx'],
-    rules: {
-      'react-hooks/static-components': 'off',
     },
   },
 );

@@ -11,11 +11,10 @@ import {
   ShieldCheck,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
-import { StatCard } from '../components/StatCard';
 import { initialChangeHistory, initialConditioningLines } from '../data/expiryData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { ChangeHistoryEntry, ConditioningLine } from '../types/expiry';
@@ -174,7 +173,9 @@ export function ExpiryCheckPage() {
   const [history, setHistory] = useLocalStorage<ChangeHistoryEntry[]>('lineops.expiry.history', initialChangeHistory);
   const [selectedLineId, setSelectedLineId] = useState(lines[0]?.id ?? '');
   const [declareModalOpen, setDeclareModalOpen] = useState(false);
-  const [blockedModalOpen, setBlockedModalOpen] = useState(false);
+  const [blockedModalOpen, setBlockedModalOpen] = useState(() =>
+    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false
+  );
   const [vatModalOpen, setVatModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'tour' | 'line'>('line');
@@ -183,10 +184,10 @@ export function ExpiryCheckPage() {
   const lineStatus = getLineStatus(selectedLine);
   const isBlocked = lineStatus === 'nonConform';
 
-  useEffect(() => {
-    if (isBlocked) setBlockedModalOpen(true);
-    else setBlockedModalOpen(false);
-  }, [selectedLineId, isBlocked]);
+  function handleLineSelect(line: ConditioningLine) {
+    setSelectedLineId(line.id);
+    setBlockedModalOpen(getLineStatus(line) === 'nonConform');
+  }
 
   const stats = useMemo(() => {
     const statuses = lines.map((l) => getLineStatus(l));
@@ -371,7 +372,7 @@ export function ExpiryCheckPage() {
                 <button
                   key={line.id}
                   type="button"
-                  onClick={() => setSelectedLineId(line.id)}
+                  onClick={() => handleLineSelect(line)}
                   className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                 >
                   {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
@@ -595,7 +596,7 @@ export function ExpiryCheckPage() {
               <button
                 key={line.id}
                 type="button"
-                onClick={() => { setSelectedLineId(line.id); setMobileView('line'); }}
+                onClick={() => { handleLineSelect(line); setMobileView('line'); }}
                 className={`rounded-xl border p-3 text-left transition hover:border-teal-300 sm:p-4 ${
                   status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
                 }`}
