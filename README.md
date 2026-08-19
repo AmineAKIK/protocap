@@ -1,34 +1,39 @@
 # LineOps Toolkit
 
-PWA React/TypeScript pour trois modules génériques liés aux lignes de conditionnement.
+PWA React/TypeScript regroupant plusieurs prototypes génériques liés aux lignes de conditionnement, dont ShiftGuide et Céline.
 
-## Objectif
-
-Le projet regroupe trois modules fonctionnels et leurs bénéfices opérationnels :
-
-- **Expiry Check** : suivi de validité du bloc de remplissage, traçabilité des recharges de cuves et board de tournée laveur.
-- **Logistics Call** : appel digital pour évacuation ou fourniture de palettes, avec board logistique.
-- **Knowledge Base** : base documentaire fictive plus claire, recherchable et structurée.
-
-> Application personnelle générique - données fictives - aucune information réelle ou confidentielle.
+> Application personnelle générique. Ne pas committer de secrets, de variables d'environnement ou d'artefacts générés.
 
 ## Stack
 
-- React
+- React 18
 - TypeScript
 - Vite
 - Tailwind CSS
 - React Router
-- localStorage
+- Express
 - vite-plugin-pwa
 - lucide-react
+- Railway pour le déploiement
 
-## Lancer le projet
+## Développement local
+
+Node.js 20 est la version de référence (`.nvmrc`).
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
+
+## Validation
+
+La commande de référence du dépôt est :
+
+```bash
+npm run check
+```
+
+Elle vérifie la syntaxe du serveur Express, exécute TypeScript puis construit l'application Vite/PWA. Le workflow GitHub Actions ajoute aussi un `npm audit --omit=dev` et vérifie que `node_modules/` et `dist/` ne sont pas versionnés.
 
 ## Build
 
@@ -37,67 +42,47 @@ npm run build
 npm run preview
 ```
 
-## Déploiement GitHub Pages
+`dist/` est généré à la demande et n'est jamais committé.
 
-Le projet est prêt pour un déploiement automatique via GitHub Actions.
+## Déploiement Railway
 
-### Déploiement automatique
+Railway est la cible de déploiement de l'application. La configuration Nixpacks effectue :
 
-1. Pousser le projet sur un dépôt GitHub.
-2. Aller dans **Settings > Pages**.
-3. Dans **Build and deployment**, choisir **GitHub Actions**.
-4. Pousser sur la branche `main`.
-5. Le workflow `.github/workflows/deploy.yml` construit l’application et publie le dossier `dist/`.
-
-Le workflow configure automatiquement le `base` Vite avec le nom du dépôt :
-
-```bash
-VITE_BASE_PATH=/${{ repository-name }}/
+```text
+npm ci
+npm run build
+node server.mjs
 ```
 
-Il génère aussi `dist/404.html` pour que les routes React comme `/expiry-check`, `/logistics-call` et `/knowledge-base` restent accessibles après rechargement direct.
+Le serveur Express sert ensuite le bundle Vite et les routes API.
 
-### Build local pour GitHub Pages
+Les variables de production restent configurées dans Railway. Le dépôt fournit uniquement `.env.example` comme référence de noms ; aucune valeur secrète ne doit être ajoutée à Git.
 
-Le `base` Vite reste configurable avec `VITE_BASE_PATH`.
-
-Exemple pour un dépôt publié sous `/lineops-toolkit/` :
-
-```bash
-VITE_BASE_PATH=/lineops-toolkit/ npm run build:pages
-```
-
-Le dossier généré est `dist/`.
-
-### Domaine personnalisé
-
-Si le site est publié sur un domaine personnalisé à la racine, construire avec :
-
-```bash
-VITE_BASE_PATH=/ npm run build:pages
-```
+Pour Céline, le backend accepte `DEEPSEEK_API_KEY` et conserve la compatibilité avec `VITE_DEEPSEEK_API_KEY`. Pour ShiftGuide, `SHIFTGUIDE_CODE` est le nom recommandé avec compatibilité pour `VITE_SHIFTGUIDE_CODE`.
 
 ## PWA
 
-La PWA est configurée avec `vite-plugin-pwa` :
+La PWA utilise `vite-plugin-pwa` avec :
 
-- manifest applicatif
-- icône SVG maskable
-- service worker avec cache offline basique
-- mode `standalone`
-
-## Données
-
-Toutes les données affichées sont des exemples fictifs stockés dans `src/data/`. Les interactions principales persistent dans le navigateur via `localStorage`.
+- manifest applicatif ;
+- icône SVG maskable ;
+- service worker en mise à jour automatique ;
+- cache offline basique ;
+- mode `standalone`.
 
 ## Structure
 
 ```text
 src/
   components/   composants UI réutilisables
-  data/         données fictives
-  hooks/        persistance localStorage
+  data/         données et référentiels applicatifs
+  hooks/        persistance et état partagé
   pages/        pages applicatives
-  types/        types métier TypeScript
-  utils/        helpers date, statuts et identifiants
+  types/        types TypeScript
+  utils/        helpers
+server.mjs      serveur Express et API
 ```
+
+## Maintenance
+
+Dependabot vérifie chaque semaine les dépendances npm et les GitHub Actions. Les changements doivent passer le workflow `Quality gate` avant fusion.
