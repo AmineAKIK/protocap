@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:pages": "tsc && vite build && cp dist/index.html dist/404.html",
+    "check": "npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
