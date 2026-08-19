@@ -1,8 +1,8 @@
 import {
-  Activity, AlertTriangle, ArrowDown, ArrowRight, BarChart3, BookOpen,
-  Box, CheckCircle2, ChevronDown, ChevronLeft, CircleDot, Clock3,
-  Factory, Gauge, GitBranch, Layers3, Lightbulb, Menu, PackageOpen,
-  RadioTower, Search, ShieldCheck, Sparkles, Target, X,
+  Activity, AlertTriangle, ArrowDown, ArrowRight,
+  Box, CheckCircle2, ChevronDown, ChevronLeft, Clock3,
+  Gauge, GitBranch, Lightbulb, Menu, PackageOpen,
+  RadioTower, ShieldCheck, Target, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
