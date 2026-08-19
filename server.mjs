@@ -11,7 +11,7 @@ const DIST = existsSync(join(__dirname, 'dist'))
 
 const PORT = process.env.PORT || 3000;
 const SHIFTGUIDE_CODE = process.env.SHIFTGUIDE_CODE ?? process.env.VITE_SHIFTGUIDE_CODE ?? '';
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY ?? '';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY ?? process.env.VITE_DEEPSEEK_API_KEY ?? '';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const sessions = new Map();
 
