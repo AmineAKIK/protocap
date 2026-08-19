@@ -1,4 +1,4 @@
-name: Apply Céline server-proxy patch
+name: Apply Celine server-proxy patch
 
 on:
   push:
@@ -25,23 +25,12 @@ jobs:
           path = Path('src/pages/shiftguide/CelinePage.tsx')
           text = path.read_text()
 
-          def require_once(marker: str, label: str) -> None:
-              count = text.count(marker)
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
               if count != 1:
                   raise SystemExit(f'{label}: expected 1 match, found {count}')
-
-          def replace_once(old: str, new: str, label: str) -> None:
-              global text
-              require_once(old, label)
               text = text.replace(old, new, 1)
-
-          def replace_between(start: str, end: str, replacement: str, label: str) -> None:
-              global text
-              require_once(start, f'{label} start')
-              require_once(end, f'{label} end')
-              start_index = text.index(start)
-              end_index = text.index(end, start_index)
-              text = text[:start_index] + replacement + text[end_index:]
 
           replace_once(
               "import { buildSystemPrompt } from '../../data/celineSystemPrompt';\n",
@@ -55,10 +44,9 @@ jobs:
               'client API key declaration',
           )
 
-          replace_between(
-              "  const res = await fetch('https://api.deepseek.com/chat/completions', {",
-              "\n\n  if (!res.ok) {",
-              """  const token = getShiftGuideToken();
+          fetch_start = text.index("  const res = await fetch('https://api.deepseek.com/chat/completions', {")
+          fetch_end = text.index("\n\n  if (!res.ok) {", fetch_start)
+          text = text[:fetch_start] + """  const token = getShiftGuideToken();
   if (!token) throw new Error('Session ShiftGuide expirée. Reconnecte-toi.');
 
   const res = await fetch('/api/celine/chat', {
@@ -68,14 +56,11 @@ jobs:
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
     }),
     signal,
-  });""",
-              'DeepSeek browser fetch',
-          )
+  });""" + text[fetch_end:]
 
-          replace_between(
-              "  if (!res.ok) {",
-              "\n\n  const data = await res.json();",
-              """  if (!res.ok) {
+          error_start = text.index("  if (!res.ok) {")
+          error_end = text.index("\n\n  const data = await res.json();", error_start)
+          text = text[:error_start] + """  if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
     try {
       const body = await res.json();
@@ -87,29 +72,27 @@ jobs:
     }
     if (res.status === 429) throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
     throw new Error(errMsg);
-  }""",
-              'proxy error handling',
-          )
+  }""" + text[error_end:]
 
-          replace_between(
-              "    if (!API_KEY) {",
-              "\n\n    const currentMessages = messages;",
-              '',
-              'client API key guard',
-          )
+          guard_start = text.index("    if (!API_KEY) {")
+          guard_end = text.index("\n\n    const currentMessages = messages;", guard_start)
+          text = text[:guard_start] + text[guard_end:]
 
-          forbidden = ['VITE_DEEPSEEK_API_KEY', 'api.deepseek.com', 'const API_KEY']
-          for value in forbidden:
-              if value in text:
-                  raise SystemExit(f'Forbidden client-side secret path remains: {value}')
+          for forbidden in ('VITE_DEEPSEEK_API_KEY', 'api.deepseek.com', 'const API_KEY'):
+              if forbidden in text:
+                  raise SystemExit(f'Forbidden client-side secret path remains: {forbidden}')
 
           path.write_text(text)
           PY
 
       - name: Commit patch
         run: |
+          if git diff --quiet -- src/pages/shiftguide/CelinePage.tsx; then
+            echo "No patch needed."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/pages/shiftguide/CelinePage.tsx
-          git commit -m "security: route Céline through server proxy"
+          git commit -m "security: route Celine through server proxy"
           git push origin HEAD:fix/server-side-celine-auth
