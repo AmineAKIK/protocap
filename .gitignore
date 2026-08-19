@@ -1,7 +1,23 @@
-node_modules
-dist
-.DS_Store
-*.local
+# Dependencies
+node_modules/
+
+# Generated output
+# Built by GitHub Actions and Railway; never commit generated bundles.
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment and local overrides
 .env
-.env.local
+.env.*
+!.env.example
+*.local
+
+# Logs
+*.log
 npm-debug.log*
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
