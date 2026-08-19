@@ -373,6 +373,7 @@ function Checklist({
               key={item.id}
               className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
             >
+              {/* Done button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'done')}
                 className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
@@ -384,6 +385,7 @@ function Checklist({
                 <Check size={13} />
               </button>
 
+              {/* Content */}
               <div className="min-w-0 flex-1">
                 <p className={`break-words text-sm leading-6 transition-colors ${item.done ? 'text-slate-400 line-through' : item.na ? 'text-slate-400' : 'text-slate-800'}`}>
                   {item.text}
@@ -398,6 +400,7 @@ function Checklist({
                 )}
               </div>
 
+              {/* N/A button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'na')}
                 className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
@@ -512,6 +515,7 @@ export function CelinePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
 
+  // Intercept browser back gesture / OS back button when conversation is active
   const hasMessages = messages.length > 0;
   useEffect(() => {
     if (!hasMessages) return;
@@ -528,6 +532,7 @@ export function CelinePage() {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
 
+  // Auto-continue: when the last assistant checklist is fully treated, send next prompt
   useEffect(() => {
     if (loading || pendingRef.current) return;
 
@@ -634,6 +639,7 @@ export function CelinePage() {
     }
   };
 
+  // Keep ref in sync with latest sendMessage on every render
   sendMessageRef.current = sendMessage;
 
   return (
