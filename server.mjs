@@ -4,6 +4,12 @@ import { existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { buildCelineSystemPrompt } from './server/celinePrompt.mjs';
+import {
+  cleanupExpiredState,
+  normalizeChatHistory,
+  parseJsonEnvValue,
+  takeRateLimit,
+} from './server/runtimeUtils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = existsSync(join(__dirname, 'dist'))
@@ -19,21 +25,11 @@ const UNLOCK_MAX_ATTEMPTS = 10;
 const CHAT_WINDOW_MS = 60 * 1000;
 const CHAT_MAX_REQUESTS = 30;
 
-function parseJsonEnv(name, fallback = null) {
-  const raw = process.env[name];
-  if (raw == null || raw === '') return fallback;
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`${name} must contain valid JSON.`, { cause: error });
-  }
-}
-
 const shiftGuideData = {
-  modules: parseJsonEnv('SG_MODULES'),
-  lexique: parseJsonEnv('SG_LEXIQUE'),
+  modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
+  lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
   systemPromptExtra: process.env.SG_SYSTEM_PROMPT ?? null,
-  urgences: parseJsonEnv('SG_URGENCES'),
+  urgences: parseJsonEnvValue('SG_URGENCES', process.env.SG_URGENCES),
 };
 
 if (SHIFTGUIDE_CODE && (!Array.isArray(shiftGuideData.modules) || !Array.isArray(shiftGuideData.lexique))) {
@@ -82,61 +78,10 @@ function hasValidSessionToken(token) {
   return true;
 }
 
-function takeRateLimit(store, key, maxRequests, windowMs) {
-  const now = Date.now();
-  const current = store.get(key);
-
-  if (!current || current.resetAt <= now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-
-  if (current.count >= maxRequests) {
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
-    };
-  }
-
-  current.count += 1;
-  return { allowed: true, retryAfterSeconds: 0 };
-}
-
-function normalizeChatHistory(messages) {
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
-
-  const history = messages[0]?.role === 'system' ? messages.slice(1) : messages;
-  if (history.length === 0) return null;
-
-  const valid = history.every((message) => {
-    if (!message || typeof message !== 'object') return false;
-    if (!['user', 'assistant'].includes(message.role)) return false;
-    return typeof message.content === 'string' && message.content.length > 0 && message.content.length <= 20_000;
-  });
-
-  return valid ? history : null;
-}
-
-function cleanupExpiredState() {
-  const now = Date.now();
-
-  for (const [token, expiresAt] of sessions) {
-    if (expiresAt <= now) {
-      sessions.delete(token);
-      chatRequests.delete(token);
-    }
-  }
-
-  for (const [key, entry] of unlockAttempts) {
-    if (entry.resetAt <= now) unlockAttempts.delete(key);
-  }
-
-  for (const [key, entry] of chatRequests) {
-    if (entry.resetAt <= now && !sessions.has(key)) chatRequests.delete(key);
-  }
-}
-
-const cleanupTimer = setInterval(cleanupExpiredState, 15 * 60 * 1000);
+const cleanupTimer = setInterval(
+  () => cleanupExpiredState({ sessions, unlockAttempts, chatRequests }),
+  15 * 60 * 1000
+);
 cleanupTimer.unref();
 
 // ── API ──────────────────────────────────────────────────────────────────────
