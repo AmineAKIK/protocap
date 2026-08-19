@@ -15,7 +15,7 @@ export interface SGSubModule {
 export interface SGModule {
   id: string;
   title: string;
-  icon: string;
+  icon?: string;
   description: string;
   type: 'standard' | 'choice';
   actions?: SGAction[];
@@ -75,7 +75,7 @@ function isModule(value: unknown): value is SGModule {
     value.id.length === 0 ||
     typeof value.title !== 'string' ||
     value.title.length === 0 ||
-    typeof value.icon !== 'string' ||
+    !isOptionalString(value.icon) ||
     typeof value.description !== 'string' ||
     (value.type !== 'standard' && value.type !== 'choice') ||
     !isOptionalString(value.footerNote)
