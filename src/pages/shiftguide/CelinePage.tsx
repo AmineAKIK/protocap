@@ -27,6 +27,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildSystemPrompt } from '../../data/celineSystemPrompt';
+import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 // ─── Speech Recognition ───────────────────────────────────────────────────────
 
@@ -109,8 +110,6 @@ interface ApiMessage {
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
-const API_KEY: string = import.meta.env.VITE_DEEPSEEK_API_KEY ?? '';
-
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
@@ -127,23 +126,32 @@ async function callOpenAI(
   history: ApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const token = getShiftGuideToken();
+  if (!token) throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
+
+  const res = await fetch('/api/celine/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
-      model: 'deepseek-chat',
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
     }),
     signal,
   });
 
   if (!res.ok) {
     let errMsg = `Erreur ${res.status}`;
-    try { const b = await res.json(); errMsg = b.error?.message ?? errMsg; } catch { /* ignore */ }
-    if (res.status === 401) throw new Error('Clé API invalide. Vérifie la variable VITE_DEEPSEEK_API_KEY.');
-    if (res.status === 429) throw new Error('Quota API dépassé. Réessaie dans un moment.');
+    try {
+      const body = await res.json();
+      errMsg = typeof body?.error === 'string' ? body.error : errMsg;
+    } catch { /* ignore */ }
+    if (res.status === 401) {
+      lockShiftGuide();
+      throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
+    }
+    if (res.status === 429) throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
     throw new Error(errMsg);
   }
 
@@ -365,7 +373,6 @@ function Checklist({
               key={item.id}
               className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
             >
-              {/* Done button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'done')}
                 className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
@@ -377,7 +384,6 @@ function Checklist({
                 <Check size={13} />
               </button>
 
-              {/* Content */}
               <div className="min-w-0 flex-1">
                 <p className={`break-words text-sm leading-6 transition-colors ${item.done ? 'text-slate-400 line-through' : item.na ? 'text-slate-400' : 'text-slate-800'}`}>
                   {item.text}
@@ -392,7 +398,6 @@ function Checklist({
                 )}
               </div>
 
-              {/* N/A button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'na')}
                 className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
@@ -507,7 +512,6 @@ export function CelinePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
 
-  // Intercept browser back gesture / OS back button when conversation is active
   const hasMessages = messages.length > 0;
   useEffect(() => {
     if (!hasMessages) return;
@@ -524,7 +528,6 @@ export function CelinePage() {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
 
-  // Auto-continue: when the last assistant checklist is fully treated, send next prompt
   useEffect(() => {
     if (loading || pendingRef.current) return;
 
@@ -577,10 +580,6 @@ export function CelinePage() {
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
-    if (!API_KEY) {
-      setError('Clé API non configurée. Ajoute VITE_DEEPSEEK_API_KEY dans les variables Railway et redéploie.');
-      return;
-    }
 
     const currentMessages = messages;
 
@@ -635,7 +634,6 @@ export function CelinePage() {
     }
   };
 
-  // Keep ref in sync with latest sendMessage on every render
   sendMessageRef.current = sendMessage;
 
   return (
