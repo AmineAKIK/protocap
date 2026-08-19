@@ -41,5 +41,19 @@ jobs:
       - name: Build
         run: npm run check
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev
+      - name: Prepare audit-fixed lockfile
+        run: npm audit fix --package-lock-only
+
+      - name: Upload audit-fixed lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-fixed-package-lock
+          path: package-lock.json
+
+      - name: Verify lockfile is already audit-clean
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            echo "package-lock.json needs the npm audit fixes attached to this run."
+            exit 1
+          fi
+          npm audit --omit=dev
