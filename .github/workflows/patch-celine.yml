@@ -1,6 +1,7 @@
 name: Apply Celine server-proxy patch
 
 on:
+  pull_request:
   push:
     branches:
       - fix/server-side-celine-auth
