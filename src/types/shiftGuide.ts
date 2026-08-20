@@ -31,7 +31,6 @@ export interface LexiqueEntry {
 export interface ShiftGuideData {
   modules: SGModule[];
   lexique: LexiqueEntry[];
-  systemPromptExtra: string | null;
   urgences: unknown;
 }
 
@@ -107,7 +106,6 @@ export function isShiftGuideData(value: unknown): value is ShiftGuideData {
     value.modules.every(isModule) &&
     Array.isArray(value.lexique) &&
     value.lexique.every(isLexiqueEntry) &&
-    (value.systemPromptExtra === null || typeof value.systemPromptExtra === 'string') &&
     'urgences' in value
   );
 }
