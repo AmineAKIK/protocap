@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   cleanupExpiredState,
+  hasValidSession,
   normalizeChatHistory,
   parseJsonEnvValue,
+  revokeSession,
   takeRateLimit,
 } from '../server/runtimeUtils.mjs';
 
@@ -55,6 +57,34 @@ test('takeRateLimit allows requests until the limit then exposes retry delay', (
     allowed: true,
     retryAfterSeconds: 0,
   });
+});
+
+test('hasValidSession rejects missing and expired sessions and clears associated chat rate state', () => {
+  const sessions = new Map([
+    ['expired', 999],
+    ['active', 5_000],
+  ]);
+  const chatRequests = new Map([
+    ['expired', { count: 2, resetAt: 5_000 }],
+    ['active', { count: 1, resetAt: 5_000 }],
+  ]);
+
+  assert.equal(hasValidSession(sessions, chatRequests, '', 1_000), false);
+  assert.equal(hasValidSession(sessions, chatRequests, 'missing', 1_000), false);
+  assert.equal(hasValidSession(sessions, chatRequests, 'expired', 1_000), false);
+  assert.equal(sessions.has('expired'), false);
+  assert.equal(chatRequests.has('expired'), false);
+  assert.equal(hasValidSession(sessions, chatRequests, 'active', 1_000), true);
+});
+
+test('revokeSession is idempotent and removes chat limiter state', () => {
+  const sessions = new Map([['token', 5_000]]);
+  const chatRequests = new Map([['token', { count: 1, resetAt: 5_000 }]]);
+
+  assert.equal(revokeSession(sessions, chatRequests, 'token'), true);
+  assert.equal(sessions.has('token'), false);
+  assert.equal(chatRequests.has('token'), false);
+  assert.equal(revokeSession(sessions, chatRequests, 'token'), false);
 });
 
 test('cleanupExpiredState removes expired sessions and stale limiter entries', () => {
