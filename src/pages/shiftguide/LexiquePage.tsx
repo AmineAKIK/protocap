@@ -28,7 +28,7 @@ export function LexiquePage() {
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
-            onClick={() => navigate('/shiftguide')}
+            onClick={() => navigate('/shiftguide/home')}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
             aria-label="Retour à l'accueil ShiftGuide"
           >
