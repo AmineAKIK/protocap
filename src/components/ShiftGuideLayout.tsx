@@ -81,6 +81,44 @@ export function ShiftGuideLayout() {
     if (!isCelineRoute) return;
 
     const media = window.matchMedia('(max-width: 1023px)');
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+
+    const updateRootLock = () => {
+      if (media.matches) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        html.style.overflow = 'hidden';
+        html.style.overscrollBehavior = 'none';
+        body.style.overflow = 'hidden';
+        body.style.overscrollBehavior = 'none';
+      } else {
+        html.style.overflow = previousHtmlOverflow;
+        html.style.overscrollBehavior = previousHtmlOverscroll;
+        body.style.overflow = previousBodyOverflow;
+        body.style.overscrollBehavior = previousBodyOverscroll;
+      }
+    };
+
+    updateRootLock();
+    media.addEventListener('change', updateRootLock);
+
+    return () => {
+      media.removeEventListener('change', updateRootLock);
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+    };
+  }, [isCelineRoute]);
+
+  useEffect(() => {
+    if (!isCelineRoute) return;
+
+    const media = window.matchMedia('(max-width: 1023px)');
     const viewport = window.visualViewport;
 
     const updateViewportHeight = () => {
@@ -89,18 +127,13 @@ export function ShiftGuideLayout() {
         return;
       }
 
-      const visibleHeight = viewport?.height ?? window.innerHeight;
-      const visibleOffsetTop = viewport?.offsetTop ?? 0;
-      const obscuredHeight = Math.max(
-        0,
-        window.innerHeight - visibleHeight - visibleOffsetTop
-      );
-      const keyboardOpen = obscuredHeight > 120;
+      const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+      const visibleHeight = viewport?.height ?? layoutHeight;
+      const keyboardOpen = visibleHeight < layoutHeight - 120;
       const mobileNavReserve = keyboardOpen ? 0 : 80;
+      const availableHeight = Math.floor(visibleHeight - mobileNavReserve);
 
-      setCelineViewportHeight(
-        Math.max(320, Math.floor(visibleHeight - mobileNavReserve))
-      );
+      setCelineViewportHeight(Math.max(240, availableHeight));
     };
 
     const initialFrame = window.requestAnimationFrame(updateViewportHeight);
@@ -125,8 +158,12 @@ export function ShiftGuideLayout() {
     navigate('/', { replace: true });
   };
 
+  const shellClass = isCelineRoute && isMobileViewport
+    ? 'shiftguide-shell h-[100dvh] overflow-hidden bg-[#f3f5f7]'
+    : 'shiftguide-shell min-h-screen bg-[#f3f5f7]';
+
   return (
-    <div className="shiftguide-shell min-h-screen bg-[#f3f5f7]">
+    <div className={shellClass}>
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-24 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
         <div className="flex h-20 items-center justify-center border-b border-white/10">
           <NavLink
@@ -174,7 +211,7 @@ export function ShiftGuideLayout() {
       <div
         className={
           isCelineRoute
-            ? 'h-[calc(100dvh_-_5rem_-_env(safe-area-inset-bottom))] overflow-hidden lg:h-auto lg:overflow-visible lg:pl-24 [&>div]:h-full lg:[&>div]:h-[100dvh]'
+            ? 'h-[calc(100dvh_-_5rem_-_env(safe-area-inset-bottom))] overflow-hidden lg:h-auto lg:overflow-visible lg:pl-24 [&>div]:h-full [&>div]:min-h-0 [&>div]:overflow-hidden lg:[&>div]:h-[100dvh] lg:[&>div]:overflow-visible'
             : 'pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24'
         }
         style={
