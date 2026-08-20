@@ -48,6 +48,9 @@ export function ShiftGuideLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [celineViewportHeight, setCelineViewportHeight] = useState<number | null>(null);
+  const isCelineRoute = location.pathname === '/shiftguide/celine';
+  const isMobileViewport = window.matchMedia('(max-width: 1023px)').matches;
 
   useEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -63,7 +66,7 @@ export function ShiftGuideLayout() {
     const frame = window.requestAnimationFrame(() => {
       resetShiftGuideScroll();
 
-      if (location.pathname === '/shiftguide/celine') {
+      if (isCelineRoute && window.matchMedia('(min-width: 1024px)').matches) {
         const input = document.querySelector<HTMLInputElement>(
           '.shiftguide-shell input[type="text"]'
         );
@@ -72,7 +75,48 @@ export function ShiftGuideLayout() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [location.pathname]);
+  }, [isCelineRoute, location.pathname]);
+
+  useEffect(() => {
+    if (!isCelineRoute) return;
+
+    const media = window.matchMedia('(max-width: 1023px)');
+    const viewport = window.visualViewport;
+
+    const updateViewportHeight = () => {
+      if (!media.matches) {
+        setCelineViewportHeight(null);
+        return;
+      }
+
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      const visibleOffsetTop = viewport?.offsetTop ?? 0;
+      const obscuredHeight = Math.max(
+        0,
+        window.innerHeight - visibleHeight - visibleOffsetTop
+      );
+      const keyboardOpen = obscuredHeight > 120;
+      const mobileNavReserve = keyboardOpen ? 0 : 80;
+
+      setCelineViewportHeight(
+        Math.max(320, Math.floor(visibleHeight - mobileNavReserve))
+      );
+    };
+
+    const initialFrame = window.requestAnimationFrame(updateViewportHeight);
+    window.addEventListener('resize', updateViewportHeight);
+    viewport?.addEventListener('resize', updateViewportHeight);
+    viewport?.addEventListener('scroll', updateViewportHeight);
+    media.addEventListener('change', updateViewportHeight);
+
+    return () => {
+      window.cancelAnimationFrame(initialFrame);
+      window.removeEventListener('resize', updateViewportHeight);
+      viewport?.removeEventListener('resize', updateViewportHeight);
+      viewport?.removeEventListener('scroll', updateViewportHeight);
+      media.removeEventListener('change', updateViewportHeight);
+    };
+  }, [isCelineRoute]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -127,7 +171,18 @@ export function ShiftGuideLayout() {
         </div>
       </aside>
 
-      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
+      <div
+        className={
+          isCelineRoute
+            ? 'h-[calc(100dvh_-_5rem_-_env(safe-area-inset-bottom))] overflow-hidden lg:h-auto lg:overflow-visible lg:pl-24 [&>div]:h-full lg:[&>div]:h-[100dvh]'
+            : 'pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24'
+        }
+        style={
+          isCelineRoute && isMobileViewport && celineViewportHeight !== null
+            ? { height: `${celineViewportHeight}px` }
+            : undefined
+        }
+      >
         <Outlet />
       </div>
 
