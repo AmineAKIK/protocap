@@ -4,6 +4,7 @@ import {
   Bot,
   FileSearch,
   Grid2x2,
+  Home,
   LogOut,
   RadioTower,
 } from 'lucide-react';
@@ -12,8 +13,8 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useShiftGuideAuth } from '../context/ShiftGuideAuthContext';
 
 const navigation = [
-  { to: '/shiftguide', label: 'Céline', icon: Bot, end: true },
-  { to: '/shiftguide/modules', label: 'Modules', icon: Grid2x2 },
+  { to: '/shiftguide', label: 'Accueil', icon: Home, end: true },
+  { to: '/shiftguide/celine', label: 'Céline', icon: Bot },
   { to: '/shiftguide/linepulse', label: 'Pulse', icon: RadioTower },
   { to: '/shiftguide/analyse-ligne', label: 'Analyse', icon: FileSearch },
   { to: '/shiftguide/lexique', label: 'Lexique', icon: BookOpen },
@@ -46,7 +47,8 @@ export function ShiftGuideLayout() {
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-24 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
         <div className="flex h-20 items-center justify-center border-b border-white/10">
           <NavLink
-            to="/shiftguide/modules"
+            to="/shiftguide"
+            end
             className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-400 text-zinc-950 shadow-lg shadow-teal-950/20"
             aria-label="Accueil ShiftGuide"
           >
@@ -118,7 +120,7 @@ export function ShiftGuideLayout() {
             className={`flex min-h-14 min-w-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[10px] font-black transition disabled:opacity-50 ${navClass(false, true)}`}
           >
             <LogOut size={18} />
-            <span>Quitter</span>
+            <span>{loggingOut ? 'Sortie…' : 'Quitter'}</span>
           </button>
         </div>
       </nav>

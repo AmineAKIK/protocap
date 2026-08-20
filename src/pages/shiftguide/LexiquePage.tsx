@@ -27,8 +27,10 @@ export function LexiquePage() {
       <header className="flex-none border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
           <button
-            onClick={() => navigate('/shiftguide/modules')}
+            type="button"
+            onClick={() => navigate('/shiftguide')}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+            aria-label="Retour à l'accueil ShiftGuide"
           >
             <ChevronLeft size={20} />
           </button>
@@ -42,8 +44,9 @@ export function LexiquePage() {
       </header>
 
       <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-5 sm:px-6">
-        <div className="flex-none rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10">
-          <div className="flex items-center gap-3">
+        <label className="flex-none rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10">
+          <span className="sr-only">Rechercher dans le lexique</span>
+          <span className="flex items-center gap-3">
             <Search size={16} className="shrink-0 text-slate-400" />
             <input
               ref={inputRef}
@@ -53,8 +56,8 @@ export function LexiquePage() {
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
             />
-          </div>
-        </div>
+          </span>
+        </label>
 
         <div className="mt-5 min-h-0 flex-1 overflow-y-auto pb-6">
           {filtered.length === 0 ? (

@@ -1,11 +1,20 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { ShiftGuideLayout } from './components/ShiftGuideLayout';
 import {
   ShiftGuideAuthProvider,
   useShiftGuideAuth,
 } from './context/ShiftGuideAuthContext';
+import { getSgModules } from './data/shiftguideModules';
 import { ShiftGuideLock } from './pages/shiftguide/ShiftGuideLock';
 
 const ExpiryCheckPage = lazy(() =>
@@ -95,19 +104,70 @@ function ShiftGuideGuard() {
   );
 }
 
+function ShiftGuideRouteState({
+  title = 'Page introuvable',
+  detail = "Cette destination n'existe pas dans ShiftGuide.",
+}: {
+  title?: string;
+  detail?: string;
+}) {
+  return (
+    <main className="grid min-h-[70dvh] place-items-center px-5 py-10">
+      <section className="w-full max-w-lg rounded-3xl border border-zinc-200 bg-white p-7 text-center shadow-xl shadow-zinc-200/50">
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">ShiftGuide</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-zinc-950">{title}</h1>
+        <p className="mt-3 text-sm font-semibold leading-6 text-zinc-500">{detail}</p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Link
+            to="/shiftguide"
+            replace
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white transition hover:bg-zinc-800"
+          >
+            Retour à l'accueil
+          </Link>
+          <Link
+            to="/shiftguide/celine"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-50 px-4 text-sm font-black text-teal-800 ring-1 ring-teal-100 transition hover:bg-teal-100"
+          >
+            Ouvrir Céline
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ShiftGuideModuleRoute() {
+  const { moduleId } = useParams<{ moduleId: string }>();
+  const exists = !!moduleId && getSgModules().some((module) => module.id === moduleId);
+
+  if (!exists) {
+    return (
+      <ShiftGuideRouteState
+        title="Module introuvable"
+        detail="Ce module n'existe pas ou n'est plus disponible dans la configuration ShiftGuide actuelle."
+      />
+    );
+  }
+
+  return <ModuleView />;
+}
+
 export function App() {
   return (
     <ShiftGuideAuthProvider>
       <Routes>
         <Route element={<ShiftGuideGuard />}>
           <Route element={<ShiftGuideLayout />}>
-            <Route path="/shiftguide" element={<CelinePage />} />
-            <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
+            <Route path="/shiftguide" element={<ShiftGuideHome />} />
+            <Route path="/shiftguide/celine" element={<CelinePage />} />
+            <Route path="/shiftguide/modules" element={<Navigate to="/shiftguide" replace />} />
             <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
             <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
-            <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
+            <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideModuleRoute />} />
             <Route path="/shiftguide/lexique" element={<LexiquePage />} />
             <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
+            <Route path="/shiftguide/*" element={<ShiftGuideRouteState />} />
           </Route>
         </Route>
 
