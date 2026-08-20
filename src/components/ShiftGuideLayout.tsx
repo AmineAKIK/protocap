@@ -48,6 +48,7 @@ export function ShiftGuideLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
+  const isCelineRoute = location.pathname === '/shiftguide/celine';
 
   useEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -63,7 +64,7 @@ export function ShiftGuideLayout() {
     const frame = window.requestAnimationFrame(() => {
       resetShiftGuideScroll();
 
-      if (location.pathname === '/shiftguide/celine') {
+      if (isCelineRoute && window.matchMedia('(min-width: 1024px)').matches) {
         const input = document.querySelector<HTMLInputElement>(
           '.shiftguide-shell input[type="text"]'
         );
@@ -72,7 +73,7 @@ export function ShiftGuideLayout() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [location.pathname]);
+  }, [isCelineRoute, location.pathname]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -127,7 +128,13 @@ export function ShiftGuideLayout() {
         </div>
       </aside>
 
-      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
+      <div
+        className={
+          isCelineRoute
+            ? 'h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] overflow-hidden lg:h-auto lg:overflow-visible lg:pl-24 [&>div]:h-full lg:[&>div]:h-[100dvh]'
+            : 'pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24'
+        }
+      >
         <Outlet />
       </div>
 
