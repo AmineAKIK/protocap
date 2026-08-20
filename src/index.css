@@ -37,17 +37,73 @@ textarea {
   background-size: 32px 32px;
 }
 
-@media (max-width: 639px) {
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > div:nth-child(2) {
+@media (max-width: 1023px) {
+  /* The shell bottom nav is the only global ShiftGuide navigation on mobile/tablet. */
+  .shiftguide-shell header a[href='/shiftguide/celine'],
+  .shiftguide-shell header a[href='/shiftguide/linepulse'],
+  .shiftguide-shell header a[href='/shiftguide/analyse-ligne'],
+  .shiftguide-shell header a[href='/shiftguide/lexique'],
+  .shiftguide-shell header a[href='/shiftguide/urgences'] {
     display: none;
   }
 
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > button:first-child span {
+  /* Céline: keep only the local back action + page identity. */
+  .shiftguide-shell header:has(a[aria-label='Accueil ShiftGuide']) > div:first-child {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-inline: 0.75rem;
+  }
+
+  .shiftguide-shell header:has(a[aria-label='Accueil ShiftGuide']) > div:first-child > div:last-child {
     display: none;
   }
 
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > div:last-child {
-    gap: 0.375rem;
+  .shiftguide-shell header:has(a[aria-label='Accueil ShiftGuide']) > div:first-child > div:nth-child(2) {
+    justify-content: flex-end;
+  }
+
+  /* Cockpit: global shortcuts are already in the shell; keep the context bar below. */
+  .shiftguide-shell header:has(a[aria-label='Céline']):has(a[aria-label='Urgences']) > div:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shiftguide-shell header:has(a[aria-label='Céline']):has(a[aria-label='Urgences']) > div:first-child > span:first-child,
+  .shiftguide-shell header:has(a[aria-label='Céline']):has(a[aria-label='Urgences']) > div:first-child > div:last-child {
+    display: none;
+  }
+
+  /* Module headers keep local close/type controls; emergency stays in the shell. */
+  .shiftguide-shell header a[aria-label='Ouvrir les urgences'] {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* LinePulse: both "Accueil" and "ShiftGuide" duplicate the shell navigation. */
+  .shiftguide-shell header:has(a[href='/shiftguide']) > div[class*='grid'] > button:first-child,
+  .shiftguide-shell header:has(a[href='/shiftguide']) > div[class*='grid'] > a[href='/shiftguide'] {
+    display: none;
+  }
+
+  .shiftguide-shell header:has(a[href='/shiftguide']) > div[class*='grid'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Simple pages: hide only the redundant home/back control. */
+  .shiftguide-shell header button[aria-label="Retour à l'accueil ShiftGuide"] {
+    display: none;
+  }
+
+  /* Urgences: first control is a redundant Accueil return; keep page identity + safety badge. */
+  .shiftguide-shell header:has(.bg-red-700) > div:first-child > button:first-child {
+    display: none;
+  }
+
+  .shiftguide-shell header:has(.bg-red-700) > div:first-child {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* Analysis keeps its local table-of-contents button, but not the global back shortcut. */
+  .shiftguide-shell header:has(button[aria-label='Sommaire']) > div:first-child > button:first-child {
+    display: none;
   }
 }
 

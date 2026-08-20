@@ -43,7 +43,7 @@ export function ShiftGuideLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f5f7]">
+    <div className="shiftguide-shell min-h-screen bg-[#f3f5f7]">
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-24 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
         <div className="flex h-20 items-center justify-center border-b border-white/10">
           <NavLink
@@ -88,7 +88,7 @@ export function ShiftGuideLayout() {
         </div>
       </aside>
 
-      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24 [&>div]:pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:[&>div]:pb-0">
+      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
         <Outlet />
       </div>
 
