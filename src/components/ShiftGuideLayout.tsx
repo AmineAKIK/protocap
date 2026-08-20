@@ -50,6 +50,7 @@ export function ShiftGuideLayout() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [celineViewportHeight, setCelineViewportHeight] = useState<number | null>(null);
   const isCelineRoute = location.pathname === '/shiftguide/celine';
+  const isMobileViewport = window.matchMedia('(max-width: 1023px)').matches;
 
   useEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -77,10 +78,7 @@ export function ShiftGuideLayout() {
   }, [isCelineRoute, location.pathname]);
 
   useEffect(() => {
-    if (!isCelineRoute) {
-      setCelineViewportHeight(null);
-      return;
-    }
+    if (!isCelineRoute) return;
 
     const media = window.matchMedia('(max-width: 1023px)');
     const viewport = window.visualViewport;
@@ -105,13 +103,14 @@ export function ShiftGuideLayout() {
       );
     };
 
-    updateViewportHeight();
+    const initialFrame = window.requestAnimationFrame(updateViewportHeight);
     window.addEventListener('resize', updateViewportHeight);
     viewport?.addEventListener('resize', updateViewportHeight);
     viewport?.addEventListener('scroll', updateViewportHeight);
     media.addEventListener('change', updateViewportHeight);
 
     return () => {
+      window.cancelAnimationFrame(initialFrame);
       window.removeEventListener('resize', updateViewportHeight);
       viewport?.removeEventListener('resize', updateViewportHeight);
       viewport?.removeEventListener('scroll', updateViewportHeight);
@@ -179,7 +178,7 @@ export function ShiftGuideLayout() {
             : 'pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24'
         }
         style={
-          isCelineRoute && celineViewportHeight !== null
+          isCelineRoute && isMobileViewport && celineViewportHeight !== null
             ? { height: `${celineViewportHeight}px` }
             : undefined
         }
