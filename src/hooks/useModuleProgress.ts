@@ -13,6 +13,7 @@ interface StoredData {
 
 const GLOBAL_PROGRESS_KEY = 'shiftguide_progress_v1';
 const PROGRESS_EVENT = 'shiftguide:progress';
+const ACTION_IDS_SEPARATOR = '\u001f';
 
 function readStoredData(key: string): StoredData {
   try {
@@ -103,13 +104,15 @@ export function subscribeShiftGuideProgress(listener: () => void) {
 }
 
 export function useModuleProgress(moduleId: string, actionIds: string[]) {
+  const actionIdsKey = actionIds.join(ACTION_IDS_SEPARATOR);
   const [progress, setProgress] = useState<Progress>(() => getModuleProgress(moduleId, actionIds));
 
   useEffect(() => {
-    const refresh = () => setProgress(getModuleProgress(moduleId, actionIds));
+    const stableActionIds = actionIdsKey ? actionIdsKey.split(ACTION_IDS_SEPARATOR) : [];
+    const refresh = () => setProgress(getModuleProgress(moduleId, stableActionIds));
     refresh();
     return subscribeShiftGuideProgress(refresh);
-  }, [moduleId, actionIds]);
+  }, [moduleId, actionIdsKey]);
 
   const setAction = useCallback((actionId: string, status: ActionStatus) => {
     const current = getSharedActionStatus(actionId);
@@ -118,12 +121,13 @@ export function useModuleProgress(moduleId: string, actionIds: string[]) {
   }, [moduleId]);
 
   const resetModule = useCallback(() => {
+    const stableActionIds = actionIdsKey ? actionIdsKey.split(ACTION_IDS_SEPARATOR) : [];
     const global = readGlobalProgress();
-    for (const actionId of actionIds) delete global[actionId];
+    for (const actionId of stableActionIds) delete global[actionId];
     writeStoredData(GLOBAL_PROGRESS_KEY, global);
     localStorage.removeItem(`shiftguide_module_${moduleId}`);
     notifyProgressChanged();
-  }, [actionIds, moduleId]);
+  }, [actionIdsKey, moduleId]);
 
   const treatedCount = actionIds.filter((id) => {
     const s = progress[id];
