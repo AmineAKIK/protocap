@@ -8,8 +8,8 @@ import {
   LogOut,
   RadioTower,
 } from 'lucide-react';
-import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useShiftGuideAuth } from '../context/ShiftGuideAuthContext';
 
 const navigation = [
@@ -30,10 +30,49 @@ function navClass(isActive: boolean, danger = false) {
     : 'text-zinc-400 hover:bg-white/10 hover:text-white';
 }
 
+function resetShiftGuideScroll() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
+  document.querySelectorAll<HTMLElement>('.shiftguide-shell *').forEach((element) => {
+    const { overflowY } = window.getComputedStyle(element);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && element.scrollTop !== 0) {
+      element.scrollTop = 0;
+    }
+  });
+}
+
 export function ShiftGuideLayout() {
   const { logout } = useShiftGuideAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+
+  useEffect(() => {
+    resetShiftGuideScroll();
+
+    const frame = window.requestAnimationFrame(() => {
+      resetShiftGuideScroll();
+
+      if (location.pathname === '/shiftguide/celine') {
+        const input = document.querySelector<HTMLInputElement>(
+          '.shiftguide-shell input[type="text"]'
+        );
+        input?.focus({ preventScroll: true });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
