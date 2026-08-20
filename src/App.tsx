@@ -119,7 +119,7 @@ function ShiftGuideRouteState({
         <p className="mt-3 text-sm font-semibold leading-6 text-zinc-500">{detail}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Link
-            to="/shiftguide/home"
+            to="/shiftguide"
             replace
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white transition hover:bg-zinc-800"
           >
@@ -159,10 +159,10 @@ export function App() {
       <Routes>
         <Route element={<ShiftGuideGuard />}>
           <Route element={<ShiftGuideLayout />}>
-            <Route path="/shiftguide" element={<CelinePage />} />
+            <Route path="/shiftguide" element={<ShiftGuideHome />} />
             <Route path="/shiftguide/celine" element={<CelinePage />} />
-            <Route path="/shiftguide/home" element={<ShiftGuideHome />} />
-            <Route path="/shiftguide/modules" element={<Navigate to="/shiftguide/home" replace />} />
+            <Route path="/shiftguide/home" element={<Navigate to="/shiftguide" replace />} />
+            <Route path="/shiftguide/modules" element={<Navigate to="/shiftguide" replace />} />
             <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
             <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
             <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideModuleRoute />} />
