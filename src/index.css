@@ -38,16 +38,21 @@ textarea {
 }
 
 @media (max-width: 639px) {
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > div:nth-child(2) {
+  header:has(a[aria-label='LinePulse']):has(a[aria-label='Accueil ShiftGuide']):has(a[aria-label='Urgences']) > div:first-child {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-inline: 0.75rem;
+  }
+
+  header:has(a[aria-label='LinePulse']):has(a[aria-label='Accueil ShiftGuide']):has(a[aria-label='Urgences']) > div:first-child > div:last-child {
     display: none;
   }
 
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > button:first-child span {
-    display: none;
+  header:has(a[aria-label='LinePulse']):has(a[aria-label='Accueil ShiftGuide']):has(a[aria-label='Urgences']) > div:first-child > div:nth-child(2) {
+    justify-content: flex-end;
   }
 
-  header:has(a[aria-label='LinePulse']):has(a[aria-label='Modules']):has(a[aria-label='Urgences']) > div:first-child > div:last-child {
-    gap: 0.375rem;
+  header:has(a[aria-label='LinePulse']):has(a[aria-label='Accueil ShiftGuide']):has(a[aria-label='Urgences']) > div:first-child > button:first-child {
+    padding-inline: 0.25rem;
   }
 }
 
