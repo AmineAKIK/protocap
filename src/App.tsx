@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { ShiftGuideLayout } from './components/ShiftGuideLayout';
 import {
   ShiftGuideAuthProvider,
   useShiftGuideAuth,
@@ -99,13 +100,15 @@ export function App() {
     <ShiftGuideAuthProvider>
       <Routes>
         <Route element={<ShiftGuideGuard />}>
-          <Route path="/shiftguide" element={<CelinePage />} />
-          <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
-          <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
-          <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
-          <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
-          <Route path="/shiftguide/lexique" element={<LexiquePage />} />
-          <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
+          <Route element={<ShiftGuideLayout />}>
+            <Route path="/shiftguide" element={<CelinePage />} />
+            <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
+            <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
+            <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
+            <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
+            <Route path="/shiftguide/lexique" element={<LexiquePage />} />
+            <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
+          </Route>
         </Route>
 
         <Route element={<MainLayout />}>
