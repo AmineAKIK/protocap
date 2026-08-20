@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   BookOpen,
   Bot,
-  ChevronLeft,
   ClipboardCheck,
   Clock3,
   Factory,
@@ -24,7 +23,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
 import { getModuleProgressSummary } from '../../hooks/useModuleProgress';
@@ -515,7 +514,6 @@ function ContextView({
 }
 
 export function ShiftGuideHome() {
-  const navigate = useNavigate();
   const [contextId, setContextId] = useState<ContextId | null>(() => {
     return (localStorage.getItem('shiftguide_context') as ContextId) ?? 'debut_equipe';
   });
@@ -541,13 +539,7 @@ export function ShiftGuideHome() {
     <div className="min-h-screen bg-[#f3f5f7] text-zinc-950">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto grid h-14 max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
-          >
-            <ChevronLeft size={17} />
-            <span className="hidden min-[380px]:inline">Retour</span>
-          </button>
+          <span className="h-10 w-10" aria-hidden="true" />
 
           <div className="flex min-w-0 items-center justify-center gap-2 sm:gap-3">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10 sm:h-10 sm:w-10">
@@ -579,7 +571,7 @@ export function ShiftGuideHome() {
               <span className="hidden sm:inline">Pulse</span>
             </Link>
             <Link
-              to="/shiftguide"
+              to="/shiftguide/celine"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="Céline"
             >
@@ -662,7 +654,7 @@ export function ShiftGuideHome() {
                 Analyse de ligne 101
               </Link>
               <Link
-                to="/shiftguide"
+                to="/shiftguide/celine"
                 className="flex items-center gap-3 rounded-xl bg-teal-50 px-3 py-3 text-sm font-black text-teal-800 ring-1 ring-teal-100 transition hover:bg-teal-100"
               >
                 <Bot size={16} />

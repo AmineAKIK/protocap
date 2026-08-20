@@ -1490,11 +1490,12 @@ export function LinePulsePage() {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto grid min-h-16 max-w-[1540px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 sm:px-6 lg:px-8">
           <button
-            onClick={() => navigate(-1)}
+            type="button"
+            onClick={() => navigate('/shiftguide')}
             className="inline-flex h-10 items-center gap-2 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:px-3"
           >
             <ChevronLeft size={17} />
-            <span className="hidden sm:inline">Retour</span>
+            <span className="hidden sm:inline">Accueil</span>
           </button>
 
           <div className="min-w-0">
@@ -1512,7 +1513,7 @@ export function LinePulsePage() {
           </div>
 
           <Link
-            to="/shiftguide/modules"
+            to="/shiftguide"
             className="inline-flex h-10 items-center justify-center rounded-full bg-zinc-100 px-3 text-xs font-black text-zinc-700 transition hover:bg-zinc-200"
           >
             ShiftGuide

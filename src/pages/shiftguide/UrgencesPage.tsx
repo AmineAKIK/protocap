@@ -67,11 +67,12 @@ export function UrgencesPage() {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto grid h-14 max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
           <button
-            onClick={() => navigate(-1)}
+            type="button"
+            onClick={() => navigate('/shiftguide')}
             className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
           >
             <ChevronLeft size={17} />
-            <span className="hidden min-[380px]:inline">Retour</span>
+            <span className="hidden min-[380px]:inline">Accueil</span>
           </button>
 
           <div className="flex min-w-0 items-center justify-center gap-2 sm:gap-3">

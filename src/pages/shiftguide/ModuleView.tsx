@@ -400,6 +400,8 @@ export function ModuleView() {
     }
   }, [actionIds, progressKey]);
 
+  const leaveModule = () => navigate('/shiftguide', { replace: true });
+
   const handleClose = () => {
     if (!isChoice || selectedSub) {
       if (actionIds.length > 0 && !checkIsComplete()) {
@@ -407,7 +409,7 @@ export function ModuleView() {
         return;
       }
     }
-    navigate(-1);
+    leaveModule();
   };
 
   const handleBackToChoice = () => {
@@ -428,8 +430,10 @@ export function ModuleView() {
         <div className="mx-auto grid h-14 max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-1.5">
           <button
+            type="button"
             onClick={handleClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+            aria-label="Fermer le module et revenir à l'accueil ShiftGuide"
           >
             <X size={20} />
           </button>
@@ -459,6 +463,7 @@ export function ModuleView() {
         <Link
           to="/shiftguide/urgences"
           className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+          aria-label="Ouvrir les urgences"
         >
           <AlertTriangle size={16} />
         </Link>
@@ -468,7 +473,7 @@ export function ModuleView() {
       {showExitWarning && (
         <ExitWarningModal
           onStay={() => setShowExitWarning(false)}
-          onLeave={() => navigate(-1)}
+          onLeave={leaveModule}
         />
       )}
 

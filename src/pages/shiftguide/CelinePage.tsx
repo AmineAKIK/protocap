@@ -643,7 +643,7 @@ export function CelinePage() {
     <div className="flex h-[100dvh] flex-col bg-[#f3f5f7] text-zinc-950">
       {confirmExit && (
         <ConfirmModal
-          onConfirm={() => { setConfirmExit(false); navigate('/'); }}
+          onConfirm={() => { setConfirmExit(false); navigate('/shiftguide'); }}
           onCancel={() => setConfirmExit(false)}
         />
       )}
@@ -651,11 +651,12 @@ export function CelinePage() {
       <header className="sticky top-0 z-30 flex-none border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto grid h-14 w-full max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
           <button
-            onClick={() => messages.length === 0 ? navigate('/') : setConfirmExit(true)}
+            type="button"
+            onClick={() => messages.length === 0 ? navigate('/shiftguide') : setConfirmExit(true)}
             className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
           >
             <ChevronLeft size={18} />
-            <span className="hidden min-[380px]:inline">Toolkit</span>
+            <span className="hidden min-[380px]:inline">Accueil</span>
           </button>
 
           <div className="flex min-w-0 items-center justify-center gap-2">
@@ -686,12 +687,12 @@ export function CelinePage() {
               <span className="hidden sm:inline">Pulse</span>
             </Link>
             <Link
-              to="/shiftguide/modules"
+              to="/shiftguide"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
-              aria-label="Modules"
+              aria-label="Accueil ShiftGuide"
             >
               <Grid2x2 size={13} />
-              <span className="hidden sm:inline">Modules</span>
+              <span className="hidden sm:inline">Accueil</span>
             </Link>
             <Link
               to="/shiftguide/urgences"
@@ -722,8 +723,8 @@ export function CelinePage() {
                 {[
                   { to: '/shiftguide/linepulse', icon: RadioTower, label: 'LinePulse temps reel' },
                   { to: '/shiftguide/analyse-ligne', icon: FileSearch, label: 'Analyse de ligne 101' },
-                  { to: '/shiftguide/modules', icon: ClipboardCheck, label: 'Modules terrain' },
-                  { to: '/shiftguide/modules', icon: Factory, label: 'Contexte ligne' },
+                  { to: '/shiftguide', icon: ClipboardCheck, label: 'Modules terrain' },
+                  { to: '/shiftguide', icon: Factory, label: 'Contexte ligne' },
                   { to: '/shiftguide/urgences', icon: AlertTriangle, label: 'Urgences' },
                 ].map((item) => {
                   const Icon = item.icon;
