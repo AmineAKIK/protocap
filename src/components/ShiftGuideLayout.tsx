@@ -88,7 +88,7 @@ export function ShiftGuideLayout() {
         </div>
       </aside>
 
-      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24 [&>div]:pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:[&>div]:pb-0">
+      <div className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] lg:pb-0 lg:pl-24">
         <Outlet />
       </div>
 
