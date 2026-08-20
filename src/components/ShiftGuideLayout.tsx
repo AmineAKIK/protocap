@@ -13,7 +13,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useShiftGuideAuth } from '../context/ShiftGuideAuthContext';
 
 const navigation = [
-  { to: '/shiftguide/home', label: 'Accueil', icon: Home, end: true },
+  { to: '/shiftguide', label: 'Accueil', icon: Home, end: true },
   { to: '/shiftguide/celine', label: 'Céline', icon: Bot },
   { to: '/shiftguide/linepulse', label: 'Pulse', icon: RadioTower },
   { to: '/shiftguide/analyse-ligne', label: 'Analyse', icon: FileSearch },
@@ -47,7 +47,7 @@ export function ShiftGuideLayout() {
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-24 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
         <div className="flex h-20 items-center justify-center border-b border-white/10">
           <NavLink
-            to="/shiftguide/home"
+            to="/shiftguide"
             end
             className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-400 text-zinc-950 shadow-lg shadow-teal-950/20"
             aria-label="Accueil ShiftGuide"
