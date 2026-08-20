@@ -1,12 +1,24 @@
-import { LockKeyhole, ShieldAlert } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { unlockShiftGuide } from '../../hooks/useShiftGuideAuth';
+import { ChevronLeft, LockKeyhole, ShieldAlert } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import type { ShiftGuideAuthResult } from '../../hooks/useShiftGuideAuth';
 
-export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
+export function ShiftGuideLock({
+  onUnlock,
+}: {
+  onUnlock: (code: string) => Promise<ShiftGuideAuthResult>;
+}) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const errorTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
   const attempt = async () => {
     const trimmed = code.trim();
@@ -14,15 +26,14 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
     setLoading(true);
     setError(null);
 
-    const result = await unlockShiftGuide(trimmed);
+    const result = await onUnlock(trimmed);
 
-    if (result.ok) {
-      onUnlock();
-    } else {
+    if (!result.ok) {
       setError(result.error ?? 'Code incorrect.');
       setCode('');
       setLoading(false);
-      setTimeout(() => setError(null), 2500);
+      if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = window.setTimeout(() => setError(null), 2500);
       inputRef.current?.focus();
     }
   };
@@ -40,47 +51,70 @@ export function ShiftGuideLock({ onUnlock }: { onUnlock: () => void }) {
           </p>
         </div>
 
-        <div className="px-6 py-6">
+        <form
+          className="px-6 py-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void attempt();
+          }}
+        >
           <p className="text-sm font-bold text-zinc-600">
             Cette section est protégée. Entre le code d'accès pour continuer.
           </p>
 
+          <label htmlFor="shiftguide-code" className="mt-5 block text-xs font-black uppercase tracking-wide text-zinc-500">
+            Code d'accès
+          </label>
           <div
-            className={`mt-5 overflow-hidden rounded-xl border transition ${
+            className={`mt-2 overflow-hidden rounded-xl border transition ${
               error
                 ? 'border-red-400 ring-4 ring-red-100'
                 : 'border-zinc-200 focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10'
             } bg-white`}
           >
             <input
+              id="shiftguide-code"
               ref={inputRef}
               type="password"
               value={code}
               autoFocus
               disabled={loading}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') attempt(); }}
+              onChange={(event) => setCode(event.target.value)}
               placeholder="Code d'accès"
               className="w-full bg-transparent px-4 py-3.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50"
-              autoComplete="off"
+              autoComplete="current-password"
+              aria-describedby={error ? 'shiftguide-auth-error' : undefined}
             />
           </div>
 
           {error && (
-            <div className="mt-3 flex items-center gap-2 text-xs font-bold text-red-600">
+            <div
+              id="shiftguide-auth-error"
+              role="alert"
+              aria-live="polite"
+              className="mt-3 flex items-center gap-2 text-xs font-bold text-red-600"
+            >
               <ShieldAlert size={13} />
               {error}
             </div>
           )}
 
           <button
-            onClick={attempt}
+            type="submit"
             disabled={!code.trim() || loading}
             className="mt-4 w-full rounded-xl bg-zinc-950 py-3.5 text-sm font-black text-teal-300 transition hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-40"
           >
             {loading ? 'Vérification…' : 'Déverrouiller'}
           </button>
-        </div>
+
+          <Link
+            to="/"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl py-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            <ChevronLeft size={15} />
+            Retour au LineOps Toolkit
+          </Link>
+        </form>
       </div>
     </div>
   );

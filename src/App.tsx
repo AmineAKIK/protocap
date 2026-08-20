@@ -1,7 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
-import { isShiftGuideUnlocked } from './hooks/useShiftGuideAuth';
+import {
+  ShiftGuideAuthProvider,
+  useShiftGuideAuth,
+} from './context/ShiftGuideAuthContext';
 import { ShiftGuideLock } from './pages/shiftguide/ShiftGuideLock';
 
 const ExpiryCheckPage = lazy(() =>
@@ -54,10 +57,10 @@ function ScrollToTop() {
   return null;
 }
 
-function RouteFallback() {
+function RouteFallback({ label = 'Chargement…' }: { label?: string }) {
   return (
     <div className="grid min-h-[40vh] place-items-center px-6 text-sm font-semibold text-slate-500">
-      Chargement…
+      {label}
     </div>
   );
 }
@@ -74,10 +77,14 @@ function MainLayout() {
 }
 
 function ShiftGuideGuard() {
-  const [unlocked, setUnlocked] = useState(isShiftGuideUnlocked);
+  const { status, unlock } = useShiftGuideAuth();
 
-  if (!unlocked) {
-    return <ShiftGuideLock onUnlock={() => setUnlocked(true)} />;
+  if (status === 'checking') {
+    return <RouteFallback label="Vérification de la session ShiftGuide…" />;
+  }
+
+  if (status === 'locked') {
+    return <ShiftGuideLock onUnlock={unlock} />;
   }
 
   return (
@@ -89,26 +96,28 @@ function ShiftGuideGuard() {
 
 export function App() {
   return (
-    <Routes>
-      <Route element={<ShiftGuideGuard />}>
-        <Route path="/shiftguide" element={<CelinePage />} />
-        <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
-        <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
-        <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
-        <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
-        <Route path="/shiftguide/lexique" element={<LexiquePage />} />
-        <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
-      </Route>
+    <ShiftGuideAuthProvider>
+      <Routes>
+        <Route element={<ShiftGuideGuard />}>
+          <Route path="/shiftguide" element={<CelinePage />} />
+          <Route path="/shiftguide/modules" element={<ShiftGuideHome />} />
+          <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
+          <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
+          <Route path="/shiftguide/module/:moduleId" element={<ModuleView />} />
+          <Route path="/shiftguide/lexique" element={<LexiquePage />} />
+          <Route path="/shiftguide/urgences" element={<UrgencesPage />} />
+        </Route>
 
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/rapport" element={<OperationalReportPage />} />
-        <Route path="/expiry-check" element={<ExpiryCheckPage />} />
-        <Route path="/logistics-call" element={<LogisticsCallPage />} />
-        <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
-        <Route path="/packing-calculator" element={<PackingCalculatorPage />} />
-        <Route path="*" element={null} />
-      </Route>
-    </Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/rapport" element={<OperationalReportPage />} />
+          <Route path="/expiry-check" element={<ExpiryCheckPage />} />
+          <Route path="/logistics-call" element={<LogisticsCallPage />} />
+          <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
+          <Route path="/packing-calculator" element={<PackingCalculatorPage />} />
+          <Route path="*" element={null} />
+        </Route>
+      </Routes>
+    </ShiftGuideAuthProvider>
   );
 }

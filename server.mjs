@@ -12,8 +12,10 @@ import {
 } from './server/security.mjs';
 import {
   cleanupExpiredState,
+  hasValidSession,
   normalizeChatHistory,
   parseJsonEnvValue,
+  revokeSession,
   takeRateLimit,
 } from './server/runtimeUtils.mjs';
 import { isValidShiftGuideConfig } from './server/shiftGuideValidation.mjs';
@@ -98,20 +100,6 @@ function getSessionToken(req) {
   return authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
 }
 
-function hasValidSessionToken(token) {
-  if (!token) return false;
-
-  const expiresAt = sessions.get(token);
-  if (!expiresAt) return false;
-  if (expiresAt <= Date.now()) {
-    sessions.delete(token);
-    chatRequests.delete(token);
-    return false;
-  }
-
-  return true;
-}
-
 const cleanupTimer = setInterval(
   () => cleanupExpiredState({ sessions, unlockAttempts, chatRequests }),
   15 * 60 * 1000
@@ -151,9 +139,24 @@ app.post('/api/shiftguide/unlock', (req, res) => {
   return res.json({ token, ...shiftGuideClientData });
 });
 
+app.get('/api/shiftguide/session', (req, res) => {
+  const token = getSessionToken(req);
+  if (!hasValidSession(sessions, chatRequests, token)) {
+    return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
+  }
+
+  return res.json({ ok: true });
+});
+
+app.delete('/api/shiftguide/session', (req, res) => {
+  const token = getSessionToken(req);
+  revokeSession(sessions, chatRequests, token);
+  return res.status(204).end();
+});
+
 app.post('/api/celine/chat', async (req, res) => {
   const token = getSessionToken(req);
-  if (!hasValidSessionToken(token)) {
+  if (!hasValidSession(sessions, chatRequests, token)) {
     return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
   }
 
