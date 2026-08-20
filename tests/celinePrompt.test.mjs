@@ -24,9 +24,11 @@ test('buildCelineSystemPrompt contains server procedures and mandatory response 
   const prompt = buildCelineSystemPrompt(sampleData);
 
   assert.match(prompt, /Reponds TOUJOURS en JSON valide/);
+  assert.match(prompt, /"actionId":"dp_01"/);
+  assert.match(prompt, /actionId.*OBLIGATOIRE/);
   assert.match(prompt, /DEBUT POSTE — 2 actions/);
-  assert.match(prompt, /1\. Action une/);
-  assert.match(prompt, /2\. Action deux \[Important\]/);
+  assert.match(prompt, /1\. \[dp_01\] Action une/);
+  assert.match(prompt, /2\. \[dp_02\] Action deux \[Important\]/);
   assert.match(prompt, /Note: Fin module/);
   assert.match(prompt, /OC : Ordre de conditionnement/);
   assert.match(prompt, /CONTEXTE SUPPLEMENTAIRE/);
