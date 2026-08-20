@@ -1,9 +1,15 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import express from 'express';
-import { existsSync } from 'fs';
-import { dirname, join, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildCelineSystemPrompt } from './server/celinePrompt.mjs';
+import {
+  buildSecurityHeaders,
+  readServerSecret,
+  safeCompareSecrets,
+  toClientShiftGuideData,
+} from './server/security.mjs';
 import {
   cleanupExpiredState,
   normalizeChatHistory,
@@ -18,28 +24,38 @@ const DIST = existsSync(join(__dirname, 'dist'))
   : resolve(process.cwd(), 'dist');
 
 const PORT = process.env.PORT || 3000;
-const SHIFTGUIDE_CODE = process.env.SHIFTGUIDE_CODE ?? process.env.VITE_SHIFTGUIDE_CODE ?? '';
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY ?? process.env.VITE_DEEPSEEK_API_KEY ?? '';
+const SHIFTGUIDE_CODE = readServerSecret(
+  process.env,
+  'SHIFTGUIDE_CODE',
+  'VITE_SHIFTGUIDE_CODE'
+);
+const DEEPSEEK_API_KEY = readServerSecret(
+  process.env,
+  'DEEPSEEK_API_KEY',
+  'VITE_DEEPSEEK_API_KEY'
+);
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const UNLOCK_WINDOW_MS = 10 * 60 * 1000;
 const UNLOCK_MAX_ATTEMPTS = 10;
+const MAX_UNLOCK_CODE_LENGTH = 256;
 const CHAT_WINDOW_MS = 60 * 1000;
 const CHAT_MAX_REQUESTS = 30;
 
-const shiftGuideData = {
+const shiftGuideConfig = {
   modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
   lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
   systemPromptExtra: process.env.SG_SYSTEM_PROMPT ?? null,
   urgences: parseJsonEnvValue('SG_URGENCES', process.env.SG_URGENCES),
 };
+const shiftGuideClientData = toClientShiftGuideData(shiftGuideConfig);
 
-const hasValidShiftGuideConfig = isValidShiftGuideConfig(shiftGuideData);
+const hasValidShiftGuideConfig = isValidShiftGuideConfig(shiftGuideConfig);
 if (SHIFTGUIDE_CODE && !hasValidShiftGuideConfig) {
   throw new Error('ShiftGuide is enabled but SG_MODULES or SG_LEXIQUE has an invalid structure.');
 }
 
 const celineSystemPrompt = hasValidShiftGuideConfig
-  ? buildCelineSystemPrompt(shiftGuideData)
+  ? buildCelineSystemPrompt(shiftGuideConfig)
   : null;
 
 const sessions = new Map();
@@ -47,11 +63,28 @@ const unlockAttempts = new Map();
 const chatRequests = new Map();
 
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '128kb' }));
+app.use((req, res, next) => {
+  const headers = buildSecurityHeaders({ secure: req.secure });
+  for (const [name, value] of Object.entries(headers)) {
+    res.setHeader(name, value);
+  }
+  next();
+});
 app.use('/api', (_req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
+});
+app.use(express.json({ limit: '128kb' }));
+app.use((error, _req, res, next) => {
+  if (error && typeof error === 'object' && error.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Requête trop volumineuse.' });
+  }
+  if (error && typeof error === 'object' && error.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'JSON invalide.' });
+  }
+  return next(error);
 });
 
 function issueSession() {
@@ -104,13 +137,18 @@ app.post('/api/shiftguide/unlock', (req, res) => {
   }
 
   const { code } = req.body ?? {};
-  if (typeof code !== 'string' || code !== SHIFTGUIDE_CODE) {
+  if (
+    typeof code !== 'string' ||
+    code.length === 0 ||
+    code.length > MAX_UNLOCK_CODE_LENGTH ||
+    !safeCompareSecrets(code, SHIFTGUIDE_CODE)
+  ) {
     return res.status(401).json({ error: 'Code incorrect.' });
   }
 
   unlockAttempts.delete(clientKey);
   const token = issueSession();
-  return res.json({ token, ...shiftGuideData });
+  return res.json({ token, ...shiftGuideClientData });
 });
 
 app.post('/api/celine/chat', async (req, res) => {
@@ -171,12 +209,25 @@ app.post('/api/celine/chat', async (req, res) => {
   }
 });
 
+app.use('/api', (_req, res) => {
+  return res.status(404).json({ error: 'Route API introuvable.' });
+});
+
 // ── Static SPA ────────────────────────────────────────────────────────────────
 
 app.use(express.static(DIST));
 
 app.get('/{*path}', (_req, res) => {
   res.sendFile(join(DIST, 'index.html'));
+});
+
+app.use((error, _req, res, next) => {
+  console.error('Unhandled server error', {
+    error: error instanceof Error ? error.name : 'UnknownError',
+  });
+
+  if (res.headersSent) return next(error);
+  return res.status(500).json({ error: 'Erreur serveur.' });
 });
 
 app.listen(PORT, () => {
