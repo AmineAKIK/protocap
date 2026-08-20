@@ -25,9 +25,13 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getSgModules } from '../../data/shiftguideModules';
+import {
+  getSharedActionStatus,
+  setSharedActionStatus,
+  subscribeShiftGuideProgress,
+} from '../../hooks/useModuleProgress';
 import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
-
-// ─── Speech Recognition ───────────────────────────────────────────────────────
 
 interface ISpeechRecognitionEvent {
   results: { [i: number]: { [j: number]: { transcript: string } } };
@@ -81,10 +85,9 @@ function useSpeechInput(onResult: (text: string) => void) {
   return { listening, toggle, supported: !!SpeechRecognitionAPI };
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface ChecklistItem {
   id: string;
+  actionId: string | null;
   text: string;
   note: string | null;
   module: string | null;
@@ -106,7 +109,41 @@ interface ApiMessage {
   content: string;
 }
 
-// ─── API ──────────────────────────────────────────────────────────────────────
+function findProgressScope(actionId: string): string | undefined {
+  for (const module of getSgModules()) {
+    if (module.type === 'standard' && module.actions?.some((action) => action.id === actionId)) {
+      return module.id;
+    }
+    if (module.type === 'choice') {
+      const subModule = module.subModules?.find((sub) =>
+        sub.actions.some((action) => action.id === actionId)
+      );
+      if (subModule) return subModule.id;
+    }
+  }
+  return undefined;
+}
+
+function sharedChecklistState(actionId: string | null) {
+  if (!actionId) return null;
+  const status = getSharedActionStatus(actionId);
+  return {
+    done: status === 'validated',
+    na: status === 'na',
+  };
+}
+
+function syncChecklistItem(item: ChecklistItem): ChecklistItem {
+  const shared = sharedChecklistState(item.actionId);
+  return shared ? { ...item, ...shared } : item;
+}
+
+function syncMessagesWithSharedProgress(messages: CelineMessage[]): CelineMessage[] {
+  return messages.map((message) => ({
+    ...message,
+    checklist: message.checklist.map(syncChecklistItem),
+  }));
+}
 
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
@@ -157,14 +194,18 @@ async function callOpenAI(
   try {
     const parsed = JSON.parse(raw);
     const checklist: ChecklistItem[] = (parsed.checklist ?? []).map(
-      (item: Record<string, unknown>, i: number) => ({
-        id: `${Date.now()}_${i}`,
-        text: String(item.text ?? ''),
-        note: item.note ? String(item.note) : null,
-        module: item.module ? String(item.module) : null,
-        done: false,
-        na: false,
-      })
+      (item: Record<string, unknown>, i: number) => {
+        const actionId = typeof item.actionId === 'string' && item.actionId ? item.actionId : null;
+        const shared = sharedChecklistState(actionId) ?? { done: false, na: false };
+        return {
+          id: `${actionId ?? 'item'}_${Date.now()}_${i}`,
+          actionId,
+          text: String(item.text ?? ''),
+          note: item.note ? String(item.note) : null,
+          module: item.module ? String(item.module) : null,
+          ...shared,
+        };
+      }
     );
     return {
       message: String(parsed.message ?? ''),
@@ -176,10 +217,8 @@ async function callOpenAI(
   }
 }
 
-// ─── Storage ──────────────────────────────────────────────────────────────────
-
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-const PROMPT_VERSION = 'v10';
+const PROMPT_VERSION = 'v11';
 
 function isValidMessage(m: unknown): m is CelineMessage {
   if (!m || typeof m !== 'object') return false;
@@ -196,19 +235,22 @@ function isValidMessage(m: unknown): m is CelineMessage {
 function normalizeMessage(m: CelineMessage): CelineMessage {
   return {
     ...m,
-    checklist: m.checklist.map((item) => ({
-      ...item,
-      na: item.na ?? false,
-    })),
+    checklist: m.checklist.map((item) => {
+      const normalized: ChecklistItem = {
+        ...item,
+        actionId: typeof item.actionId === 'string' ? item.actionId : null,
+        done: item.done ?? false,
+        na: item.na ?? false,
+      };
+      return syncChecklistItem(normalized);
+    }),
   };
 }
 
 function loadHistory(): CelineMessage[] {
   try {
     if (localStorage.getItem('shiftguide_prompt_version') !== PROMPT_VERSION) {
-      localStorage.removeItem(STORAGE_KEY_HISTORY);
       localStorage.setItem('shiftguide_prompt_version', PROMPT_VERSION);
-      return [];
     }
     const saved = localStorage.getItem(STORAGE_KEY_HISTORY);
     if (!saved) return [];
@@ -219,8 +261,6 @@ function loadHistory(): CelineMessage[] {
     return [];
   }
 }
-
-// ─── WelcomeScreen ────────────────────────────────────────────────────────────
 
 const SUGGESTIONS: Array<{ icon: LucideIcon; text: string; tone: string }> = [
   { icon: Clock3, text: 'Je commence mon poste', tone: 'bg-teal-50 text-teal-700 ring-teal-100' },
@@ -301,8 +341,6 @@ function WelcomeScreen({ onSuggest }: { onSuggest: (text: string) => void }) {
   );
 }
 
-// ─── ConfirmModal ─────────────────────────────────────────────────────────────
-
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
@@ -332,8 +370,6 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
     </div>
   );
 }
-
-// ─── Checklist ────────────────────────────────────────────────────────────────
 
 function Checklist({
   items,
@@ -369,7 +405,6 @@ function Checklist({
               key={item.id}
               className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
             >
-              {/* Done button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'done')}
                 className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
@@ -381,7 +416,6 @@ function Checklist({
                 <Check size={13} />
               </button>
 
-              {/* Content */}
               <div className="min-w-0 flex-1">
                 <p className={`break-words text-sm leading-6 transition-colors ${item.done ? 'text-slate-400 line-through' : item.na ? 'text-slate-400' : 'text-slate-800'}`}>
                   {item.text}
@@ -396,7 +430,6 @@ function Checklist({
                 )}
               </div>
 
-              {/* N/A button */}
               <button
                 onClick={() => onAction(msgId, item.id, 'na')}
                 className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
@@ -422,8 +455,6 @@ function Checklist({
     </div>
   );
 }
-
-// ─── MessageBubble ────────────────────────────────────────────────────────────
 
 function MessageBubble({
   msg,
@@ -485,8 +516,6 @@ function MessageBubble({
   );
 }
 
-// ─── CelinePage ───────────────────────────────────────────────────────────────
-
 export function CelinePage() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<CelineMessage[]>(loadHistory);
@@ -511,7 +540,6 @@ export function CelinePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
 
-  // Intercept browser back gesture / OS back button when conversation is active
   const hasMessages = messages.length > 0;
   useEffect(() => {
     if (!hasMessages) return;
@@ -525,10 +553,15 @@ export function CelinePage() {
   }, [hasMessages]);
 
   useEffect(() => {
+    return subscribeShiftGuideProgress(() => {
+      setMessages((current) => syncMessagesWithSharedProgress(current));
+    });
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
 
-  // Auto-continue: when the last assistant checklist is fully treated, send next prompt
   useEffect(() => {
     if (loading || pendingRef.current) return;
 
@@ -563,15 +596,27 @@ export function CelinePage() {
   };
 
   const handleItemAction = (msgId: string, itemId: string, action: 'done' | 'na') => {
+    const item = messages
+      .find((message) => message.id === msgId)
+      ?.checklist.find((checklistItem) => checklistItem.id === itemId);
+
+    if (item?.actionId) {
+      const current = getSharedActionStatus(item.actionId);
+      const requested = action === 'done' ? 'validated' : 'na';
+      const next = current === requested ? 'pending' : requested;
+      setSharedActionStatus(item.actionId, next, findProgressScope(item.actionId));
+      return;
+    }
+
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== msgId) return m;
         return {
           ...m,
-          checklist: m.checklist.map((item) => {
-            if (item.id !== itemId) return item;
-            if (action === 'done') return { ...item, done: !item.done, na: false };
-            return { ...item, na: !item.na, done: false };
+          checklist: m.checklist.map((checklistItem) => {
+            if (checklistItem.id !== itemId) return checklistItem;
+            if (action === 'done') return { ...checklistItem, done: !checklistItem.done, na: false };
+            return { ...checklistItem, na: !checklistItem.na, done: false };
           }),
         };
       })

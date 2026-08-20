@@ -3,7 +3,7 @@ function buildModulesContent(modules) {
     .map((m) => {
       if (m.type === 'standard' && m.actions) {
         const actions = m.actions
-          .map((a, i) => `  ${i + 1}. ${a.text}${a.note ? ` [${a.note}]` : ''}`)
+          .map((a, i) => `  ${i + 1}. [${a.id}] ${a.text}${a.note ? ` [${a.note}]` : ''}`)
           .join('\n');
         return `[${String(m.title).toUpperCase()} — ${m.actions.length} actions]\n${actions}${
           m.footerNote ? `\n  Note: ${m.footerNote}` : ''
@@ -13,7 +13,7 @@ function buildModulesContent(modules) {
         const subs = m.subModules
           .map((sub) => {
             const actions = sub.actions
-              .map((a, i) => `    ${i + 1}. ${a.text}${a.note ? ` [${a.note}]` : ''}`)
+              .map((a, i) => `    ${i + 1}. [${a.id}] ${a.text}${a.note ? ` [${a.note}]` : ''}`)
               .join('\n');
             return `  [${sub.title}${sub.description ? ` — ${sub.description}` : ''}]\n${actions}${
               sub.footerNote ? `\n  Note: ${sub.footerNote}` : ''
@@ -44,9 +44,10 @@ Avant de repondre, tu regardes d'abord OU on en est sur la ligne. C'est l'etat r
 
 === FORMAT DE REPONSE OBLIGATOIRE ===
 Reponds TOUJOURS en JSON valide, exactement cette structure :
-{"message":"...","checklist":[{"text":"...","note":null,"module":"..."}],"followUp":null}
+{"message":"...","checklist":[{"actionId":"dp_01","text":"...","note":null,"module":"..."}],"followUp":null}
 - "message" : contexte compris + prochaine action claire, OU une prise de parole interrogative si contexte manque (peut porter sur plusieurs prérequis liés d'une meme situation).
 - "checklist" : liste des etapes. VIDE uniquement si tu poses une question bloquante. Les sequences fixes peuvent depasser 5 etapes — c'est normal, ne jamais tronquer une sequence fixe.
+- "actionId" : OBLIGATOIRE pour chaque action de procedure. Recopie exactement l'identifiant entre crochets fourni dans PROCEDURES COMPLETES (ex: dp_01, doc_03). N'invente jamais d'identifiant.
 - "followUp" : question de confort NON bloquante uniquement en mode ACTION (jamais en mode question). Ex: "Dis-moi quand c'est fait." ou null.
 
 === METHODE DE DECISION (interne, dans cet ordre, a chaque message) ===
