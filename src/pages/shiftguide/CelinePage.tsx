@@ -26,11 +26,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSgModules } from '../../data/shiftguideModules';
-import {
-  getSharedActionStatus,
-  setSharedActionStatus,
-  subscribeShiftGuideProgress,
-} from '../../hooks/useModuleProgress';
+import { setSharedActionStatus } from '../../hooks/useModuleProgress';
 import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 interface ISpeechRecognitionEvent {
@@ -124,27 +120,6 @@ function findProgressScope(actionId: string): string | undefined {
   return undefined;
 }
 
-function sharedChecklistState(actionId: string | null) {
-  if (!actionId) return null;
-  const status = getSharedActionStatus(actionId);
-  return {
-    done: status === 'validated',
-    na: status === 'na',
-  };
-}
-
-function syncChecklistItem(item: ChecklistItem): ChecklistItem {
-  const shared = sharedChecklistState(item.actionId);
-  return shared ? { ...item, ...shared } : item;
-}
-
-function syncMessagesWithSharedProgress(messages: CelineMessage[]): CelineMessage[] {
-  return messages.map((message) => ({
-    ...message,
-    checklist: message.checklist.map(syncChecklistItem),
-  }));
-}
-
 function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
@@ -196,14 +171,14 @@ async function callOpenAI(
     const checklist: ChecklistItem[] = (parsed.checklist ?? []).map(
       (item: Record<string, unknown>, i: number) => {
         const actionId = typeof item.actionId === 'string' && item.actionId ? item.actionId : null;
-        const shared = sharedChecklistState(actionId) ?? { done: false, na: false };
         return {
           id: `${actionId ?? 'item'}_${Date.now()}_${i}`,
           actionId,
           text: String(item.text ?? ''),
           note: item.note ? String(item.note) : null,
           module: item.module ? String(item.module) : null,
-          ...shared,
+          done: false,
+          na: false,
         };
       }
     );
@@ -218,7 +193,7 @@ async function callOpenAI(
 }
 
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-const PROMPT_VERSION = 'v11';
+const PROMPT_VERSION = 'v12';
 
 function isValidMessage(m: unknown): m is CelineMessage {
   if (!m || typeof m !== 'object') return false;
@@ -235,15 +210,12 @@ function isValidMessage(m: unknown): m is CelineMessage {
 function normalizeMessage(m: CelineMessage): CelineMessage {
   return {
     ...m,
-    checklist: m.checklist.map((item) => {
-      const normalized: ChecklistItem = {
-        ...item,
-        actionId: typeof item.actionId === 'string' ? item.actionId : null,
-        done: item.done ?? false,
-        na: item.na ?? false,
-      };
-      return syncChecklistItem(normalized);
-    }),
+    checklist: m.checklist.map((item) => ({
+      ...item,
+      actionId: typeof item.actionId === 'string' ? item.actionId : null,
+      done: item.done ?? false,
+      na: item.na ?? false,
+    })),
   };
 }
 
@@ -553,12 +525,6 @@ export function CelinePage() {
   }, [hasMessages]);
 
   useEffect(() => {
-    return subscribeShiftGuideProgress(() => {
-      setMessages((current) => syncMessagesWithSharedProgress(current));
-    });
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
 
@@ -599,28 +565,29 @@ export function CelinePage() {
     const item = messages
       .find((message) => message.id === msgId)
       ?.checklist.find((checklistItem) => checklistItem.id === itemId);
+    if (!item) return;
 
-    if (item?.actionId) {
-      const current = getSharedActionStatus(item.actionId);
-      const requested = action === 'done' ? 'validated' : 'na';
-      const next = current === requested ? 'pending' : requested;
-      setSharedActionStatus(item.actionId, next, findProgressScope(item.actionId));
-      return;
-    }
+    const nextDone = action === 'done' ? !item.done : false;
+    const nextNa = action === 'na' ? !item.na : false;
 
     setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== msgId) return m;
+      prev.map((message) => {
+        if (message.id !== msgId) return message;
         return {
-          ...m,
-          checklist: m.checklist.map((checklistItem) => {
-            if (checklistItem.id !== itemId) return checklistItem;
-            if (action === 'done') return { ...checklistItem, done: !checklistItem.done, na: false };
-            return { ...checklistItem, na: !checklistItem.na, done: false };
-          }),
+          ...message,
+          checklist: message.checklist.map((checklistItem) =>
+            checklistItem.id === itemId
+              ? { ...checklistItem, done: nextDone, na: nextNa }
+              : checklistItem
+          ),
         };
       })
     );
+
+    if (item.actionId) {
+      const status = nextDone ? 'validated' : nextNa ? 'na' : 'pending';
+      setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
+    }
   };
 
   const sendMessage = async (text: string) => {
