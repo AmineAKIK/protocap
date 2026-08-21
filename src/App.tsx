@@ -9,6 +9,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
+import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
 import { ShiftGuideLayout } from './components/ShiftGuideLayout';
 import {
   ShiftGuideAuthProvider,
@@ -166,7 +167,17 @@ export function App() {
             <Route path="/shiftguide/celine" element={<CelinePage />} />
             <Route path="/shiftguide/home" element={<Navigate to="/shiftguide" replace />} />
             <Route path="/shiftguide/modules" element={<Navigate to="/shiftguide" replace />} />
-            <Route path="/shiftguide/linepulse" element={<LinePulsePage />} />
+            <Route
+              path="/shiftguide/linepulse"
+              element={(
+                <DemoBoundaryNotice
+                  title="Démonstrateur"
+                  content="LinePulse utilise un jeu de données fictif statique. Les vues « temps réel » illustrent l'expérience cible et ne sont pas connectées à un flux usine."
+                >
+                  <LinePulsePage />
+                </DemoBoundaryNotice>
+              )}
+            />
             <Route path="/shiftguide/analyse-ligne" element={<LineAnalysisReportPage />} />
             <Route path="/shiftguide/module/:moduleId" element={<ShiftGuideModuleRoute />} />
             <Route path="/shiftguide/lexique" element={<LexiquePage />} />
@@ -177,10 +188,30 @@ export function App() {
 
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/rapport" element={<OperationalReportPage />} />
+          <Route
+            path="/rapport"
+            element={(
+              <DemoBoundaryNotice
+                title="Cadre d'évaluation"
+                content="Les impacts et indicateurs présentés sont des hypothèses de conception et des critères de mesure proposés, pas des résultats de production mesurés."
+              >
+                <OperationalReportPage />
+              </DemoBoundaryNotice>
+            )}
+          />
           <Route path="/proposition-pilote" element={<PilotProposalPage />} />
           <Route path="/expiry-check" element={<ExpiryCheckPage />} />
-          <Route path="/logistics-call" element={<LogisticsCallPage />} />
+          <Route
+            path="/logistics-call"
+            element={(
+              <DemoBoundaryNotice
+                title="Démonstrateur local"
+                content="Le board est persisté dans ce navigateur uniquement. Il n'y a pas encore de synchronisation multi-utilisateur ou temps réel."
+              >
+                <LogisticsCallPage />
+              </DemoBoundaryNotice>
+            )}
+          />
           <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
           <Route path="/packing-calculator" element={<PackingCalculatorPage />} />
           <Route path="*" element={null} />
