@@ -1,0 +1,10 @@
+# Default ownership for the repository.
+* @AmineAKIK
+
+# Security-sensitive and delivery configuration.
+/server.mjs @AmineAKIK
+/server/ @AmineAKIK
+/.github/ @AmineAKIK
+/railway.toml @AmineAKIK
+/nixpacks.toml @AmineAKIK
+/.env.example @AmineAKIK

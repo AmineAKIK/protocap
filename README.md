@@ -86,3 +86,13 @@ server.mjs      serveur Express et API
 ## Maintenance
 
 Dependabot vérifie chaque semaine les dépendances npm et les GitHub Actions. Les changements doivent passer le workflow `Quality gate` avant fusion.
+
+## Licensing
+
+Protocap is **source-available software with non-commercial rights**. Original software code is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+The software license does not automatically cover reports, operational documentation, procedures, business proposals, prompts, workflow content, co-authored materials, trademarks, or other non-software materials. Those materials retain their applicable rights unless expressly licensed otherwise.
+
+Commercial use that is not permitted by an applicable license requires a separate written agreement. Commercial licensing discussions are handled through **AkikSystems — contact@akiksystems.com**.
+
+See [LICENSING.md](LICENSING.md) for the exact licensing perimeter and commercial-use policy.
