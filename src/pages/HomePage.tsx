@@ -7,7 +7,7 @@ import { PresentationMode } from '../components/PresentationMode';
 const modules = [
   {
     title: 'ShiftGuide',
-    description: "Céline, l'assistante IA opérationnelle : elle guide le conducteur en temps réel selon sa situation — prise de poste, changement d'OC, cuve, fin de poste.",
+    description: "Céline, l'assistante IA opérationnelle : elle guide le conducteur au fil de la situation déclarée — prise de poste, changement d'OC, cuve, fin de poste.",
     to: '/shiftguide',
     icon: ListChecks,
     tag: 'IA · Guidage terrain',
@@ -15,19 +15,19 @@ const modules = [
   },
   {
     title: 'Expiry Check',
-    description: 'Suivi de la validité du bloc de remplissage par ligne, board tournée laveur et traçabilité des recharges de cuves.',
+    description: 'Suivi de la validité du bloc de remplissage par ligne, board tournée laveur et traçabilité locale des recharges de cuves.',
     to: '/expiry-check',
     icon: ClipboardCheck,
-    tag: 'Traçabilité · Qualité',
+    tag: 'Traçabilité · Démonstrateur',
     highlight: 'Démarrage sécurisé, échéances visibles'
   },
   {
     title: 'Logistics Call',
-    description: "Création d'appel horodaté depuis la ligne, priorisation et board logistique synchronisé en temps réel.",
+    description: "Création d'appel horodaté, priorisation et cycle de statuts dans un board de démonstration persisté localement dans le navigateur.",
     to: '/logistics-call',
     icon: RadioTower,
-    tag: 'Flux logistique · Temps réel',
-    highlight: 'Demandes visibles, suivies, priorisées'
+    tag: 'Flux logistique · Démonstrateur',
+    highlight: 'Workflow visible, sans fausse synchronisation'
   },
   {
     title: 'Knowledge Base',
@@ -65,13 +65,13 @@ export function HomePage() {
                 <span className="text-teal-700">Toolkit</span>
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
-                Quatre modules terrain pour ligne de conditionnement.
+                Cinq outils terrain pour explorer des flux de ligne de conditionnement.
               </p>
 
               {/* Message */}
               <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
                 <p className="text-sm leading-6 text-slate-700">
-                  Trois jours en tant que conducteur de ligne de conditionnement dans une usine de produits de soins ont orienté ces quatre maquettes et le rapport qui les accompagne. Les frictions observées en production sont réelles — les données affichées, elles, sont entièrement fictives. Aucun élément propre à l’entreprise n’y figure.
+                  Trois jours en tant que conducteur de ligne de conditionnement dans une usine de produits de soins ont orienté les prototypes présentés ici et le rapport qui les accompagne. Les frictions observées en production sont réelles — les données affichées, elles, sont entièrement fictives. Aucun élément confidentiel propre à l’entreprise n’y figure.
                 </p>
               </div>
             </div>
@@ -85,15 +85,15 @@ export function HomePage() {
                 <ul className="divide-y divide-slate-100">
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">1</span>
-                    Quatre modules indépendants, chacun centré sur un flux terrain précis.
+                    Cinq outils complémentaires, chacun centré sur un flux ou une décision terrain.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">2</span>
-                    Aucune donnée réelle ou confidentielle.
+                    Données publiques fictives ; configuration ShiftGuide protégée côté serveur.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">3</span>
-                    Les interactions sont conservées localement dans le navigateur.
+                    Les prototypes locaux ne simulent pas une synchronisation multi-utilisateur inexistante.
                   </li>
                 </ul>
                 <div className="border-t border-slate-100 px-5 py-3">
@@ -105,9 +105,9 @@ export function HomePage() {
                     Lancer la présentation
                   </button>
                 </div>
-                <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-400">
-                  <Wifi size={13} />
-                  PWA — fonctionne aussi hors-ligne une fois chargée
+                <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-center text-xs text-slate-400">
+                  <Wifi size={13} className="shrink-0" />
+                  PWA — assets statiques mis en cache ; fonctions serveur en ligne uniquement
                 </div>
               </div>
             </div>
@@ -130,7 +130,7 @@ export function HomePage() {
               Une lecture terrain de la charge invisible autour du conducteur : informations dispersées, décisions à reconstruire et flux critiques à rendre plus lisibles.
             </p>
             <div className="mt-4 inline-flex max-w-full rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
-              Observation terrain, hypothèses, impacts et indicateurs possibles
+              Observation terrain, hypothèses, impacts et indicateurs d’évaluation proposés
             </div>
           </div>
           <Link to="/rapport" className="block lg:self-end">
@@ -169,7 +169,7 @@ export function HomePage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p>Aucune donnée réelle ou confidentielle.</p>
+          <p>Données publiques de démonstration fictives.</p>
           <a
             className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline"
             href="https://www.akiksystems.com"

@@ -1,98 +1,150 @@
-# LineOps Toolkit
+# Protocap · LineOps Toolkit
 
-PWA React/TypeScript regroupant plusieurs prototypes génériques liés aux lignes de conditionnement, dont ShiftGuide et Céline.
+[![Quality gate](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml/badge.svg)](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml)
 
-> Application personnelle générique. Ne pas committer de secrets, de variables d'environnement ou d'artefacts générés.
+**Industrial operations toolkit for manufacturing teams — shop-floor guidance, traceability, logistics workflows and AI-assisted decision support.**
 
-## Stack
+[Live demo](https://protocap-production.up.railway.app/) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
 
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- React Router
-- Express
-- vite-plugin-pwa
-- lucide-react
-- Railway pour le déploiement
+Protocap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines independent prototypes with the protected **ShiftGuide** workspace and its AI-assisted operator guide, **Céline**.
 
-## Développement local
+The repository deliberately distinguishes **implemented behavior**, **local demonstrations**, **mock data** and **future operational integrations**. It should be read as an engineering portfolio and product exploration, not as a claim that every demonstrated workflow is already connected to a production information system.
 
-Node.js 20 est la version de référence (`.nvmrc`).
+## What is implemented
+
+| Surface | Current implementation | Data / runtime boundary |
+| --- | --- | --- |
+| **ShiftGuide** | Protected operator guidance, modules, lexicon, emergencies and shared progress | Protected configuration is served after server-side unlock; progress is browser-persisted |
+| **Céline** | AI-assisted conversational guidance inside ShiftGuide | Server-side prompt and provider credential; requires a valid ShiftGuide session and network access |
+| **LinePulse** | Multi-role operational-visibility concept | **Demonstration using static mock data**; no live plant feed is connected |
+| **Expiry Check** | Validity tracking and local action history | Browser-local persistence; no shared quality backend |
+| **Logistics Call** | Request creation, prioritisation and status workflow | Browser-local demonstration; **not multi-user or real-time synchronised** |
+| **Knowledge Base** | Searchable operational reference interface | Static repository content |
+| **Packing Calculator** | Pure packaging calculations with selectable rounding policies | Calculation is local; last form values are stored in the browser |
+| **Pilot proposal** | Public three-page proposal for a controlled sampling-reminder pilot | Working proposal only; it is not evidence of a deployed integration |
+
+All public demonstration data is fictitious. Operational or co-authored documents remain outside the software-license perimeter unless expressly stated otherwise; see [LICENSING.md](LICENSING.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser[React / Vite PWA] -->|public routes| Local[Local demo state\nlocalStorage / static data]
+  Browser -->|unlock + session| API[Express server]
+  API --> Config[Protected ShiftGuide config\nserver environment]
+  Browser -->|authenticated chat| API
+  API -->|server-side request| AI[DeepSeek API]
+  API --> Static[Built Vite assets]
+```
+
+The application is a React SPA served by Express. Public prototypes primarily run in the browser. ShiftGuide forms a separate protected boundary: its code is public, but its operational configuration is loaded from server-side environment variables and returned only after a successful unlock.
+
+Céline never receives the provider key in the browser. The Express boundary owns authentication checks, rate limiting, payload limits, timeout handling, the system prompt and the upstream AI request.
+
+For a more detailed view, including trust boundaries and current trade-offs, see [docs/architecture.md](docs/architecture.md).
+
+## Security decisions
+
+The current server boundary intentionally includes:
+
+- server-only `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY` configuration;
+- timing-safe unlock-code comparison;
+- random bearer session tokens with an eight-hour TTL;
+- unlock and chat rate limiting;
+- request-size limits and generic error responses;
+- provider timeout handling;
+- restrictive security headers, including CSP, frame protection and no-store API responses;
+- protected ShiftGuide configuration returned only after successful authentication.
+
+This is intentionally **not described as a distributed production architecture**. Sessions and rate-limit state currently live in process memory, so a process restart invalidates sessions and multiple replicas would not share that state. That trade-off is acceptable for the current hosted demonstrator and is documented rather than hidden.
+
+## PWA and offline behavior
+
+The Vite PWA service worker pre-caches built static assets and supports standalone installation. Offline capability is therefore **partial**:
+
+- already-cached static UI and browser-local prototypes can remain available depending on the cached route/assets;
+- Céline, ShiftGuide session validation/unlock and any other server-dependent behavior require network access;
+- no claim is made that the complete application is operational offline.
+
+## Quality gate
+
+`main` is protected by repository rules and changes are reviewed through pull requests. The canonical local check is:
+
+```bash
+npm run check
+```
+
+It runs server syntax checks, the automated Node test suite, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally checks that generated directories are not tracked and runs `npm audit --omit=dev`.
+
+The current automated suite focuses on server/runtime concerns: security helpers, ShiftGuide validation, session/rate-limit runtime behavior and Céline prompt construction. Frontend component and E2E coverage are known gaps and are tracked as subsequent hardening work rather than overstated here.
+
+## Local development
+
+Node.js 20 is the repository reference version (`.nvmrc`).
 
 ```bash
 npm ci
 npm run dev
 ```
 
-## Validation
-
-La commande de référence du dépôt est :
-
-```bash
-npm run check
-```
-
-Elle vérifie la syntaxe du serveur Express, exécute TypeScript puis construit l'application Vite/PWA. Le workflow GitHub Actions ajoute aussi un `npm audit --omit=dev` et vérifie que `node_modules/` et `dist/` ne sont pas versionnés.
-
-## Build
+Production build:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-`dist/` est généré à la demande et n'est jamais committé.
-
-## Déploiement Railway
-
-Railway est la cible de déploiement de l'application. La configuration Nixpacks effectue :
+Server-backed ShiftGuide/Céline development uses the variables documented in `.env.example`:
 
 ```text
-npm ci
-npm run build
-node server.mjs
+SHIFTGUIDE_CODE
+DEEPSEEK_API_KEY
+SG_MODULES
+SG_LEXIQUE
+SG_SYSTEM_PROMPT
+SG_URGENCES
 ```
 
-Le serveur Express sert ensuite le bundle Vite et les routes API.
+Secrets must remain server-side. Legacy `VITE_*` secret names are tolerated by the server only as a migration fallback and should not be used for new configuration.
 
-Les variables de production restent configurées dans Railway. Le dépôt fournit uniquement `.env.example` comme référence de noms ; aucune valeur secrète ne doit être ajoutée à Git.
+## Deployment
 
-Pour Céline, le backend accepte `DEEPSEEK_API_KEY` et conserve la compatibilité avec `VITE_DEEPSEEK_API_KEY`. Pour ShiftGuide, `SHIFTGUIDE_CODE` est le nom recommandé avec compatibilité pour `VITE_SHIFTGUIDE_CODE`.
+The public demonstrator is hosted on Railway. Nixpacks installs dependencies, builds the Vite bundle and starts the Express server. Deployment configuration and secrets live in Railway; successful CI validates the repository but is not presented as proof of a successful Railway deployment.
 
-## PWA
-
-La PWA utilise `vite-plugin-pwa` avec :
-
-- manifest applicatif ;
-- icône SVG maskable ;
-- service worker en mise à jour automatique ;
-- cache offline basique ;
-- mode `standalone`.
-
-## Structure
+## Repository map
 
 ```text
-src/
-  components/   composants UI réutilisables
-  data/         données et référentiels applicatifs
-  hooks/        persistance et état partagé
-  pages/        pages applicatives
-  types/        types TypeScript
-  utils/        helpers
-server.mjs      serveur Express et API
+.github/          CI, ownership and pull-request governance
+server/           server-side security, runtime and ShiftGuide validation helpers
+src/components/   shared UI and layout components
+src/context/      application context providers
+src/data/         public/static demo data and client references
+src/hooks/        browser persistence and shared client behavior
+src/pages/        public and ShiftGuide application surfaces
+src/types/        client-side application contracts
+src/utils/        pure helpers and domain calculations
+tests/            Node server/runtime test suite
+docs/             architecture, product boundaries and archived source documents
+server.mjs        Express API boundary and SPA host
 ```
 
-## Maintenance
+## Known boundaries
 
-Dependabot vérifie chaque semaine les dépendances npm et les GitHub Actions. Les changements doivent passer le workflow `Quality gate` avant fusion.
+The most important current limitations are explicit:
+
+- LinePulse is mock-driven, not connected to a live manufacturing feed;
+- Logistics Call and Expiry Check are local demonstrations, not shared multi-user systems;
+- PWA offline support does not include server-dependent features;
+- ShiftGuide sessions and rate limits are process-local;
+- frontend component/E2E coverage is not yet at the same maturity level as server tests;
+- the AI endpoint currently proxies the provider response shape; a provider-neutral server DTO is planned hardening work.
+
+See [docs/product-boundaries.md](docs/product-boundaries.md) for the detailed product-status matrix.
 
 ## Licensing
 
 Protocap is **source-available software with non-commercial rights**. Original software code is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
-The software license does not automatically cover reports, operational documentation, procedures, business proposals, prompts, workflow content, co-authored materials, trademarks, or other non-software materials. Those materials retain their applicable rights unless expressly licensed otherwise.
+The software license does not automatically cover reports, operational documentation, procedures, business proposals, prompts, workflow content, co-authored materials, trademarks or other non-software materials. Commercial use that is not permitted by an applicable license requires a separate written agreement.
 
-Commercial use that is not permitted by an applicable license requires a separate written agreement. Commercial licensing discussions are handled through **AkikSystems — contact@akiksystems.com**.
-
-See [LICENSING.md](LICENSING.md) for the exact licensing perimeter and commercial-use policy.
+Commercial licensing discussions are handled through **AkikSystems — contact@akiksystems.com**. See [LICENSING.md](LICENSING.md) for the exact perimeter.
