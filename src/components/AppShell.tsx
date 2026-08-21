@@ -72,6 +72,7 @@ export function AppShell({ children }: AppShellProps) {
                 `flex min-h-14 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
                   isActive ? 'text-teal-700' : 'text-slate-400'
                 }`
+              }
             >
               {({ isActive }) => (
                 <>
