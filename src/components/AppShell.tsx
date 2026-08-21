@@ -22,25 +22,27 @@ export function AppShell({ children }: AppShellProps) {
     <div className="min-h-screen bg-slate-50">
       {/* Top header */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" style={{ height: '56px' }}>
-
+        <div
+          className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)] items-center gap-6 px-4 sm:px-6 lg:px-8"
+          style={{ height: '56px' }}
+        >
           {/* Logo */}
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
               <Boxes size={18} />
             </span>
-            <span className="text-sm font-bold text-slate-950 hidden sm:block">LineOps Toolkit</span>
+            <span className="hidden text-sm font-bold text-slate-950 sm:block">LineOps Toolkit</span>
           </Link>
 
-          {/* Desktop nav — centred */}
-          <nav className="absolute left-1/2 -translate-x-1/2 hidden items-center gap-0.5 xl:flex">
+          {/* Desktop nav */}
+          <nav className="hidden min-w-0 items-center justify-end gap-0.5 xl:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  `inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-teal-700 text-white'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -52,8 +54,6 @@ export function AppShell({ children }: AppShellProps) {
               </NavLink>
             ))}
           </nav>
-
-          <div className="hidden w-32 xl:block" />
         </div>
       </header>
 
@@ -77,7 +77,7 @@ export function AppShell({ children }: AppShellProps) {
               {({ isActive }) => (
                 <>
                   <item.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
-                  <span className="truncate max-w-[52px]">{item.label.split(' ')[0]}</span>
+                  <span className="max-w-[52px] truncate">{item.label.split(' ')[0]}</span>
                 </>
               )}
             </NavLink>
