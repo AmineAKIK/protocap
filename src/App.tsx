@@ -35,6 +35,9 @@ const OperationalReportPage = lazy(() =>
 const PackingCalculatorPage = lazy(() =>
   import('./pages/PackingCalculatorPage').then((module) => ({ default: module.PackingCalculatorPage }))
 );
+const PilotProposalPage = lazy(() =>
+  import('./pages/PilotProposalPage').then((module) => ({ default: module.PilotProposalPage }))
+);
 const CelinePage = lazy(() =>
   import('./pages/shiftguide/CelinePage').then((module) => ({ default: module.CelinePage }))
 );
@@ -175,6 +178,7 @@ export function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/rapport" element={<OperationalReportPage />} />
+          <Route path="/proposition-pilote" element={<PilotProposalPage />} />
           <Route path="/expiry-check" element={<ExpiryCheckPage />} />
           <Route path="/logistics-call" element={<LogisticsCallPage />} />
           <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
