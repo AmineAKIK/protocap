@@ -24,6 +24,7 @@ flowchart TB
   end
 
   Env[Railway environment\nsecrets + ShiftGuide config]
+  ProviderAdapter[DeepSeek adapter]
   Provider[DeepSeek API]
 
   Public --> LocalStore
@@ -34,8 +35,8 @@ flowchart TB
   ShiftUI --> Chat
   Session --> Memory
   Chat --> Memory
-  Chat --> Env
-  Chat --> Provider
+  Chat --> ProviderAdapter
+  ProviderAdapter --> Provider
   Static --> Browser
 ```
 
@@ -74,19 +75,28 @@ The server and client use the same runtime validator from `shared/shiftGuideCont
 
 `SG_URGENCES` is optional at deployment level for backward compatibility: the server supplies the current safe default when the variable is absent. Once resolved, the same typed payload is sent to the UI and injected into Céline's system prompt, avoiding two independent copies of operational emergency content.
 
+## Server process boundary
+
+`server.mjs` is the production process entrypoint only. It reads environment values, creates the DeepSeek adapter and in-memory runtime stores, starts periodic cleanup, then calls `listen`.
+
+The Express application itself is built by `createServerApp` in `server/app.mjs`. The factory receives explicit dependencies and does not open a port or schedule background work. Tests can therefore instantiate a complete API with isolated stores and a deterministic provider, then exercise it over a real ephemeral HTTP socket without starting the production process.
+
+This keeps process lifecycle concerns separate from request handling while avoiding a framework or dependency-injection container.
+
 ## Céline boundary
 
 Céline is intentionally server-mediated:
 
 1. the client sends chat history with the ShiftGuide bearer token;
-2. the server verifies the session and rate limit;
+2. the server verifies the session, request shape and rate limit;
 3. the server owns the system prompt and provider credential;
-4. the server normalises/limits chat input and applies an upstream timeout;
-5. the server calls DeepSeek and returns the response.
+4. `server/providers/deepSeekProvider.mjs` owns the DeepSeek-specific request/response envelope and timeout;
+5. the server validates provider content against `shared/celineContract.js`;
+6. `/api/celine/chat` returns a Protocap-owned `{ message, checklist, followUp }` DTO.
 
-This prevents the provider credential and protected system prompt from being shipped in the public bundle.
+The browser no longer knows DeepSeek's `choices[]` structure. `src/features/shiftguide/celineClient.ts` only knows the Protocap HTTP contract.
 
-The current page still parses the provider-shaped chat response returned by `/api/celine/chat`. That coupling is deliberately not wrapped in a frontend-only abstraction because the next server-boundary change will replace it with a Protocap-owned DTO. The client and server contract should be changed together rather than creating an adapter around a response shape that is scheduled to disappear.
+The server also verifies every checklist `actionId` against the validated ShiftGuide configuration and rejects duplicate or unknown IDs. A provider response therefore cannot create arbitrary progress keys even if the model ignores its prompt instructions.
 
 ## Security controls implemented today
 
@@ -99,7 +109,8 @@ The current page still parses the provider-shaped chat response returned by `/ap
 - CSP, frame denial, MIME sniffing protection, restrictive permissions policy and referrer policy;
 - `Cache-Control: no-store` for API routes;
 - HSTS when the request is secure;
-- DeepSeek request timeout.
+- DeepSeek request timeout;
+- server-side validation of Céline's provider response and operational action IDs.
 
 ## Deliberate current trade-offs
 
@@ -109,13 +120,9 @@ Sessions and rate-limit buckets are JavaScript `Map` instances in the Express pr
 
 A distributed store such as Redis would become justified if horizontal scaling, durable sessions or cross-instance throttling became real requirements.
 
-### Server startup and testability
+### Provider availability
 
-`server.mjs` currently creates the Express application and calls `app.listen` in the same module. Helper logic is tested independently, but full HTTP integration testing would be easier after separating application construction from process startup.
-
-### Provider response coupling
-
-`/api/celine/chat` currently returns the provider payload. A stronger external-service boundary would map this to a Protocap-owned DTO so the frontend is not coupled to DeepSeek's response shape.
+The DeepSeek adapter is the only production provider today. The application boundary is provider-independent, but no artificial multi-provider abstraction or fallback routing is implemented because there is no current product requirement for it.
 
 ## Deployment boundary
 
