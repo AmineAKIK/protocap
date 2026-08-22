@@ -5,6 +5,8 @@ node_modules/
 # Built by GitHub Actions and Railway; never commit generated bundles.
 dist/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 
 # Environment and local overrides
