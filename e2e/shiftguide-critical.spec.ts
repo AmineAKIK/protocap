@@ -51,6 +51,24 @@ test.describe('ShiftGuide critical journeys', () => {
     await expect(page.getByText('Terminé')).toBeVisible();
   });
 
+  test('keeps incomplete-module confirmation keyboard safe and restores focus', async ({ page }) => {
+    await unlock(page, '/shiftguide/module/module_standard');
+
+    const closeButton = page.getByRole('button', {
+      name: "Fermer le module et revenir à l'accueil ShiftGuide",
+    });
+    await closeButton.click();
+
+    const dialog = page.getByRole('dialog', { name: 'Module non terminé' });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continuer' })).toBeFocused();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(closeButton).toBeFocused();
+    await expect(page).toHaveURL(/\/shiftguide\/module\/module_standard$/);
+  });
+
   test('treats a choice module as the active scenario instead of requiring every alternative', async ({ page }) => {
     await unlock(page, '/shiftguide/module/module_choice');
 

@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Link, type LinkProps } from 'react-router-dom';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -7,21 +8,55 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
 }
 
+interface ButtonLinkProps extends LinkProps {
+  variant?: ButtonVariant;
+  icon?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}
+
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-teal-700 text-white hover:bg-teal-800 focus:ring-teal-700/20',
-  secondary: 'bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-900/20',
-  ghost: 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-900/10',
-  danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-600/20'
+  primary: 'bg-teal-700 text-white hover:bg-teal-800 focus-visible:ring-teal-700/20',
+  secondary: 'bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-900/20',
+  ghost: 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-900/10',
+  danger: 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600/20'
 };
 
-export function Button({ children, variant = 'primary', icon, className = '', ...props }: ButtonProps) {
+function buttonClassName(variant: ButtonVariant, className: string) {
+  return `inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`;
+}
+
+export function Button({
+  children,
+  variant = 'primary',
+  icon,
+  className = '',
+  type = 'button',
+  ...props
+}: ButtonProps) {
   return (
     <button
-      className={`inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`}
+      type={type}
+      className={buttonClassName(variant, className)}
       {...props}
     >
-      {icon ? <span className="shrink-0">{icon}</span> : null}
+      {icon ? <span className="shrink-0" aria-hidden="true">{icon}</span> : null}
       {children}
     </button>
+  );
+}
+
+export function ButtonLink({
+  children,
+  variant = 'primary',
+  icon,
+  className = '',
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <Link className={buttonClassName(variant, className)} {...props}>
+      {icon ? <span className="shrink-0" aria-hidden="true">{icon}</span> : null}
+      {children}
+    </Link>
   );
 }

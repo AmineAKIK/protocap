@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AccessibleDialog } from '../../components/AccessibleDialog';
 import type { SGAction, SGSubModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
 import {
@@ -50,29 +51,36 @@ function ExitWarningModal({
   onStay: () => void;
   onLeave: () => void;
 }) {
+  const continueRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-slate-950">Module non terminé</p>
-        <p className="mb-6 text-sm leading-relaxed text-slate-500">
-          Ce module n'est pas terminé. Ta progression est sauvegardée. Tu pourras reprendre où tu en es.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onStay}
-            className="flex-1 rounded-xl bg-teal-700 py-3 text-sm font-bold text-white transition hover:bg-teal-600 active:scale-95"
-          >
-            Continuer
-          </button>
-          <button
-            onClick={onLeave}
-            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95"
-          >
-            Quitter
-          </button>
-        </div>
+    <AccessibleDialog
+      title="Module non terminé"
+      description="Ta progression est sauvegardée. Tu pourras reprendre où tu en es."
+      onClose={onStay}
+      hideCloseButton
+      initialFocusRef={continueRef}
+      className="max-w-sm"
+      contentClassName="p-6"
+    >
+      <div className="flex gap-3">
+        <button
+          ref={continueRef}
+          type="button"
+          onClick={onStay}
+          className="flex-1 rounded-xl bg-teal-700 py-3 text-sm font-bold text-white transition hover:bg-teal-600 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
+        >
+          Continuer
+        </button>
+        <button
+          type="button"
+          onClick={onLeave}
+          className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-700/20"
+        >
+          Quitter
+        </button>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 }
 
@@ -83,29 +91,36 @@ function ResetConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-slate-950">Réinitialiser ?</p>
-        <p className="mb-6 text-sm leading-relaxed text-slate-500">
-          Cela effacera toutes les validations de ce module.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white transition hover:bg-red-600 active:scale-95"
-          >
-            Confirmer
-          </button>
-        </div>
+    <AccessibleDialog
+      title="Réinitialiser ?"
+      description="Cela effacera toutes les validations de ce module."
+      onClose={onCancel}
+      hideCloseButton
+      initialFocusRef={cancelRef}
+      className="max-w-sm"
+      contentClassName="p-6"
+    >
+      <div className="flex gap-3">
+        <button
+          ref={cancelRef}
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-700/20"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white transition hover:bg-red-600 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-700/20"
+        >
+          Confirmer
+        </button>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 }
 
@@ -129,12 +144,13 @@ function ChoiceScreen({
       <div className="grid gap-3 sm:grid-cols-2">
         {subModules.map((sub) => (
           <button
+            type="button"
             key={sub.id}
             onClick={() => onSelect(sub)}
-            className="panel group flex min-h-36 flex-col p-5 text-left transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md active:scale-[0.99]"
+            className="panel group flex min-h-36 flex-col p-5 text-left transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
           >
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-teal-700 ring-1 ring-teal-100">
-              <GitBranch size={19} />
+              <GitBranch size={19} aria-hidden="true" />
             </span>
             {sub.description && (
               <span className="mt-4 text-xs font-bold uppercase tracking-widest text-teal-700">
@@ -166,6 +182,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
     useModuleProgress(moduleId, actionIds);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const resetTriggerRef = useRef<HTMLButtonElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showReset, setShowReset] = useState(false);
 
@@ -220,7 +237,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <p className="mx-auto max-w-5xl px-4 py-2 text-xs font-semibold text-slate-500 sm:px-6">
+        <p className="mx-auto max-w-5xl px-4 py-2 text-xs font-semibold text-slate-500 sm:px-6" aria-live="polite">
           {treatedCount} / {totalActions} actions traitées
           {isComplete && <span className="ml-2 font-bold text-emerald-700">Terminé</span>}
         </p>
@@ -262,10 +279,10 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
                   </div>
                   {isValidated && (
                     <span
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white ring-1 ring-emerald-200 sm:inline-flex sm:w-auto sm:gap-1.5 sm:px-2.5 sm:text-xs sm:font-bold sm:text-emerald-700 sm:bg-emerald-50"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white ring-1 ring-emerald-200 sm:inline-flex sm:w-auto sm:gap-1.5 sm:bg-emerald-50 sm:px-2.5 sm:text-xs sm:font-bold sm:text-emerald-700"
                       title="Validé"
                     >
-                      <Check size={14} />
+                      <Check size={14} aria-hidden="true" />
                       <span className="hidden sm:inline">Validé</span>
                     </span>
                   )}
@@ -289,35 +306,41 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
 
       <div className="mx-auto flex w-full max-w-5xl flex-none items-center justify-between px-4 py-2 sm:px-6">
         <button
+          type="button"
           onClick={goPrev}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95"
+          aria-label="Action précédente"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={20} aria-hidden="true" />
         </button>
         <span className="text-sm font-bold text-slate-500">{currentIndex + 1} / {actions.length}</span>
         <button
+          type="button"
           onClick={goNext}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95"
+          aria-label="Action suivante"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={20} aria-hidden="true" />
         </button>
       </div>
 
       <div className="mx-auto flex w-full max-w-5xl flex-none gap-3 px-4 pb-3 sm:px-6">
         <button
+          type="button"
           onClick={handleValidate}
-          className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 ${
+          className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 ${
             currentStatus === 'validated'
               ? 'bg-emerald-600 text-white ring-2 ring-emerald-200'
               : 'bg-teal-700 text-white hover:bg-teal-600'
           }`}
         >
-          <Check size={17} />
+          <Check size={17} aria-hidden="true" />
           Valider
         </button>
         <button
+          type="button"
           onClick={handleNA}
-          className={`flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 ${
+          className={`flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold uppercase tracking-wide transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-700/20 ${
             currentStatus === 'na'
               ? 'bg-slate-700 text-white ring-2 ring-slate-300'
               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -333,10 +356,12 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
 
       <div className="flex-none pb-4 pt-1 text-center">
         <button
+          ref={resetTriggerRef}
+          type="button"
           onClick={() => setShowReset(true)}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
         >
-          <RotateCcw size={12} />
+          <RotateCcw size={12} aria-hidden="true" />
           Réinitialiser la progression
         </button>
       </div>
@@ -397,17 +422,18 @@ export function ModuleView() {
             <button
               type="button"
               onClick={handleClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
               aria-label="Fermer le module et revenir à l'accueil ShiftGuide"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
             {isChoice && selectedSub && (
               <button
+                type="button"
                 onClick={handleBackToChoice}
-                className="hidden items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 min-[380px]:flex"
+                className="hidden items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 min-[380px]:flex"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={14} aria-hidden="true" />
                 Types
               </button>
             )}
@@ -415,7 +441,7 @@ export function ModuleView() {
 
           <div className="flex min-w-0 flex-col items-center">
             <span className="flex min-w-0 max-w-full items-center gap-2 text-sm font-bold text-slate-950">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white" aria-hidden="true">
                 {renderModuleIcon(module.id, 16)}
               </span>
               <span className="truncate">{module.title}</span>
@@ -427,10 +453,10 @@ export function ModuleView() {
 
           <Link
             to="/shiftguide/urgences"
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-700/20"
             aria-label="Ouvrir les urgences"
           >
-            <AlertTriangle size={16} />
+            <AlertTriangle size={16} aria-hidden="true" />
           </Link>
         </div>
       </header>

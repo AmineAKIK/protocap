@@ -1,7 +1,6 @@
 import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, ListChecks, Maximize2, RadioTower, Wifi } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '../components/Button';
+import { ButtonLink } from '../components/Button';
 import { PresentationMode } from '../components/PresentationMode';
 
 const modules = [
@@ -53,13 +52,10 @@ export function HomePage() {
   return (
     <div>
       {presenting && <PresentationMode onClose={() => setPresenting(false)} />}
-      {/* Hero */}
       <section className="industrial-grid border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16 lg:px-8">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-16">
-
-            {/* Left */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
                 LineOps<br />
                 <span className="text-teal-700">Toolkit</span>
@@ -67,8 +63,6 @@ export function HomePage() {
               <p className="mt-4 text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
                 Cinq outils terrain pour explorer des flux de ligne de conditionnement.
               </p>
-
-              {/* Message */}
               <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
                 <p className="text-sm leading-6 text-slate-700">
                   Trois jours en tant que conducteur de ligne de conditionnement dans une usine de produits de soins ont orienté les prototypes présentés ici et le rapport qui les accompagne. Les frictions observées en production sont réelles — les données affichées, elles, sont entièrement fictives. Aucun élément confidentiel propre à l’entreprise n’y figure.
@@ -76,53 +70,51 @@ export function HomePage() {
               </div>
             </div>
 
-            {/* Right — Périmètre card */}
-            <div className="w-full lg:w-72 xl:w-80 shrink-0">
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="w-full shrink-0 lg:w-72 xl:w-80">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Périmètre</p>
                 </div>
                 <ul className="divide-y divide-slate-100">
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">1</span>
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">1</span>
                     Cinq outils complémentaires, chacun centré sur un flux ou une décision terrain.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">2</span>
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">2</span>
                     Données publiques fictives ; configuration ShiftGuide protégée côté serveur.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">3</span>
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">3</span>
                     Les prototypes locaux ne simulent pas une synchronisation multi-utilisateur inexistante.
                   </li>
                 </ul>
                 <div className="border-t border-slate-100 px-5 py-3">
                   <button
+                    type="button"
                     onClick={() => setPresenting(true)}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500 active:scale-95"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
                   >
-                    <Maximize2 size={15} />
+                    <Maximize2 size={15} aria-hidden="true" />
                     Lancer la présentation
                   </button>
                 </div>
                 <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-center text-xs text-slate-400">
-                  <Wifi size={13} className="shrink-0" />
+                  <Wifi size={13} className="shrink-0" aria-hidden="true" />
                   PWA — assets statiques mis en cache ; fonctions serveur en ligne uniquement
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* Module cards */}
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">Rapport</p>
         <article className="panel group mb-10 grid gap-5 p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
           <div className="min-w-0">
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-              <FileText size={22} />
+              <FileText size={22} aria-hidden="true" />
             </div>
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Synthèse opérationnelle</p>
             <h3 className="text-xl font-bold text-slate-950 transition group-hover:text-teal-700">Du terrain au prototype</h3>
@@ -133,14 +125,12 @@ export function HomePage() {
               Observation terrain, hypothèses, impacts et indicateurs d’évaluation proposés
             </div>
           </div>
-          <Link to="/rapport" className="block lg:self-end">
-            <Button className="w-full" icon={<ArrowRight size={16} />}>
-              Ouvrir le rapport
-            </Button>
-          </Link>
+          <ButtonLink to="/rapport" className="w-full lg:self-end" icon={<ArrowRight size={16} />}>
+            Ouvrir le rapport
+          </ButtonLink>
         </article>
 
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Modules</p>
+        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">Modules</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((module) => (
             <article
@@ -148,30 +138,27 @@ export function HomePage() {
               className="panel group flex flex-col p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
             >
               <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                <module.icon size={22} />
+                <module.icon size={22} aria-hidden="true" />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">{module.tag}</p>
-              <h3 className="text-xl font-bold text-slate-950 group-hover:text-teal-700 transition">{module.title}</h3>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">{module.tag}</p>
+              <h3 className="text-xl font-bold text-slate-950 transition group-hover:text-teal-700">{module.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">{module.description}</p>
               <div className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
                 {module.highlight}
               </div>
-              <Link to={module.to} className="mt-4 block">
-                <Button className="w-full" icon={<ArrowRight size={16} />}>
-                  Ouvrir le module
-                </Button>
-              </Link>
+              <ButtonLink to={module.to} className="mt-4 w-full" icon={<ArrowRight size={16} />}>
+                Ouvrir le module
+              </ButtonLink>
             </article>
           ))}
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>Données publiques de démonstration fictives.</p>
           <a
-            className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline"
+            className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
             href="https://www.akiksystems.com"
             target="_blank"
             rel="noreferrer"
