@@ -39,6 +39,16 @@ flowchart TB
   Static --> Browser
 ```
 
+## Frontend boundaries
+
+The root React router owns the public application surface and delegates `/shiftguide/*` to a dedicated ShiftGuide feature boundary. `src/features/shiftguide/ShiftGuideApp.tsx` owns ShiftGuide authentication, internal routes, legacy redirects and protected route-state handling. This keeps public routing independent from protected feature internals.
+
+Within ShiftGuide, `ShiftGuideLayout` is a shell composer rather than a browser-effects container. Desktop/mobile navigation lives in `src/components/shiftguide/ShiftGuideNavigation.tsx`; scroll restoration, route scroll reset, Céline desktop focus, mobile document locking and `visualViewport` sizing live behind `useShiftGuideShell`.
+
+Progress presentation also consumes a feature-level selector rather than rebuilding persistence semantics inside a page. `useShiftGuideProgressOverview` reads the canonical `shiftguide_progress_v2` contract, applies the shared standard/choice summary rules and subscribes to progress changes. Pages therefore do not need to know how alternative choice branches are represented in storage.
+
+These boundaries are intentionally pragmatic rather than framework-driven: there is no global state library or artificial component hierarchy. Large presentation-heavy pages are left intact unless extracting a boundary removes coupling or creates a meaningful test seam.
+
 ## Public/browser-local boundary
 
 Expiry Check, Logistics Call and Packing Calculator use browser persistence. This makes the flows useful as interactive demonstrations without inventing a backend that does not exist. It also means their state is not shared across browsers, users or devices.
@@ -75,6 +85,8 @@ Céline is intentionally server-mediated:
 5. the server calls DeepSeek and returns the response.
 
 This prevents the provider credential and protected system prompt from being shipped in the public bundle.
+
+The current page still parses the provider-shaped chat response returned by `/api/celine/chat`. That coupling is deliberately not wrapped in a frontend-only abstraction because the next server-boundary change will replace it with a Protocap-owned DTO. The client and server contract should be changed together rather than creating an adapter around a response shape that is scheduled to disappear.
 
 ## Security controls implemented today
 
