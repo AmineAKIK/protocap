@@ -22,11 +22,11 @@ import {
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
-import { getModuleProgressSummary } from '../../hooks/useModuleProgress';
+import { useShiftGuideProgressOverview } from '../../features/shiftguide/useShiftGuideProgressOverview';
 
 type ContextId =
   | 'debut_equipe'
@@ -135,41 +135,6 @@ function renderModuleIcon(moduleId: string, size: number) {
     case 'tri': return <Layers3 size={size} />;
     default: return <ListChecks size={size} />;
   }
-}
-
-function getAllSummaries(): Record<string, ModuleSummary> {
-  const result: Record<string, ModuleSummary> = {};
-
-  for (const module of getSgModules()) {
-    if (module.type === 'choice' && module.subModules) {
-      const subSummaries = module.subModules.map((sub) =>
-        getModuleProgressSummary(
-          sub.id,
-          sub.actions.map((action) => action.id)
-        )
-      );
-      const treatedCount = subSummaries.reduce((sum, item) => sum + item.treatedCount, 0);
-      const totalActions = subSummaries.reduce((sum, item) => sum + item.totalActions, 0);
-      result[module.id] = {
-        treatedCount,
-        totalActions,
-        isComplete: totalActions > 0 && treatedCount === totalActions,
-      };
-      continue;
-    }
-
-    if (!module.actions) {
-      result[module.id] = EMPTY_SUMMARY;
-      continue;
-    }
-
-    result[module.id] = getModuleProgressSummary(
-      module.id,
-      module.actions.map((action) => action.id)
-    );
-  }
-
-  return result;
 }
 
 function getSummary(module: SGModule, summaries: Record<string, ModuleSummary>) {
@@ -517,18 +482,14 @@ export function ShiftGuideHome() {
   const [contextId, setContextId] = useState<ContextId | null>(() => {
     return (localStorage.getItem('shiftguide_context') as ContextId) ?? 'debut_equipe';
   });
-  const [summaries] = useState<Record<string, ModuleSummary>>(getAllSummaries);
+  const {
+    summaries,
+    treatedActions,
+    totalActions,
+    completionPct,
+  } = useShiftGuideProgressOverview();
 
   const activeCtx = CONTEXTS.find((ctx) => ctx.id === contextId) ?? CONTEXTS[0];
-  const totalActions = useMemo(
-    () => Object.values(summaries).reduce((sum, summary) => sum + summary.totalActions, 0),
-    [summaries]
-  );
-  const treatedActions = useMemo(
-    () => Object.values(summaries).reduce((sum, summary) => sum + summary.treatedCount, 0),
-    [summaries]
-  );
-  const completionPct = totalActions > 0 ? Math.round((treatedActions / totalActions) * 100) : 0;
 
   const handleContextSelect = (id: ContextId) => {
     setContextId(id);
