@@ -51,6 +51,19 @@ ShiftGuide code is part of the public client bundle, but protected operational c
 
 The browser stores the active ShiftGuide token and protected payload in `sessionStorage`. The server validates the token for protected API calls.
 
+### Shared runtime contract
+
+The server and client use the same runtime validator from `shared/shiftGuideContract.js`. The contract enforces the assumptions made by downstream consumers instead of merely checking broad JSON shape:
+
+- standard modules contain at least one action;
+- choice modules contain at least one submodule and every submodule contains at least one action;
+- action IDs are globally unique because shared progress is keyed by action ID;
+- module and submodule IDs are globally unique because they are progress scopes/routes;
+- lexicon sigles are unique case-insensitively;
+- emergency content has a typed, non-empty structure.
+
+`SG_URGENCES` is optional at deployment level for backward compatibility: the server supplies the current safe default when the variable is absent. Once resolved, the same typed payload is sent to the UI and injected into Céline's system prompt, avoiding two independent copies of operational emergency content.
+
 ## Céline boundary
 
 Céline is intentionally server-mediated:
@@ -91,10 +104,6 @@ A distributed store such as Redis would become justified if horizontal scaling, 
 ### Provider response coupling
 
 `/api/celine/chat` currently returns the provider payload. A stronger external-service boundary would map this to a Protocap-owned DTO so the frontend is not coupled to DeepSeek's response shape.
-
-### Client/server ShiftGuide validation
-
-ShiftGuide currently has validation responsibilities on both sides of the boundary. Contract consolidation and stronger global invariants are planned separately so this portfolio/documentation PR does not hide a technical refactor inside copy changes.
 
 ## Deployment boundary
 

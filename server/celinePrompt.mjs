@@ -1,7 +1,7 @@
 function buildModulesContent(modules) {
   return modules
     .map((m) => {
-      if (m.type === 'standard' && m.actions) {
+      if (m.type === 'standard') {
         const actions = m.actions
           .map((a, i) => `  ${i + 1}. [${a.id}] ${a.text}${a.note ? ` [${a.note}]` : ''}`)
           .join('\n');
@@ -9,20 +9,18 @@ function buildModulesContent(modules) {
           m.footerNote ? `\n  Note: ${m.footerNote}` : ''
         }`;
       }
-      if (m.type === 'choice' && m.subModules) {
-        const subs = m.subModules
-          .map((sub) => {
-            const actions = sub.actions
-              .map((a, i) => `    ${i + 1}. [${a.id}] ${a.text}${a.note ? ` [${a.note}]` : ''}`)
-              .join('\n');
-            return `  [${sub.title}${sub.description ? ` — ${sub.description}` : ''}]\n${actions}${
-              sub.footerNote ? `\n  Note: ${sub.footerNote}` : ''
-            }`;
-          })
-          .join('\n\n');
-        return `[${String(m.title).toUpperCase()}]\n${subs}`;
-      }
-      return '';
+
+      const subs = m.subModules
+        .map((sub) => {
+          const actions = sub.actions
+            .map((a, i) => `    ${i + 1}. [${a.id}] ${a.text}${a.note ? ` [${a.note}]` : ''}`)
+            .join('\n');
+          return `  [${sub.title}${sub.description ? ` — ${sub.description}` : ''}]\n${actions}${
+            sub.footerNote ? `\n  Note: ${sub.footerNote}` : ''
+          }`;
+        })
+        .join('\n\n');
+      return `[${String(m.title).toUpperCase()}]\n${subs}`;
     })
     .join('\n\n');
 }
@@ -31,7 +29,28 @@ function buildLexique(lexique) {
   return lexique.map((e) => `  ${e.sigle} : ${e.definition}`).join('\n');
 }
 
-export function buildCelineSystemPrompt({ modules, lexique, systemPromptExtra = '' }) {
+function buildUrgencesContent(urgences) {
+  const accident = urgences.accidentSteps
+    .map((step, index) => `${index + 1}) ${step.label.toUpperCase()} — ${step.description}`)
+    .join('\n');
+  const goldenRules = urgences.goldenRules
+    .map((rule) => `${rule.label.toUpperCase()} — ${rule.description}`)
+    .join('\n');
+
+  return `=== URGENCES ===
+Numeros : ${urgences.emergencyNumbers.join(' ou ')}
+Signal critique : ${urgences.generalAlarm.signal} — ${urgences.generalAlarm.instruction}
+Evacuation : ${urgences.generalAlarm.steps.join(' -> ')}
+Essai sirene : ${urgences.drill.schedule} -> ${urgences.drill.instruction}
+Accident :
+${accident}
+Priorite : ${urgences.priorityMessage} ${urgences.priorityDescription}
+
+=== REGLES D'OR ===
+${goldenRules}`;
+}
+
+export function buildCelineSystemPrompt({ modules, lexique, urgences, systemPromptExtra = '' }) {
   return `Tu es Celine, l'assistante operationnelle ShiftGuide pour conducteurs de ligne de conditionnement.
 Tu as ete developpee par AkikSystems.
 Tu parles uniquement francais. Tu tutoies l'operateur.
@@ -163,12 +182,5 @@ ${buildModulesContent(modules)}
 === LEXIQUE ===
 ${buildLexique(lexique)}
 
-=== URGENCES ===
-Numeros : 15 ou 18 depuis poste interne
-Accident : 1) PROTEGER 2) ALERTER (15 ou 18) 3) SECOURIR
-Evacuation (sirene longue) : sorties de secours -> point de rassemblement -> repondre a l'appel -> reprendre apres autorisation
-Essai sirene : 1er mardi du mois 15h -> ne pas evacuer
-
-=== REGLES D'OR ===
-LOTO, COUPURE (gants), EQUIPEMENT VALIDE, ERGONOMIE, CHOC (elements bleus), CO-ACTIVITE (contact visuel passages pietons), CHIMIQUE (lunettes securite), ENVIRONNEMENT (tri dechets)`;
+${buildUrgencesContent(urgences)}`;
 }

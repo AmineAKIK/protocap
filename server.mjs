@@ -3,7 +3,9 @@ import express from 'express';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateShiftGuideConfig } from './shared/shiftGuideContract.js';
 import { buildCelineSystemPrompt } from './server/celinePrompt.mjs';
+import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 import {
   buildSecurityHeaders,
   readServerSecret,
@@ -18,7 +20,6 @@ import {
   revokeSession,
   takeRateLimit,
 } from './server/runtimeUtils.mjs';
-import { isValidShiftGuideConfig } from './server/shiftGuideValidation.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = existsSync(join(__dirname, 'dist'))
@@ -47,15 +48,17 @@ const shiftGuideConfig = {
   modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
   lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
   systemPromptExtra: process.env.SG_SYSTEM_PROMPT ?? null,
-  urgences: parseJsonEnvValue('SG_URGENCES', process.env.SG_URGENCES),
+  urgences: parseJsonEnvValue('SG_URGENCES', process.env.SG_URGENCES, DEFAULT_SHIFTGUIDE_URGENCES),
 };
-const shiftGuideClientData = toClientShiftGuideData(shiftGuideConfig);
-
-const hasValidShiftGuideConfig = isValidShiftGuideConfig(shiftGuideConfig);
+const shiftGuideValidation = validateShiftGuideConfig(shiftGuideConfig);
+const hasValidShiftGuideConfig = shiftGuideValidation.ok;
 if (SHIFTGUIDE_CODE && !hasValidShiftGuideConfig) {
-  throw new Error('ShiftGuide is enabled but SG_MODULES or SG_LEXIQUE has an invalid structure.');
+  throw new Error(`ShiftGuide configuration is invalid: ${shiftGuideValidation.errors.join('; ')}`);
 }
 
+const shiftGuideClientData = hasValidShiftGuideConfig
+  ? toClientShiftGuideData(shiftGuideConfig)
+  : null;
 const celineSystemPrompt = hasValidShiftGuideConfig
   ? buildCelineSystemPrompt(shiftGuideConfig)
   : null;
@@ -113,7 +116,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.post('/api/shiftguide/unlock', (req, res) => {
-  if (!SHIFTGUIDE_CODE || !celineSystemPrompt) {
+  if (!SHIFTGUIDE_CODE || !celineSystemPrompt || !shiftGuideClientData) {
     return res.status(503).json({ error: 'Accès ShiftGuide non configuré.' });
   }
 
