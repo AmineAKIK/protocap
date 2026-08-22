@@ -26,8 +26,9 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSgModules } from '../../data/shiftguideModules';
+import { requestCelineResponse } from '../../features/shiftguide/celineClient';
+import type { CelineApiMessage } from '../../features/shiftguide/celineClient';
 import { setSharedActionStatus } from '../../hooks/useModuleProgress';
-import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
 interface ISpeechRecognitionEvent {
   results: { [i: number]: { [j: number]: { transcript: string } } };
@@ -100,11 +101,6 @@ interface CelineMessage {
   loading?: boolean;
 }
 
-interface ApiMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 function findProgressScope(actionId: string): string | undefined {
   for (const module of getSgModules()) {
     if (module.type === 'standard' && module.actions?.some((action) => action.id === actionId)) {
@@ -120,7 +116,7 @@ function findProgressScope(actionId: string): string | undefined {
   return undefined;
 }
 
-function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
+function toApiHistory(msgs: CelineMessage[]): CelineApiMessage[] {
   return msgs
     .filter((m) => !m.loading)
     .map((m) => ({
@@ -133,63 +129,21 @@ function toApiHistory(msgs: CelineMessage[]): ApiMessage[] {
 }
 
 async function callOpenAI(
-  history: ApiMessage[],
+  history: CelineApiMessage[],
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const token = getShiftGuideToken();
-  if (!token) throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
-
-  const res = await fetch('/api/celine/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ messages: history }),
-    signal,
-  });
-
-  if (!res.ok) {
-    let errMsg = `Erreur ${res.status}`;
-    try {
-      const body = await res.json();
-      errMsg = typeof body?.error === 'string' ? body.error : errMsg;
-    } catch { /* ignore */ }
-    if (res.status === 401) {
-      lockShiftGuide();
-      throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
-    }
-    if (res.status === 429) throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
-    throw new Error(errMsg);
-  }
-
-  const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content ?? '{}';
-
-  try {
-    const parsed = JSON.parse(raw);
-    const checklist: ChecklistItem[] = (parsed.checklist ?? []).map(
-      (item: Record<string, unknown>, i: number) => {
-        const actionId = typeof item.actionId === 'string' && item.actionId ? item.actionId : null;
-        return {
-          id: `${actionId ?? 'item'}_${Date.now()}_${i}`,
-          actionId,
-          text: String(item.text ?? ''),
-          note: item.note ? String(item.note) : null,
-          module: item.module ? String(item.module) : null,
-          done: false,
-          na: false,
-        };
-      }
-    );
-    return {
-      message: String(parsed.message ?? ''),
-      checklist,
-      followUp: parsed.followUp ? String(parsed.followUp) : null,
-    };
-  } catch {
-    return { message: raw, checklist: [], followUp: null };
-  }
+  const response = await requestCelineResponse(history, signal);
+  const createdAt = Date.now();
+  return {
+    message: response.message,
+    checklist: response.checklist.map((item, index) => ({
+      ...item,
+      id: `${item.actionId}_${createdAt}_${index}`,
+      done: false,
+      na: false,
+    })),
+    followUp: response.followUp,
+  };
 }
 
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
