@@ -1,4 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
+import {
+  getActionProgress,
+  getActionStatus,
+  PROGRESS_STORAGE_KEY,
+  readProgressState,
+  resolveActiveChoice,
+  summarizeActions,
+  summarizeChoiceModule,
+  withActionStatus,
+  withActiveChoice,
+  withoutActions,
+  writeProgressState,
+} from '../../shared/shiftGuideProgress.js';
+import type { SharedProgressSummary } from '../../shared/shiftGuideProgress.js';
+import { getSgModules } from '../data/shiftguideModules';
+import type { SGChoiceModule, SGSubModule } from '../data/shiftguideModules';
 
 export type ActionStatus = 'pending' | 'validated' | 'na';
 
@@ -6,65 +22,51 @@ interface Progress {
   [actionId: string]: ActionStatus;
 }
 
-interface StoredData {
-  actions: Progress;
-  updatedAt: number;
+interface ChoiceTarget {
+  module: SGChoiceModule;
+  subModule: SGSubModule;
 }
 
-const GLOBAL_PROGRESS_KEY = 'shiftguide_progress_v1';
 const PROGRESS_EVENT = 'shiftguide:progress';
 const ACTION_IDS_SEPARATOR = '\u001f';
-
-function readStoredData(key: string): StoredData {
-  try {
-    const saved = localStorage.getItem(key);
-    if (!saved) return { actions: {}, updatedAt: 0 };
-    const parsed = JSON.parse(saved) as Partial<StoredData>;
-    return {
-      actions: parsed.actions && typeof parsed.actions === 'object' ? parsed.actions : {},
-      updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
-    };
-  } catch {
-    return { actions: {}, updatedAt: 0 };
-  }
-}
-
-function writeStoredData(key: string, actions: Progress) {
-  localStorage.setItem(key, JSON.stringify({ actions, updatedAt: Date.now() } satisfies StoredData));
-}
-
-function readGlobalProgress(): Progress {
-  return readStoredData(GLOBAL_PROGRESS_KEY).actions;
-}
 
 function notifyProgressChanged() {
   window.dispatchEvent(new Event(PROGRESS_EVENT));
 }
 
-function migrateLegacyModule(moduleId: string): Progress {
-  const legacyKey = `shiftguide_module_${moduleId}`;
-  const legacy = readStoredData(legacyKey).actions;
-  const global = readGlobalProgress();
-  let changed = false;
-
-  for (const [actionId, status] of Object.entries(legacy)) {
-    if (!global[actionId] && status !== 'pending') {
-      global[actionId] = status;
-      changed = true;
-    }
+function findChoiceParentForSubModule(subModuleId: string): ChoiceTarget | null {
+  for (const module of getSgModules()) {
+    if (module.type !== 'choice' || !module.subModules) continue;
+    const choiceModule = module as SGChoiceModule;
+    const subModule = choiceModule.subModules.find((candidate) => candidate.id === subModuleId);
+    if (subModule) return { module: choiceModule, subModule };
   }
+  return null;
+}
 
-  if (changed) writeStoredData(GLOBAL_PROGRESS_KEY, global);
-  return global;
+function readState() {
+  return readProgressState(localStorage);
+}
+
+function writeState(state: ReturnType<typeof readState>) {
+  writeProgressState(localStorage, state);
+  notifyProgressChanged();
 }
 
 function getModuleProgress(moduleId: string, actionIds: string[]): Progress {
-  const global = migrateLegacyModule(moduleId);
-  return Object.fromEntries(actionIds.map((actionId) => [actionId, global[actionId] ?? 'pending']));
+  const state = readState();
+  const choiceTarget = findChoiceParentForSubModule(moduleId);
+  if (choiceTarget) {
+    const activeSubModuleId = resolveActiveChoice(state, choiceTarget.module);
+    if (activeSubModuleId && activeSubModuleId !== moduleId) {
+      return Object.fromEntries(actionIds.map((actionId) => [actionId, 'pending'])) as Progress;
+    }
+  }
+  return getActionProgress(state, actionIds) as Progress;
 }
 
 export function getSharedActionStatus(actionId: string): ActionStatus {
-  return readGlobalProgress()[actionId] ?? 'pending';
+  return getActionStatus(readState(), actionId) as ActionStatus;
 }
 
 export function setSharedActionStatus(
@@ -72,28 +74,23 @@ export function setSharedActionStatus(
   status: ActionStatus,
   moduleId?: string
 ) {
-  const global = readGlobalProgress();
-  if (status === 'pending') delete global[actionId];
-  else global[actionId] = status;
-  writeStoredData(GLOBAL_PROGRESS_KEY, global);
-
-  // Compatibility mirror while legacy module readers are still present.
+  let state = withActionStatus(readState(), actionId, status);
   if (moduleId) {
-    const legacyKey = `shiftguide_module_${moduleId}`;
-    const legacy = readStoredData(legacyKey).actions;
-    if (status === 'pending') delete legacy[actionId];
-    else legacy[actionId] = status;
-    writeStoredData(legacyKey, legacy);
+    const choiceTarget = findChoiceParentForSubModule(moduleId);
+    if (choiceTarget) {
+      state = withActiveChoice(state, choiceTarget.module.id, choiceTarget.subModule.id);
+    }
   }
+  writeState(state);
+}
 
-  notifyProgressChanged();
+export function setActiveChoiceModule(moduleId: string, subModuleId: string) {
+  writeState(withActiveChoice(readState(), moduleId, subModuleId));
 }
 
 export function subscribeShiftGuideProgress(listener: () => void) {
   const onStorage = (event: StorageEvent) => {
-    if (event.key === GLOBAL_PROGRESS_KEY || event.key?.startsWith('shiftguide_module_')) {
-      listener();
-    }
+    if (event.key === PROGRESS_STORAGE_KEY) listener();
   };
   window.addEventListener(PROGRESS_EVENT, listener);
   window.addEventListener('storage', onStorage);
@@ -122,16 +119,12 @@ export function useModuleProgress(moduleId: string, actionIds: string[]) {
 
   const resetModule = useCallback(() => {
     const stableActionIds = actionIdsKey ? actionIdsKey.split(ACTION_IDS_SEPARATOR) : [];
-    const global = readGlobalProgress();
-    for (const actionId of stableActionIds) delete global[actionId];
-    writeStoredData(GLOBAL_PROGRESS_KEY, global);
-    localStorage.removeItem(`shiftguide_module_${moduleId}`);
-    notifyProgressChanged();
-  }, [actionIdsKey, moduleId]);
+    writeState(withoutActions(readState(), stableActionIds));
+  }, [actionIdsKey]);
 
   const treatedCount = actionIds.filter((id) => {
-    const s = progress[id];
-    return s === 'validated' || s === 'na';
+    const status = progress[id];
+    return status === 'validated' || status === 'na';
   }).length;
 
   const totalActions = actionIds.length;
@@ -149,17 +142,22 @@ export function useModuleProgress(moduleId: string, actionIds: string[]) {
   };
 }
 
+export function isModuleProgressComplete(moduleId: string, actionIds: string[]) {
+  if (actionIds.length === 0) return true;
+  return getModuleProgressSummary(moduleId, actionIds).isComplete;
+}
+
 export function getModuleProgressSummary(
   moduleId: string,
   actionIds: string[]
-): { treatedCount: number; totalActions: number; isComplete: boolean } {
-  const progress = getModuleProgress(moduleId, actionIds);
-  const treatedCount = actionIds.filter(
-    (id) => progress[id] === 'validated' || progress[id] === 'na'
-  ).length;
-  return {
-    treatedCount,
-    totalActions: actionIds.length,
-    isComplete: treatedCount === actionIds.length && actionIds.length > 0,
-  };
+): SharedProgressSummary {
+  const state = readState();
+  const choiceTarget = findChoiceParentForSubModule(moduleId);
+  if (choiceTarget) {
+    const choiceSummary = summarizeChoiceModule(state, choiceTarget.module);
+    if (choiceSummary.activeSubModuleId !== moduleId) {
+      return { treatedCount: 0, totalActions: 0, isComplete: false };
+    }
+  }
+  return summarizeActions(state, actionIds);
 }

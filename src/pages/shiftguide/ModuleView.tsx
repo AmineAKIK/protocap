@@ -21,7 +21,11 @@ import { useCallback, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { SGAction, SGSubModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
-import { useModuleProgress } from '../../hooks/useModuleProgress';
+import {
+  isModuleProgressComplete,
+  setActiveChoiceModule,
+  useModuleProgress,
+} from '../../hooks/useModuleProgress';
 
 function renderModuleIcon(moduleId: string | undefined, size: number) {
   switch (moduleId) {
@@ -39,8 +43,6 @@ function renderModuleIcon(moduleId: string | undefined, size: number) {
   }
 }
 
-// ─── Exit Warning Modal ──────────────────────────────────────────────────────
-
 function ExitWarningModal({
   onStay,
   onLeave,
@@ -51,12 +53,9 @@ function ExitWarningModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-slate-950">
-          Module non terminé
-        </p>
+        <p className="mb-2 text-base font-bold text-slate-950">Module non terminé</p>
         <p className="mb-6 text-sm leading-relaxed text-slate-500">
-          Ce module n'est pas terminé. Ta progression est sauvegardée. Tu
-          pourras reprendre où tu en es.
+          Ce module n'est pas terminé. Ta progression est sauvegardée. Tu pourras reprendre où tu en es.
         </p>
         <div className="flex gap-3">
           <button
@@ -77,8 +76,6 @@ function ExitWarningModal({
   );
 }
 
-// ─── Reset Confirm Modal ─────────────────────────────────────────────────────
-
 function ResetConfirmModal({
   onCancel,
   onConfirm,
@@ -89,9 +86,7 @@ function ResetConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <p className="mb-2 text-base font-bold text-slate-950">
-          Réinitialiser ?
-        </p>
+        <p className="mb-2 text-base font-bold text-slate-950">Réinitialiser ?</p>
         <p className="mb-6 text-sm leading-relaxed text-slate-500">
           Cela effacera toutes les validations de ce module.
         </p>
@@ -113,8 +108,6 @@ function ResetConfirmModal({
     </div>
   );
 }
-
-// ─── Choice Screen ───────────────────────────────────────────────────────────
 
 function ChoiceScreen({
   subModules,
@@ -160,8 +153,6 @@ function ChoiceScreen({
     </div>
   );
 }
-
-// ─── Action Carousel ─────────────────────────────────────────────────────────
 
 interface ActionCarouselProps {
   moduleId: string;
@@ -219,10 +210,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
   return (
     <>
       {showReset && (
-        <ResetConfirmModal
-          onCancel={() => setShowReset(false)}
-          onConfirm={handleReset}
-        />
+        <ResetConfirmModal onCancel={() => setShowReset(false)} onConfirm={handleReset} />
       )}
 
       <div className="flex-none border-b border-slate-200 bg-white">
@@ -234,9 +222,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         </div>
         <p className="mx-auto max-w-5xl px-4 py-2 text-xs font-semibold text-slate-500 sm:px-6">
           {treatedCount} / {totalActions} actions traitées
-          {isComplete && (
-            <span className="ml-2 font-bold text-emerald-700">Terminé</span>
-          )}
+          {isComplete && <span className="ml-2 font-bold text-emerald-700">Terminé</span>}
         </p>
       </div>
 
@@ -271,9 +257,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
                       Action {String(i + 1).padStart(2, '0')}
                     </p>
                     <p className="mt-3 text-xl font-bold leading-snug text-slate-950 sm:text-2xl">
-                      <span className={isNA ? 'text-slate-400 line-through' : ''}>
-                        {action.text}
-                      </span>
+                      <span className={isNA ? 'text-slate-400 line-through' : ''}>{action.text}</span>
                     </p>
                   </div>
                   {isValidated && (
@@ -310,9 +294,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-sm font-bold text-slate-500">
-          {currentIndex + 1} / {actions.length}
-        </span>
+        <span className="text-sm font-bold text-slate-500">{currentIndex + 1} / {actions.length}</span>
         <button
           onClick={goNext}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950 active:scale-95"
@@ -346,9 +328,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
       </div>
 
       {footerNote && (
-        <p className="flex-none px-4 pb-1 text-center text-xs font-semibold text-slate-500">
-          {footerNote}
-        </p>
+        <p className="flex-none px-4 pb-1 text-center text-xs font-semibold text-slate-500">{footerNote}</p>
       )}
 
       <div className="flex-none pb-4 pt-1 text-center">
@@ -367,9 +347,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
 export function ModuleView() {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
-
-  const module = getSgModules().find((m) => m.id === moduleId);
-
+  const module = getSgModules().find((candidate) => candidate.id === moduleId);
   const [selectedSub, setSelectedSub] = useState<SGSubModule | null>(null);
   const [showExitWarning, setShowExitWarning] = useState(false);
 
@@ -381,39 +359,26 @@ export function ModuleView() {
     ? (selectedSub?.id ?? module?.id ?? '')
     : (module?.id ?? '');
   const activeFooterNote = isChoice ? selectedSub?.footerNote : module?.footerNote;
-
-  const actionIds = activeActions.map((a) => a.id);
-  const progressKey = `shiftguide_module_${activeModuleId}`;
-
-  const checkIsComplete = useCallback(() => {
-    if (actionIds.length === 0) return true;
-    try {
-      const saved = localStorage.getItem(progressKey);
-      if (!saved) return false;
-      const { actions } = JSON.parse(saved);
-      const treated = actionIds.filter(
-        (id) => actions[id] === 'validated' || actions[id] === 'na'
-      ).length;
-      return treated === actionIds.length;
-    } catch {
-      return false;
-    }
-  }, [actionIds, progressKey]);
+  const actionIds = activeActions.map((action) => action.id);
+  const isActiveModuleComplete =
+    actionIds.length === 0 || isModuleProgressComplete(activeModuleId, actionIds);
 
   const leaveModule = () => navigate('/shiftguide', { replace: true });
 
   const handleClose = () => {
-    if (!isChoice || selectedSub) {
-      if (actionIds.length > 0 && !checkIsComplete()) {
-        setShowExitWarning(true);
-        return;
-      }
+    if ((!isChoice || selectedSub) && actionIds.length > 0 && !isActiveModuleComplete) {
+      setShowExitWarning(true);
+      return;
     }
     leaveModule();
   };
 
-  const handleBackToChoice = () => {
-    setSelectedSub(null);
+  const handleBackToChoice = () => setSelectedSub(null);
+
+  const handleSelectSubModule = (subModule: SGSubModule) => {
+    if (module?.type !== 'choice') return;
+    setActiveChoiceModule(module.id, subModule.id);
+    setSelectedSub(subModule);
   };
 
   if (!module) {
@@ -428,59 +393,56 @@ export function ModuleView() {
     <div className="flex h-[100dvh] flex-col bg-slate-50 text-slate-950">
       <header className="flex-none border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="mx-auto grid h-14 max-w-5xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
-            aria-label="Fermer le module et revenir à l'accueil ShiftGuide"
-          >
-            <X size={20} />
-          </button>
-          {isChoice && selectedSub && (
+          <div className="flex min-w-0 items-center gap-1.5">
             <button
-              onClick={handleBackToChoice}
-              className="hidden items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 min-[380px]:flex"
+              type="button"
+              onClick={handleClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+              aria-label="Fermer le module et revenir à l'accueil ShiftGuide"
             >
-              <ChevronLeft size={14} />
-              Types
+              <X size={20} />
             </button>
-          )}
-        </div>
+            {isChoice && selectedSub && (
+              <button
+                onClick={handleBackToChoice}
+                className="hidden items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 min-[380px]:flex"
+              >
+                <ChevronLeft size={14} />
+                Types
+              </button>
+            )}
+          </div>
 
-        <div className="flex min-w-0 flex-col items-center">
-          <span className="flex min-w-0 max-w-full items-center gap-2 text-sm font-bold text-slate-950">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white">
-              {renderModuleIcon(module.id, 16)}
+          <div className="flex min-w-0 flex-col items-center">
+            <span className="flex min-w-0 max-w-full items-center gap-2 text-sm font-bold text-slate-950">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-teal-700 text-white">
+                {renderModuleIcon(module.id, 16)}
+              </span>
+              <span className="truncate">{module.title}</span>
             </span>
-            <span className="truncate">{module.title}</span>
-          </span>
-          {isChoice && selectedSub && (
-            <span className="max-w-full truncate text-xs font-semibold text-teal-700">{selectedSub.title}</span>
-          )}
-        </div>
+            {isChoice && selectedSub && (
+              <span className="max-w-full truncate text-xs font-semibold text-teal-700">{selectedSub.title}</span>
+            )}
+          </div>
 
-        <Link
-          to="/shiftguide/urgences"
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
-          aria-label="Ouvrir les urgences"
-        >
-          <AlertTriangle size={16} />
-        </Link>
+          <Link
+            to="/shiftguide/urgences"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-100 transition hover:bg-red-100"
+            aria-label="Ouvrir les urgences"
+          >
+            <AlertTriangle size={16} />
+          </Link>
         </div>
       </header>
 
       {showExitWarning && (
-        <ExitWarningModal
-          onStay={() => setShowExitWarning(false)}
-          onLeave={leaveModule}
-        />
+        <ExitWarningModal onStay={() => setShowExitWarning(false)} onLeave={leaveModule} />
       )}
 
       {isChoice && !selectedSub ? (
         <ChoiceScreen
           subModules={module.subModules ?? []}
-          onSelect={setSelectedSub}
+          onSelect={handleSelectSubModule}
         />
       ) : (
         <ActionCarousel
