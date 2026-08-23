@@ -15,6 +15,7 @@ import {
 import type { SharedProgressSummary } from '../../shared/shiftGuideProgress.js';
 import { getSgModules } from '../data/shiftguideModules';
 import type { SGChoiceModule, SGSubModule } from '../data/shiftguideModules';
+import { runShiftGuideProgressTransaction } from '../features/shiftguide/shiftGuideConcurrency';
 import { getShiftGuidePersistentStorage } from '../features/shiftguide/shiftGuideStorage';
 
 export type ActionStatus = 'pending' | 'validated' | 'na';
@@ -54,6 +55,27 @@ function writeState(state: ReturnType<typeof readState>) {
   notifyProgressChanged();
 }
 
+function mutateState(
+  mutation: (state: ReturnType<typeof readState>) => ReturnType<typeof readState>
+) {
+  return runShiftGuideProgressTransaction(() => {
+    const current = readState();
+    const next = mutation(current);
+    writeState(next);
+    return next;
+  });
+}
+
+function applyChoiceScope(
+  state: ReturnType<typeof readState>,
+  moduleId?: string
+): ReturnType<typeof readState> {
+  if (!moduleId) return state;
+  const choiceTarget = findChoiceParentForSubModule(moduleId);
+  if (!choiceTarget) return state;
+  return withActiveChoice(state, choiceTarget.module.id, choiceTarget.subModule.id);
+}
+
 function getModuleProgress(moduleId: string, actionIds: string[]): Progress {
   const state = readState();
   const choiceTarget = findChoiceParentForSubModule(moduleId);
@@ -75,18 +97,27 @@ export function setSharedActionStatus(
   status: ActionStatus,
   moduleId?: string
 ) {
-  let state = withActionStatus(readState(), actionId, status);
-  if (moduleId) {
-    const choiceTarget = findChoiceParentForSubModule(moduleId);
-    if (choiceTarget) {
-      state = withActiveChoice(state, choiceTarget.module.id, choiceTarget.subModule.id);
-    }
-  }
-  writeState(state);
+  return mutateState((state) => {
+    const next = withActionStatus(state, actionId, status);
+    return applyChoiceScope(next, moduleId);
+  });
+}
+
+function toggleSharedActionStatus(
+  actionId: string,
+  status: ActionStatus,
+  moduleId?: string
+) {
+  return mutateState((state) => {
+    const current = getActionStatus(state, actionId) as ActionStatus;
+    const nextStatus: ActionStatus = current === status ? 'pending' : status;
+    const next = withActionStatus(state, actionId, nextStatus);
+    return applyChoiceScope(next, moduleId);
+  });
 }
 
 export function setActiveChoiceModule(moduleId: string, subModuleId: string) {
-  writeState(withActiveChoice(readState(), moduleId, subModuleId));
+  return mutateState((state) => withActiveChoice(state, moduleId, subModuleId));
 }
 
 export function subscribeShiftGuideProgress(listener: () => void) {
@@ -113,14 +144,12 @@ export function useModuleProgress(moduleId: string, actionIds: string[]) {
   }, [moduleId, actionIdsKey]);
 
   const setAction = useCallback((actionId: string, status: ActionStatus) => {
-    const current = getSharedActionStatus(actionId);
-    const next = current === status ? 'pending' : status;
-    setSharedActionStatus(actionId, next, moduleId);
+    void toggleSharedActionStatus(actionId, status, moduleId);
   }, [moduleId]);
 
   const resetModule = useCallback(() => {
     const stableActionIds = actionIdsKey ? actionIdsKey.split(ACTION_IDS_SEPARATOR) : [];
-    writeState(withoutActions(readState(), stableActionIds));
+    void mutateState((state) => withoutActions(state, stableActionIds));
   }, [actionIdsKey]);
 
   const treatedCount = actionIds.filter((id) => {
