@@ -8,21 +8,24 @@ export function parseJsonEnvValue(name, raw, fallback = null) {
 }
 
 export function takeRateLimit(store, key, maxRequests, windowMs, now = Date.now()) {
+  const cutoff = now - windowMs;
   const current = store.get(key);
+  const timestamps = current?.timestamps?.filter((timestamp) => timestamp > cutoff) ?? [];
 
-  if (!current || current.resetAt <= now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-
-  if (current.count >= maxRequests) {
+  if (timestamps.length >= maxRequests) {
+    const retryAt = timestamps[0] + windowMs;
+    store.set(key, { timestamps, resetAt: retryAt });
     return {
       allowed: false,
-      retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+      retryAfterSeconds: Math.max(1, Math.ceil((retryAt - now) / 1000)),
     };
   }
 
-  current.count += 1;
+  timestamps.push(now);
+  store.set(key, {
+    timestamps,
+    resetAt: timestamps[0] + windowMs,
+  });
   return { allowed: true, retryAfterSeconds: 0 };
 }
 

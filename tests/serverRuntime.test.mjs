@@ -14,7 +14,7 @@ test('parseJsonEnvValue parses JSON and respects fallback', () => {
   assert.throws(() => parseJsonEnvValue('X', '{broken'), /X must contain valid JSON/);
 });
 
-test('takeRateLimit allows requests until the limit then exposes retry delay', () => {
+test('takeRateLimit allows requests until the sliding-window quota then exposes retry delay', () => {
   const store = new Map();
   const now = 1_000;
 
@@ -30,10 +30,37 @@ test('takeRateLimit allows requests until the limit then exposes retry delay', (
     allowed: false,
     retryAfterSeconds: 5,
   });
-  assert.deepEqual(takeRateLimit(store, 'client', 2, 5_000, now + 5_001), {
+  assert.deepEqual(takeRateLimit(store, 'client', 2, 5_000, now + 5_000), {
     allowed: true,
     retryAfterSeconds: 0,
   });
+});
+
+test('takeRateLimit closes fixed-window boundary bursts', () => {
+  const store = new Map();
+  const windowMs = 10_000;
+
+  assert.equal(takeRateLimit(store, 'client', 2, windowMs, 9_998).allowed, true);
+  assert.equal(takeRateLimit(store, 'client', 2, windowMs, 9_999).allowed, true);
+
+  const blockedAcrossOldBoundary = takeRateLimit(store, 'client', 2, windowMs, 10_001);
+  assert.deepEqual(blockedAcrossOldBoundary, {
+    allowed: false,
+    retryAfterSeconds: 10,
+  });
+
+  assert.equal(takeRateLimit(store, 'client', 2, windowMs, 19_998).allowed, true);
+  assert.equal(store.get('client').timestamps.length, 2);
+});
+
+test('takeRateLimit keeps per-key memory bounded by the quota', () => {
+  const store = new Map();
+
+  for (let index = 0; index < 100; index += 1) {
+    takeRateLimit(store, 'client', 3, 60_000, 1_000 + index);
+  }
+
+  assert.equal(store.get('client').timestamps.length, 3);
 });
 
 test('hasValidSession rejects expired sessions and clears rate/provider context', () => {
@@ -78,13 +105,13 @@ test('cleanupExpiredState removes expired sessions, provider context and stale l
     ['active', 5_000],
   ]);
   const unlockAttempts = new Map([
-    ['old-ip', { count: 1, resetAt: 999 }],
-    ['current-ip', { count: 1, resetAt: 5_000 }],
+    ['old-ip', { timestamps: [0], resetAt: 999 }],
+    ['current-ip', { timestamps: [1_000], resetAt: 5_000 }],
   ]);
   const chatRequests = new Map([
-    ['expired', { count: 1, resetAt: 5_000 }],
-    ['orphan', { count: 1, resetAt: 999 }],
-    ['active', { count: 1, resetAt: 999 }],
+    ['expired', { timestamps: [1_000], resetAt: 5_000 }],
+    ['orphan', { timestamps: [0], resetAt: 999 }],
+    ['active', { timestamps: [0], resetAt: 999 }],
   ]);
   const celineContexts = new Map([
     ['expired', [{ role: 'user', content: 'old' }]],

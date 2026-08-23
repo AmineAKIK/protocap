@@ -21,13 +21,14 @@ const shiftGuideConfig = {
   systemPromptExtra: null,
 };
 
-async function withRailwayServer(run) {
+async function withRailwayServer(run, options = {}) {
   const { app } = createServerApp({
     shiftGuideCode: 'access-code',
     shiftGuideConfig,
     celineRoutingSpec: TEST_CELINE_ROUTING_SPEC,
     ingressTrust: RAILWAY_INGRESS_TRUST,
     logger: { info() {}, warn() {}, error() {} },
+    ...options,
   });
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -68,6 +69,27 @@ test('changing X-Forwarded-For cannot bypass Railway client rate limiting', asyn
     });
     assert.equal(blocked.status, 429);
   });
+});
+
+test('unlock rate limiting stays bounded across the old fixed-window reset boundary', async () => {
+  let currentTime = 0;
+  await withRailwayServer(async (baseUrl) => {
+    const headers = { 'X-Real-IP': '203.0.113.40' };
+
+    assert.equal((await wrongUnlock(baseUrl, headers)).status, 401);
+
+    currentTime = 599_999;
+    for (let attempt = 0; attempt < 9; attempt += 1) {
+      assert.equal((await wrongUnlock(baseUrl, headers)).status, 401);
+    }
+
+    currentTime = 600_001;
+    assert.equal((await wrongUnlock(baseUrl, headers)).status, 401);
+
+    const blocked = await wrongUnlock(baseUrl, headers);
+    assert.equal(blocked.status, 429);
+    assert.equal(blocked.headers.get('retry-after'), '600');
+  }, { now: () => currentTime });
 });
 
 test('distinct valid Railway client IPs keep distinct unlock buckets', async () => {
