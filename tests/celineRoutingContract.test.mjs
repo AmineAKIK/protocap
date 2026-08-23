@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 import {
   createCelineAuthorityRevision,
   validateCelineRoutingSpec,
@@ -43,6 +44,25 @@ test('routing contract rejects unknown actions and duplicate route/action ids', 
   assert.ok(result.errors.some((error) => error.includes('duplicates "a1"')));
   assert.ok(result.errors.some((error) => error.includes('unknown action "missing"')));
   assert.ok(result.errors.some((error) => error.includes('duplicates route "route_a"')));
+});
+
+test('routing contract enforces route cardinality and text budgets', () => {
+  const tooManyRoutes = Array.from({ length: CONFIG_BUDGETS.routes + 1 }, (_, index) => ({
+    id: `route_${index}`,
+    label: `Route ${index}`,
+    decisionGuide: 'Guide',
+    actionIds: ['a1'],
+  }));
+  const cardinality = validateCelineRoutingSpec({ ...spec, routes: tooManyRoutes }, config);
+  assert.equal(cardinality.ok, false);
+  assert.match(cardinality.errors.join('\n'), new RegExp(`between 1 and ${CONFIG_BUDGETS.routes} routes`));
+
+  const oversized = validateCelineRoutingSpec({
+    ...spec,
+    routes: [{ ...spec.routes[0], decisionGuide: 'x'.repeat(CONFIG_BUDGETS.textChars + 1) }],
+  }, config);
+  assert.equal(oversized.ok, false);
+  assert.match(oversized.errors.join('\n'), new RegExp(`at most ${CONFIG_BUDGETS.textChars} characters`));
 });
 
 test('authority revision is deterministic and changes when routing semantics change', () => {
