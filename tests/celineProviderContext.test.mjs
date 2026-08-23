@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  appendCelineProviderDecision,
+  buildCelineProviderHistory,
+  extractLatestCelineUserMessage,
+} from '../server/celineProviderContext.mjs';
+
+test('provider context extracts only the latest valid operator message', () => {
+  assert.equal(extractLatestCelineUserMessage([
+    { role: 'user', content: 'ancien' },
+    { role: 'assistant', content: '{"message":"ancienne checklist"}' },
+    { role: 'user', content: 'courant' },
+  ]), 'courant');
+
+  assert.equal(extractLatestCelineUserMessage([{ role: 'assistant', content: 'x' }]), null);
+  assert.equal(extractLatestCelineUserMessage([{ role: 'user', content: 'x'.repeat(4_001) }]), null);
+});
+
+test('provider context stores only operator turns and closed server decisions', () => {
+  let context = [];
+  context = appendCelineProviderDecision(context, 'Je commence mon poste', {
+    kind: 'route',
+    id: 'debut_poste_production',
+  });
+
+  assert.deepEqual(context, [
+    { role: 'user', content: 'Je commence mon poste' },
+    { role: 'assistant', content: '{"kind":"route","id":"debut_poste_production"}' },
+  ]);
+  assert.doesNotMatch(JSON.stringify(context), /checklist|Faire le contrôle|module/i);
+});
+
+test('provider context is bounded to eight semantic turns', () => {
+  let context = [];
+  for (let index = 0; index < 12; index += 1) {
+    context = appendCelineProviderDecision(context, `tour-${index}`, {
+      kind: 'clarify',
+      id: `q-${index}`,
+    });
+  }
+
+  assert.equal(context.length, 16);
+  assert.equal(context[0].content, 'tour-4');
+  const history = buildCelineProviderHistory(context, 'nouveau');
+  assert.equal(history.length, 17);
+  assert.deepEqual(history.at(-1), { role: 'user', content: 'nouveau' });
+});
