@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
 import { resolveServerSecret } from './server/envCompat.mjs';
+import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
@@ -42,6 +43,7 @@ const { app } = createServerApp({
   celineProvider,
   runtimeState,
   distDir,
+  ingressTrust: RAILWAY_INGRESS_TRUST,
 });
 
 const cleanupTimer = setInterval(
