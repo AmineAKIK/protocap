@@ -39,6 +39,24 @@ function collectActionIds(modules) {
   return ids;
 }
 
+function canonicalizeValidRoutingSpec(spec) {
+  return {
+    version: spec.version,
+    routes: spec.routes.map((route) => ({
+      id: route.id,
+      label: route.label,
+      decisionGuide: route.decisionGuide,
+      actionIds: [...route.actionIds],
+    })),
+    clarifications: spec.clarifications.map((clarification) => ({
+      id: clarification.id,
+      question: clarification.question,
+      decisionGuide: clarification.decisionGuide,
+    })),
+    classifierRules: [...spec.classifierRules],
+  };
+}
+
 export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
   const errors = [];
   if (!isRecord(spec)) return { ok: false, errors: ['Celine routing spec must be an object'] };
@@ -120,6 +138,12 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+export function parseCelineRoutingSpec(spec, shiftGuideConfig) {
+  const validation = validateCelineRoutingSpec(spec, shiftGuideConfig);
+  if (!validation.ok) return { ...validation, value: null };
+  return { ok: true, errors: [], value: canonicalizeValidRoutingSpec(spec) };
 }
 
 export function createCelineAuthorityRevision(routingSpec) {
