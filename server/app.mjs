@@ -17,6 +17,7 @@ import {
 } from './celineProviderContext.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import { createReadinessSnapshot } from './readiness.mjs';
+import { createClientDisconnectSignal } from './requestCancellation.mjs';
 import {
   buildSecurityHeaders,
   safeCompareSecrets,
@@ -250,11 +251,13 @@ export function createServerApp({
       celineContexts.get(token),
       userMessage
     );
+    const clientDisconnect = createClientDisconnectSignal(res);
 
     try {
       const providerContent = await celineProvider.complete({
         systemPrompt: celineSystemPrompt,
         history: providerHistory,
+        signal: clientDisconnect.signal,
       });
       const decision = parseCelineDecision(providerContent);
       const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
@@ -269,11 +272,16 @@ export function createServerApp({
       }
       return res.json(response);
     } catch (error) {
+      if (error instanceof CelineProviderError && error.code === 'cancelled') {
+        return;
+      }
       const mapped = mapProviderError(error);
       logger.error('Celine provider request failed', {
         code: error instanceof CelineProviderError ? error.code : 'unknown',
       });
       return res.status(mapped.status).json({ error: mapped.error });
+    } finally {
+      clientDisconnect.dispose();
     }
   });
 
