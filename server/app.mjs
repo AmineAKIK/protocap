@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
 import { validateShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
+import { CELINE_AUTHORITY_REVISION } from './celineAuthorityRevision.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import {
@@ -143,7 +144,12 @@ export function createServerApp({
       return res.status(401).json({ error: 'Code incorrect.' });
     }
 
-    return res.json({ ...issueSession(), configRevision, ...shiftGuideClientData });
+    return res.json({
+      ...issueSession(),
+      configRevision,
+      celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      ...shiftGuideClientData,
+    });
   });
 
   app.get('/api/shiftguide/session', (req, res) => {
@@ -151,7 +157,12 @@ export function createServerApp({
     if (!hasValidSession(sessions, chatRequests, token, now())) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
-    return res.json({ ok: true, expiresAt: sessions.get(token), configRevision });
+    return res.json({
+      ok: true,
+      expiresAt: sessions.get(token),
+      configRevision,
+      celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+    });
   });
 
   app.delete('/api/shiftguide/session', (req, res) => {
