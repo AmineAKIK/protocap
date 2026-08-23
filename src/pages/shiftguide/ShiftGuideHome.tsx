@@ -26,6 +26,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { SGModule } from '../../data/shiftguideModules';
 import { getSgModules } from '../../data/shiftguideModules';
+import { getShiftGuidePersistentStorage } from '../../features/shiftguide/shiftGuideStorage';
 import { useShiftGuideProgressOverview } from '../../features/shiftguide/useShiftGuideProgressOverview';
 
 type ContextId =
@@ -54,6 +55,7 @@ interface ModuleSummary {
 }
 
 const EMPTY_SUMMARY: ModuleSummary = { treatedCount: 0, totalActions: 0, isComplete: false };
+const localStorage = getShiftGuidePersistentStorage();
 
 const CONTEXTS: ContextDef[] = [
   {

@@ -31,6 +31,31 @@ function parseJson(raw) {
   }
 }
 
+function safeGetItem(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage, key, value) {
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemoveItem(storage, key) {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Progress persistence is optional at runtime; callers may keep state in memory.
+  }
+}
+
 function sanitizeActions(value) {
   if (!isRecord(value)) return {};
   const actions = {};
@@ -81,27 +106,37 @@ function emptyState(configRevision) {
 
 function getLegacyKeys(storage) {
   const keys = [];
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (typeof key === 'string' && key.startsWith(LEGACY_MODULE_PREFIX)) keys.push(key);
+  let length;
+  try {
+    length = storage.length;
+  } catch {
+    return keys;
+  }
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const key = storage.key(index);
+      if (typeof key === 'string' && key.startsWith(LEGACY_MODULE_PREFIX)) keys.push(key);
+    } catch {
+      return keys;
+    }
   }
   return keys;
 }
 
 function clearLegacyProgress(storage) {
-  storage.removeItem(LEGACY_PROGRESS_STORAGE_KEY);
-  storage.removeItem(LEGACY_PROGRESS_V2_STORAGE_KEY);
-  for (const key of getLegacyKeys(storage)) storage.removeItem(key);
+  safeRemoveItem(storage, LEGACY_PROGRESS_STORAGE_KEY);
+  safeRemoveItem(storage, LEGACY_PROGRESS_V2_STORAGE_KEY);
+  for (const key of getLegacyKeys(storage)) safeRemoveItem(storage, key);
 }
 
 export function readProgressState(storage) {
-  const configRevision = storage.getItem(CONFIG_REVISION_STORAGE_KEY);
+  const configRevision = safeGetItem(storage, CONFIG_REVISION_STORAGE_KEY);
   if (!configRevision) return emptyState('');
 
-  const current = normalizeCurrentState(parseJson(storage.getItem(PROGRESS_STORAGE_KEY)), configRevision);
+  const current = normalizeCurrentState(parseJson(safeGetItem(storage, PROGRESS_STORAGE_KEY)), configRevision);
   const hasLegacy =
-    storage.getItem(LEGACY_PROGRESS_STORAGE_KEY) !== null ||
-    storage.getItem(LEGACY_PROGRESS_V2_STORAGE_KEY) !== null ||
+    safeGetItem(storage, LEGACY_PROGRESS_STORAGE_KEY) !== null ||
+    safeGetItem(storage, LEGACY_PROGRESS_V2_STORAGE_KEY) !== null ||
     getLegacyKeys(storage).length > 0;
 
   if (current && !hasLegacy) return current;
@@ -110,17 +145,17 @@ export function readProgressState(storage) {
   if (current) return current;
 
   const fresh = { ...emptyState(configRevision), updatedAt: Date.now() };
-  storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(fresh));
+  safeSetItem(storage, PROGRESS_STORAGE_KEY, JSON.stringify(fresh));
   return fresh;
 }
 
 export function writeProgressState(storage, state) {
-  const configRevision = storage.getItem(CONFIG_REVISION_STORAGE_KEY);
+  const configRevision = safeGetItem(storage, CONFIG_REVISION_STORAGE_KEY);
   if (!configRevision) return emptyState('');
 
   const normalized = normalizeCurrentState(state, configRevision) ?? emptyState(configRevision);
   const next = { ...normalized, updatedAt: Date.now() };
-  storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(next));
+  safeSetItem(storage, PROGRESS_STORAGE_KEY, JSON.stringify(next));
   return next;
 }
 
