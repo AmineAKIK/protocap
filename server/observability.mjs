@@ -1,9 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+const KNOWN_API_PATHS = new Set([
+  '/api/health',
+  '/api/ready',
+  '/api/shiftguide/unlock',
+  '/api/shiftguide/session',
+  '/api/celine/chat',
+]);
 
 function normalizeRequestId(value) {
   return typeof value === 'string' && REQUEST_ID_PATTERN.test(value) ? value : null;
+}
+
+function observableApiPath(req) {
+  const routePath = typeof req.route?.path === 'string' ? req.route.path : null;
+  return routePath && KNOWN_API_PATHS.has(routePath) ? routePath : '/api/*';
 }
 
 export function createRequestId(headerValue) {
@@ -51,7 +63,7 @@ export function attachRequestObservability(app, { logger, now = () => Date.now()
       logger.info('http_request', {
         requestId,
         method: req.method,
-        path: req.route?.path ?? req.path,
+        path: observableApiPath(req),
         status: res.statusCode,
         durationMs: Math.max(0, now() - startedAt),
       });
