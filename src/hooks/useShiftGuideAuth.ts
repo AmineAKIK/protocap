@@ -3,6 +3,7 @@ import type { ShiftGuideData } from '../types/shiftGuide';
 
 interface ShiftGuideUnlockResponse extends ShiftGuideData {
   token: string;
+  expiresAt: number;
 }
 
 export interface ShiftGuideAuthResult {
@@ -14,14 +15,23 @@ export const SHIFTGUIDE_SESSION_INVALIDATED_EVENT = 'shiftguide:session-invalida
 
 const SESSION_KEY = 'shiftguide_auth_token';
 const DATA_KEY = 'shiftguide_data';
+const EXPIRY_KEY = 'shiftguide_session_expires_at';
 
 function clearStoredShiftGuideAuth() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(DATA_KEY);
+  sessionStorage.removeItem(EXPIRY_KEY);
 }
 
 function notifySessionInvalidated() {
   window.dispatchEvent(new Event(SHIFTGUIDE_SESSION_INVALIDATED_EVENT));
+}
+
+function getStoredExpiry(): number | null {
+  const raw = sessionStorage.getItem(EXPIRY_KEY);
+  if (!raw) return null;
+  const expiresAt = Number(raw);
+  return Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null;
 }
 
 export function getShiftGuideToken(): string | null {
@@ -40,13 +50,19 @@ export function getShiftGuideData(): ShiftGuideData | null {
 }
 
 export function isShiftGuideUnlocked(): boolean {
+  const expiresAt = getStoredExpiry();
+  if (!expiresAt || expiresAt <= Date.now()) {
+    clearStoredShiftGuideAuth();
+    return false;
+  }
   return !!getShiftGuideToken() && !!getShiftGuideData();
 }
 
 export async function validateShiftGuideSession(): Promise<boolean> {
   const token = getShiftGuideToken();
   const data = getShiftGuideData();
-  if (!token || !data) {
+  const expiresAt = getStoredExpiry();
+  if (!token || !data || !expiresAt || expiresAt <= Date.now()) {
     clearStoredShiftGuideAuth();
     return false;
   }
@@ -57,7 +73,22 @@ export async function validateShiftGuideSession(): Promise<boolean> {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (res.ok) return true;
+    if (res.ok) {
+      const body: unknown = await res.json().catch(() => null);
+      if (
+        !body ||
+        typeof body !== 'object' ||
+        !('expiresAt' in body) ||
+        typeof body.expiresAt !== 'number' ||
+        !Number.isFinite(body.expiresAt) ||
+        body.expiresAt <= Date.now()
+      ) {
+        clearStoredShiftGuideAuth();
+        return false;
+      }
+      sessionStorage.setItem(EXPIRY_KEY, String(body.expiresAt));
+      return true;
+    }
 
     if (res.status === 401) {
       clearStoredShiftGuideAuth();
@@ -83,17 +114,25 @@ export async function unlockShiftGuide(code: string): Promise<ShiftGuideAuthResu
     }
 
     const response: unknown = await res.json();
-    if (!response || typeof response !== 'object' || !('token' in response)) {
+    if (!response || typeof response !== 'object' || !('token' in response) || !('expiresAt' in response)) {
       return { ok: false, error: 'Session invalide.' };
     }
 
-    const { token, ...data } = response as Record<string, unknown>;
-    if (typeof token !== 'string' || token.length === 0 || !isShiftGuideData(data)) {
+    const { token, expiresAt, ...data } = response as Record<string, unknown>;
+    if (
+      typeof token !== 'string' ||
+      token.length === 0 ||
+      typeof expiresAt !== 'number' ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now() ||
+      !isShiftGuideData(data)
+    ) {
       return { ok: false, error: 'Données ShiftGuide invalides.' };
     }
 
-    const validatedResponse: ShiftGuideUnlockResponse = { token, ...data };
+    const validatedResponse: ShiftGuideUnlockResponse = { token, expiresAt, ...data };
     sessionStorage.setItem(SESSION_KEY, validatedResponse.token);
+    sessionStorage.setItem(EXPIRY_KEY, String(validatedResponse.expiresAt));
     sessionStorage.setItem(DATA_KEY, JSON.stringify(data));
     return { ok: true };
   } catch {

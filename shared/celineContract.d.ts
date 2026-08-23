@@ -11,16 +11,38 @@ export interface SharedCelineResponse {
   followUp: string | null;
 }
 
+export interface SharedCelineActionDefinition {
+  text: string;
+  note: string | null;
+  module: string | null;
+}
+
 export function parseCelineAssistantContent(
   rawContent: unknown,
-  allowedActionIds: ReadonlySet<string>
+  actionCatalog: ReadonlyMap<string, SharedCelineActionDefinition>
 ): SharedCelineResponse | null;
+
+export function collectShiftGuideActions(
+  modules: Array<{
+    title: string;
+    type: 'standard' | 'choice';
+    actions?: Array<{ id: string; text: string; note?: string }>;
+    subModules?: Array<{
+      title: string;
+      actions: Array<{ id: string; text: string; note?: string }>;
+    }>;
+  }>
+): Map<string, SharedCelineActionDefinition>;
 
 export function collectShiftGuideActionIds(
   modules: Array<{
+    title: string;
     type: 'standard' | 'choice';
-    actions?: Array<{ id: string }>;
-    subModules?: Array<{ actions: Array<{ id: string }> }>;
+    actions?: Array<{ id: string; text: string; note?: string }>;
+    subModules?: Array<{
+      title: string;
+      actions: Array<{ id: string; text: string; note?: string }>;
+    }>;
   }>
 ): Set<string>;
 

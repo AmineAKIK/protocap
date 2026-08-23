@@ -46,9 +46,14 @@ export async function requestCelineResponse(
       lockShiftGuide();
       throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
     }
+
     if (response.status === 429) {
-      throw new Error('Service IA temporairement saturé. Réessaie dans un moment.');
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter && /^\d+$/.test(retryAfter)) {
+        throw new Error(`${errorMessage} Délai conseillé : ${retryAfter} s.`);
+      }
     }
+
     throw new Error(errorMessage);
   }
 

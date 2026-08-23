@@ -19,7 +19,12 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   });
 
   useEffect(() => {
-    window.localStorage.setItem(vkey, JSON.stringify(value));
+    try {
+      window.localStorage.setItem(vkey, JSON.stringify(value));
+    } catch {
+      // Browser storage is a persistence enhancement, not a runtime requirement.
+      // Quota/security failures must not crash the application.
+    }
   }, [vkey, value]);
 
   return [value, setValue] as const;
