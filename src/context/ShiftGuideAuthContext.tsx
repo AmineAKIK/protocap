@@ -30,8 +30,26 @@ const ShiftGuideAuthContext = createContext<ShiftGuideAuthContextValue | null>(n
 
 export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ShiftGuideAuthStatus>('checking');
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const authGenerationRef = useRef(0);
   const validationPromiseRef = useRef<Promise<boolean> | null>(null);
+
+  const applyValidationResult = useCallback((valid: boolean) => {
+    if (!valid) {
+      setSessionExpiresAt(null);
+      setStatus('locked');
+      return;
+    }
+
+    const expiresAt = getShiftGuideSessionExpiry();
+    if (!expiresAt || expiresAt <= Date.now()) {
+      lockShiftGuide();
+      return;
+    }
+
+    setSessionExpiresAt(expiresAt);
+    setStatus('unlocked');
+  }, []);
 
   const validateSession = useCallback(() => {
     if (!validationPromiseRef.current) {
@@ -46,10 +64,10 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
     const generation = authGenerationRef.current;
     const valid = await validateSession();
     if (authGenerationRef.current === generation) {
-      setStatus(valid ? 'unlocked' : 'locked');
+      applyValidationResult(valid);
     }
     return valid;
-  }, [validateSession]);
+  }, [applyValidationResult, validateSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,12 +76,13 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
       const generation = authGenerationRef.current;
       const valid = await validateSession();
       if (!cancelled && authGenerationRef.current === generation) {
-        setStatus(valid ? 'unlocked' : 'locked');
+        applyValidationResult(valid);
       }
     };
 
     const handleInvalidated = () => {
       authGenerationRef.current += 1;
+      setSessionExpiresAt(null);
       setStatus('locked');
     };
 
@@ -88,28 +107,34 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [reconcileSession, validateSession]);
+  }, [applyValidationResult, reconcileSession, validateSession]);
 
   useEffect(() => {
-    if (status !== 'unlocked') return;
+    if (status !== 'unlocked' || !sessionExpiresAt) return;
 
-    const expiresAt = getShiftGuideSessionExpiry();
-    if (!expiresAt || expiresAt <= Date.now()) {
+    const remainingMs = sessionExpiresAt - Date.now();
+    if (remainingMs <= 0) {
       lockShiftGuide();
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
       lockShiftGuide();
-    }, expiresAt - Date.now());
+    }, remainingMs);
 
     return () => window.clearTimeout(timeoutId);
-  }, [status]);
+  }, [sessionExpiresAt, status]);
 
   const unlock = useCallback(async (code: string) => {
     const result = await unlockShiftGuide(code);
     if (result.ok) {
       authGenerationRef.current += 1;
+      const expiresAt = getShiftGuideSessionExpiry();
+      if (!expiresAt || expiresAt <= Date.now()) {
+        lockShiftGuide();
+        return { ok: false, error: 'Session invalide.' };
+      }
+      setSessionExpiresAt(expiresAt);
       setStatus('unlocked');
     }
     return result;
@@ -117,6 +142,7 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     authGenerationRef.current += 1;
+    setSessionExpiresAt(null);
     setStatus('locked');
     await logoutShiftGuide();
   }, []);
