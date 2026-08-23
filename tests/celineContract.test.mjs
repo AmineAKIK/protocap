@@ -1,63 +1,36 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  collectShiftGuideActions,
-  parseCelineAssistantContent,
-} from '../shared/celineContract.js';
+import { parseCelineDecision } from '../shared/celineContract.js';
 
-const modules = [
-  {
-    id: 'standard',
-    title: 'Standard',
-    type: 'standard',
-    actions: [
-      { id: 'a1', text: 'Action canonique 1', note: 'Note canonique' },
-      { id: 'a2', text: 'Action canonique 2' },
-    ],
-  },
-  {
-    id: 'choice',
-    title: 'Choice',
-    type: 'choice',
-    subModules: [
-      { id: 'sub', title: 'Sous-module', actions: [{ id: 'a3', text: 'Action canonique 3' }] },
-    ],
-  },
-];
-
-const actionCatalog = collectShiftGuideActions(modules);
-
-test('Celine contract returns canonical action content instead of trusting provider text', () => {
-  const result = parseCelineAssistantContent(JSON.stringify({
-    message: 'Contrôle suivant.',
-    checklist: [
-      { actionId: 'a1', text: 'Texte halluciné', note: 'Note hallucinee', module: 'Faux module' },
-    ],
-    followUp: 'Dis-moi quand c’est fait.',
-  }), actionCatalog);
-
-  assert.deepEqual(result, {
-    message: 'Contrôle suivant.',
-    checklist: [
-      { actionId: 'a1', text: 'Action canonique 1', note: 'Note canonique', module: 'Standard' },
-    ],
-    followUp: 'Dis-moi quand c’est fait.',
-  });
+test('Celine provider contract accepts only closed decision shapes', () => {
+  assert.deepEqual(
+    parseCelineDecision(JSON.stringify({ kind: 'route', id: 'debut_oc' })),
+    { kind: 'route', id: 'debut_oc' }
+  );
+  assert.deepEqual(
+    parseCelineDecision(JSON.stringify({ kind: 'clarify', id: 'debut_oc_precedent' })),
+    { kind: 'clarify', id: 'debut_oc_precedent' }
+  );
+  assert.deepEqual(
+    parseCelineDecision(JSON.stringify({ kind: 'lexicon', id: 'OC' })),
+    { kind: 'lexicon', id: 'OC' }
+  );
+  assert.deepEqual(
+    parseCelineDecision(JSON.stringify({ kind: 'emergency', id: 'general_alarm' })),
+    { kind: 'emergency', id: 'general_alarm' }
+  );
+  assert.deepEqual(parseCelineDecision(JSON.stringify({ kind: 'unknown' })), { kind: 'unknown' });
 });
 
-test('Celine contract rejects malformed JSON and unknown or duplicated action ids', () => {
-  assert.equal(parseCelineAssistantContent('{broken', actionCatalog), null);
-  assert.equal(parseCelineAssistantContent(JSON.stringify({
-    message: 'x',
-    checklist: [{ actionId: 'hallucinated' }],
-    followUp: null,
-  }), actionCatalog), null);
-  assert.equal(parseCelineAssistantContent(JSON.stringify({
-    message: 'x',
-    checklist: [
-      { actionId: 'a1' },
-      { actionId: 'a1' },
-    ],
-    followUp: null,
-  }), actionCatalog), null);
+test('Celine provider contract rejects free-form operator content and unknown shapes', () => {
+  assert.equal(parseCelineDecision('{broken'), null);
+  assert.equal(parseCelineDecision(JSON.stringify({ kind: 'route' })), null);
+  assert.equal(parseCelineDecision(JSON.stringify({ kind: 'route', id: '' })), null);
+  assert.equal(parseCelineDecision(JSON.stringify({ kind: 'invented', id: 'x' })), null);
+  assert.equal(parseCelineDecision(JSON.stringify({
+    kind: 'route',
+    id: 'debut_oc',
+    message: 'Instruction libre qui ne doit jamais traverser la frontière',
+  })), null);
+  assert.equal(parseCelineDecision(JSON.stringify({ kind: 'unknown', reason: 'texte libre' })), null);
 });

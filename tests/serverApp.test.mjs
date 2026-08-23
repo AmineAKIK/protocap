@@ -15,7 +15,7 @@ const shiftGuideConfig = {
       actions: [{ id: 'action_1', text: 'Faire le contrôle' }],
     },
   ],
-  lexique: [],
+  lexique: [{ sigle: 'OC', definition: 'Ordre de conditionnement' }],
   urgences: DEFAULT_SHIFTGUIDE_URGENCES,
   systemPromptExtra: null,
 };
@@ -48,6 +48,17 @@ async function unlock(baseUrl) {
   });
   assert.equal(response.status, 200);
   return response.json();
+}
+
+async function chat(baseUrl, token, messages = [{ role: 'user', content: 'bonjour' }]) {
+  return fetch(`${baseUrl}/api/celine/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ messages }),
+  });
 }
 
 test('Express factory supports the real unlock, session and logout lifecycle over HTTP', async () => {
@@ -87,70 +98,74 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
   });
 });
 
-test('Celine HTTP route returns canonical Protocap action data instead of provider text', async () => {
+test('Celine HTTP route renders operator content from server authority, not provider prose', async () => {
   let providerRequest;
   const celineProvider = {
     async complete(input) {
       providerRequest = input;
-      return JSON.stringify({
-        message: 'Action suivante.',
-        checklist: [
-          { actionId: 'action_1', text: 'Texte fournisseur non fiable', note: 'x', module: 'x' },
-        ],
-        followUp: null,
-      });
+      return JSON.stringify({ kind: 'route', id: 'module:module_standard' });
     },
   };
 
   await withServer({ celineProvider }, async (baseUrl) => {
     const unlocked = await unlock(baseUrl);
-    const response = await fetch(`${baseUrl}/api/celine/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${unlocked.token}`,
-      },
-      body: JSON.stringify({ messages: [{ role: 'user', content: 'bonjour' }] }),
-    });
+    const response = await chat(baseUrl, unlocked.token);
 
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), {
-      message: 'Action suivante.',
+      message: 'Suis la séquence « Module standard » dans l’ordre indiqué.',
       checklist: [
         { actionId: 'action_1', text: 'Faire le contrôle', note: null, module: 'Module standard' },
       ],
-      followUp: null,
+      followUp: 'Dis-moi quand la checklist est traitée.',
     });
     assert.equal(providerRequest.history[0].content, 'bonjour');
-    assert.match(providerRequest.systemPrompt, /Module standard/i);
+    assert.match(providerRequest.systemPrompt, /module:module_standard/);
+    assert.doesNotMatch(providerRequest.systemPrompt, /Faire le contrôle/);
   });
 });
 
-test('Celine HTTP route rejects hallucinated action ids and maps provider failures', async () => {
-  const invalidProvider = {
-    async complete() {
-      return JSON.stringify({
-        message: 'x',
-        checklist: [{ actionId: 'unknown_action', text: 'x', note: null, module: null }],
-        followUp: null,
-      });
+test('Celine HTTP route renders lexicon facts without exposing definitions to the provider', async () => {
+  const celineProvider = {
+    async complete(input) {
+      assert.match(input.systemPrompt, /SIGLES AUTORISES/);
+      assert.doesNotMatch(input.systemPrompt, /Ordre de conditionnement/);
+      return JSON.stringify({ kind: 'lexicon', id: 'OC' });
     },
   };
 
-  await withServer({ celineProvider: invalidProvider }, async (baseUrl) => {
+  await withServer({ celineProvider }, async (baseUrl) => {
     const unlocked = await unlock(baseUrl);
-    const response = await fetch(`${baseUrl}/api/celine/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${unlocked.token}`,
-      },
-      body: JSON.stringify({ messages: [{ role: 'user', content: 'bonjour' }] }),
+    const response = await chat(baseUrl, unlocked.token, [{ role: 'user', content: 'OC veut dire quoi ?' }]);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      message: 'OC : Ordre de conditionnement',
+      checklist: [],
+      followUp: null,
     });
-    assert.equal(response.status, 502);
-    assert.deepEqual(await response.json(), { error: 'Service IA indisponible.' });
   });
+});
 
+test('Celine HTTP route rejects free-form output and unauthorized decisions', async () => {
+  for (const providerContent of [
+    JSON.stringify({
+      kind: 'route',
+      id: 'module:module_standard',
+      message: 'Instruction libre injectée par le fournisseur',
+    }),
+    JSON.stringify({ kind: 'route', id: 'route_inventee' }),
+  ]) {
+    const invalidProvider = { async complete() { return providerContent; } };
+    await withServer({ celineProvider: invalidProvider }, async (baseUrl) => {
+      const unlocked = await unlock(baseUrl);
+      const response = await chat(baseUrl, unlocked.token);
+      assert.equal(response.status, 502);
+      assert.deepEqual(await response.json(), { error: 'Service IA indisponible.' });
+    });
+  }
+});
+
+test('Celine HTTP route maps provider failures', async () => {
   const rateLimitedProvider = {
     async complete() {
       throw new CelineProviderError('rate_limited', 'limited');
@@ -158,14 +173,7 @@ test('Celine HTTP route rejects hallucinated action ids and maps provider failur
   };
   await withServer({ celineProvider: rateLimitedProvider }, async (baseUrl) => {
     const unlocked = await unlock(baseUrl);
-    const response = await fetch(`${baseUrl}/api/celine/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${unlocked.token}`,
-      },
-      body: JSON.stringify({ messages: [{ role: 'user', content: 'bonjour' }] }),
-    });
+    const response = await chat(baseUrl, unlocked.token);
     assert.equal(response.status, 429);
   });
 });
