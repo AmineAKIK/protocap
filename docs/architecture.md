@@ -11,7 +11,7 @@ flowchart TB
   subgraph Browser
     Public[Public prototype routes]
     ShiftUI[ShiftGuide UI]
-    SessionStore[sessionStorage\nShiftGuide token + protected config + revision]
+    SessionStore[sessionStorage\nShiftGuide token + protected config + revisions]
     LocalStore[localStorage\nrevision-bound progress/history]
   end
 
@@ -19,6 +19,7 @@ flowchart TB
     Unlock[POST /api/shiftguide/unlock]
     Session[GET/DELETE /api/shiftguide/session]
     Chat[POST /api/celine/chat]
+    Authority[Céline authority catalog\nserver-owned routes + wording]
     Memory[In-memory sessions\nand rate-limit state]
     Static[Static Vite bundle]
   end
@@ -37,6 +38,9 @@ flowchart TB
   Chat --> Memory
   Chat --> ProviderAdapter
   ProviderAdapter --> Provider
+  Provider --> Chat
+  Chat --> Authority
+  Authority --> ShiftUI
   Static --> Browser
 ```
 
@@ -58,13 +62,13 @@ Knowledge Base is driven by repository data. LinePulse is a visual decision-supp
 
 ## ShiftGuide boundary
 
-ShiftGuide code is part of the public client bundle, but protected operational configuration is not. The server reads `SG_MODULES`, `SG_LEXIQUE`, `SG_URGENCES` and `SG_SYSTEM_PROMPT` from its environment. Unlock succeeds only when a server-side code comparison passes, after which the server returns a random session token, the protected client payload and a deterministic `configRevision`.
+ShiftGuide code is part of the public client bundle, but protected operational configuration is not. The server reads `SG_MODULES`, `SG_LEXIQUE`, `SG_URGENCES` and `SG_SYSTEM_PROMPT` from its environment. Unlock succeeds only when a server-side code comparison passes, after which the server returns a random session token, the protected client payload, a deterministic `configRevision` and the current `celineAuthorityRevision`.
 
-The revision is a SHA-256 identity derived server-side from the validated operational configuration: modules and action text, lexicon, emergency guidance and the additional Céline context. Object-key insertion order does not affect the result. A semantic configuration change therefore creates a new identity even when action IDs are reused.
+The configuration revision is a SHA-256 identity derived server-side from the validated operational configuration: modules and action text, lexicon, emergency guidance and the additional Céline context. Object-key insertion order does not affect the result. A semantic configuration change therefore creates a new identity even when action IDs are reused.
 
-The browser stores the active ShiftGuide token, protected payload, expiry and revision in `sessionStorage`. The server returns the same revision during session validation. A revision mismatch fails closed instead of allowing an old browser session to claim compatibility with a different procedure.
+The browser stores the active ShiftGuide token, protected payload, expiry and both server revisions in `sessionStorage`. The server returns the same identities during session validation. A revision mismatch fails closed instead of allowing an old browser session to claim compatibility with a different procedure or AI authority protocol.
 
-Revision-bound local data uses a separate persistent copy of the current revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock instead of being silently attributed to the current procedure. Céline history is also cleared when the authoritative revision changes. Format version and procedure revision are separate concepts: one describes JSON shape, the other describes operational meaning.
+Revision-bound local data uses a separate persistent copy of the current configuration revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock instead of being silently attributed to the current procedure. Céline history is cleared when either the operational configuration changes or the Céline authority protocol changes. A protocol-only change does not erase operator progress.
 
 ### Shared runtime contract
 
@@ -77,7 +81,7 @@ The server and client use the same runtime validator from `shared/shiftGuideCont
 - lexicon sigles are unique case-insensitively;
 - emergency content has a typed, non-empty structure.
 
-`SG_URGENCES` is optional at deployment level for backward compatibility: the server supplies the current safe default when the variable is absent. Once resolved, the same typed payload is sent to the UI and injected into Céline's system prompt, avoiding two independent copies of operational emergency content.
+`SG_URGENCES` is optional at deployment level for backward compatibility: the server supplies the current safe default when the variable is absent. The resolved typed payload is sent to the protected UI and retained server-side as the authoritative source for deterministic Céline emergency responses.
 
 ## Server process boundary
 
@@ -89,18 +93,24 @@ This keeps process lifecycle concerns separate from request handling while avoid
 
 ## Céline boundary
 
-Céline is intentionally server-mediated:
+Céline is intentionally server-mediated and the model is not an operational-content authority:
 
 1. the client sends chat history with the ShiftGuide bearer token;
-2. the server verifies the session, request shape and rate limit;
-3. the server owns the system prompt and provider credential;
+2. the server verifies the session, request shape and rate limits;
+3. the server owns the classification prompt, provider credential and closed decision catalog;
 4. `server/providers/deepSeekProvider.mjs` owns the DeepSeek-specific request/response envelope and timeout;
-5. the server validates provider content against `shared/celineContract.js`;
-6. `/api/celine/chat` returns a Protocap-owned `{ message, checklist, followUp }` DTO.
+5. the provider may return only a compact decision such as a route ID, clarification ID, lexicon key, emergency topic or `unknown`;
+6. `shared/celineContract.js` rejects free-form provider fields and malformed decision shapes;
+7. `server/celineAuthority.mjs` resolves the decision against the current validated configuration and renders all operator-facing wording, checklist content and follow-up text;
+8. `/api/celine/chat` returns the same Protocap-owned `{ message, checklist, followUp }` DTO to the browser.
 
-The browser no longer knows DeepSeek's `choices[]` structure. `src/features/shiftguide/celineClient.ts` only knows the Protocap HTTP contract.
+The browser therefore knows neither DeepSeek's response envelope nor the provider decision protocol. `src/features/shiftguide/celineClient.ts` only knows the Protocap HTTP DTO.
 
-The server also verifies every checklist `actionId` against the validated ShiftGuide configuration and rejects duplicate or unknown IDs. A provider response therefore cannot create arbitrary progress keys even if the model ignores its prompt instructions.
+Procedure text, lexicon definitions and emergency wording do not need to be copied into the provider prompt to be rendered. The model sees permitted decision identifiers and classification context; the server retrieves the authoritative content after a permitted decision is selected. A syntactically valid but unknown route is rejected. A provider response that adds its own `message`, checklist or instruction is rejected rather than partially trusted.
+
+Configured standard modules and choice submodules receive deterministic full-sequence routes. Additional fixed cross-module routes are exposed only when every referenced action ID exists in the current validated configuration, preventing partially compatible operational sequences from entering the model's allowed catalog.
+
+`SG_SYSTEM_PROMPT` is treated as non-authoritative site context. It may influence classification but cannot introduce new routes, instructions or operator-facing responses.
 
 ## Security controls implemented today
 
@@ -109,14 +119,16 @@ The server also verifies every checklist `actionId` against the validated ShiftG
 - eight-hour session TTL;
 - reactive browser expiry enforcement with foreground revalidation;
 - server-issued configuration revision enforced across session, progress and Céline-history lifecycles;
+- separately versioned Céline authority protocol with history-only invalidation;
+- closed provider decision protocol with rejection of free-form operator content;
+- server-owned rendering of procedure actions, clarification wording, lexicon facts and emergency guidance;
 - per-IP unlock throttling, per-IP chat throttling and per-session chat throttling;
 - 128 KB JSON body limit;
 - generic client-facing provider/server errors;
 - CSP, frame denial, MIME sniffing protection, restrictive permissions policy and referrer policy;
 - `Cache-Control: no-store` for API routes;
 - HSTS when the request is secure;
-- DeepSeek request timeout;
-- server-side validation of Céline's provider response and operational action IDs.
+- DeepSeek request timeout.
 
 ## Deliberate current trade-offs
 
@@ -129,6 +141,10 @@ A distributed store such as Redis would become justified if horizontal scaling, 
 ### Provider availability
 
 The DeepSeek adapter is the only production provider today. The application boundary is provider-independent, but no artificial multi-provider abstraction or fallback routing is implemented because there is no current product requirement for it.
+
+### Decision catalog evolution
+
+The current authority catalog intentionally remains code-owned while the operational configuration format contains only modules, lexicon, emergencies and supplemental context. This makes authority explicit and testable now, but the fixed cross-module route definitions still need to stay aligned with the procedure model. If route customization becomes a deployment requirement, the next step is a declarative, validated routing contract rather than adding more prompt-only rules.
 
 ## Deployment boundary
 
