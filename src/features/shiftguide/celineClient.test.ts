@@ -9,6 +9,7 @@ afterEach(() => {
 describe('requestCelineResponse', () => {
   it('sends only the latest operator turn and consumes the Protocap DTO', async () => {
     sessionStorage.setItem('shiftguide_auth_token', 'token');
+    const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       message: 'Action suivante.',
       checklist: [
@@ -27,16 +28,37 @@ describe('requestCelineResponse', () => {
         { role: 'assistant', content: '{"message":"ancienne réponse avec checklist"}' },
         { role: 'user', content: 'bonjour' },
       ],
-      new AbortController().signal
+      controller.signal
     );
 
     expect(result.message).toBe('Action suivante.');
     expect(result.checklist[0].actionId).toBe('a1');
     const [, options] = fetchMock.mock.calls[0];
     expect(options.headers.Authorization).toBe('Bearer token');
+    expect(options.signal).toBe(controller.signal);
     expect(JSON.parse(options.body)).toEqual({
       messages: [{ role: 'user', content: 'bonjour' }],
     });
+  });
+
+  it('propagates an AbortError when the caller cancels the in-flight browser request', async () => {
+    sessionStorage.setItem('shiftguide_auth_token', 'token');
+    const controller = new AbortController();
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((_url, options: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        options.signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        }, { once: true });
+      })
+    ));
+
+    const request = requestCelineResponse(
+      [{ role: 'user', content: 'bonjour' }],
+      controller.signal
+    );
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   it('rejects requests without an operator turn before network access', async () => {
