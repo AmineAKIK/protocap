@@ -1,4 +1,5 @@
 import {
+  clearCelineHistory,
   reconcileCelineAuthorityRevision,
   reconcileShiftGuideConfigRevision,
 } from '../../shared/shiftGuidePersistence.js';
@@ -31,6 +32,9 @@ function clearStoredShiftGuideAuth() {
   sessionStorage.removeItem(EXPIRY_KEY);
   sessionStorage.removeItem(REVISION_KEY);
   sessionStorage.removeItem(CELINE_AUTHORITY_REVISION_KEY);
+  clearCelineHistory(sessionStorage);
+  // Migration cleanup: old builds stored Celine history persistently on the workstation.
+  clearCelineHistory(localStorage);
 }
 
 function notifySessionInvalidated() {
@@ -194,6 +198,10 @@ export async function unlockShiftGuide(code: string): Promise<ShiftGuideAuthResu
       ...data,
     };
 
+    // Every successful unlock starts a fresh conversational memory scope.
+    clearCelineHistory(sessionStorage);
+    // Remove legacy persistent conversation data from pre-session-scoped builds.
+    clearCelineHistory(localStorage);
     reconcileShiftGuideConfigRevision(localStorage, validatedResponse.configRevision);
     reconcileCelineAuthorityRevision(localStorage, validatedResponse.celineAuthorityRevision);
     sessionStorage.setItem(SESSION_KEY, validatedResponse.token);
