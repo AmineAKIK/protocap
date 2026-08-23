@@ -57,3 +57,46 @@ test('DeepSeek adapter maps upstream rate limits and invalid payloads to provide
     (error) => error instanceof CelineProviderError && error.code === 'invalid_response'
   );
 });
+
+test('DeepSeek adapter propagates client cancellation separately from timeout', async () => {
+  let capturedSignal;
+  const provider = createDeepSeekProvider({
+    apiKey: 'secret',
+    timeoutMs: 60_000,
+    fetchImpl: async (_url, options) => {
+      capturedSignal = options.signal;
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+      });
+    },
+  });
+  const controller = new AbortController();
+
+  const request = provider.complete({
+    systemPrompt: 'system',
+    history: [],
+    signal: controller.signal,
+  });
+  controller.abort(new Error('client gone'));
+
+  await assert.rejects(
+    () => request,
+    (error) => error instanceof CelineProviderError && error.code === 'cancelled'
+  );
+  assert.equal(capturedSignal.aborted, true);
+});
+
+test('DeepSeek adapter keeps its own timeout semantics when no client cancellation occurs', async () => {
+  const provider = createDeepSeekProvider({
+    apiKey: 'secret',
+    timeoutMs: 5,
+    fetchImpl: async (_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+    }),
+  });
+
+  await assert.rejects(
+    () => provider.complete({ systemPrompt: 'system', history: [] }),
+    (error) => error instanceof CelineProviderError && error.code === 'timeout'
+  );
+});
