@@ -137,17 +137,18 @@ test('ShiftGuide budgets reject excessive cardinality and field length', () => {
 });
 
 test('ShiftGuide budgets bound total actions across otherwise valid scopes', () => {
-  const modules = Array.from({ length: 11 }, (_, moduleIndex) => ({
+  const moduleCount = Math.floor(CONFIG_BUDGETS.totalActions / CONFIG_BUDGETS.actionsPerScope) + 1;
+  const modules = Array.from({ length: moduleCount }, (_, moduleIndex) => ({
     id: `m${moduleIndex}`,
     title: `Module ${moduleIndex}`,
     description: '',
     type: 'standard',
-    actions: Array.from({ length: 190 }, (_, actionIndex) => ({
+    actions: Array.from({ length: CONFIG_BUDGETS.actionsPerScope }, (_, actionIndex) => ({
       id: `m${moduleIndex}_a${actionIndex}`,
       text: 'Action',
     })),
   }));
-  assert.ok(modules.every((module) => module.actions.length <= CONFIG_BUDGETS.actionsPerScope));
+  assert.ok(moduleCount <= CONFIG_BUDGETS.modules);
   const result = validateShiftGuideData({ ...validConfig, modules });
   assert.equal(result.ok, false);
   assert.match(result.errors.join('\n'), new RegExp(`at most ${CONFIG_BUDGETS.totalActions} actions in total`));
