@@ -25,6 +25,23 @@ This favors continuity over a crash for non-sensitive operator state. It does **
 
 The fallback is intentionally page-memory only. It is not synchronized across tabs and is not persisted elsewhere.
 
+## Multi-tab progress writes
+
+Procedure progress is stored as one revision-bound JSON document. A single `localStorage.setItem()` is atomic, but a progress update is a larger `read -> mutate -> write` operation. Without coordination, two tabs can read the same snapshot and the later writer can silently erase the first tab's update.
+
+`src/features/shiftguide/shiftGuideConcurrency.ts` serializes these progress mutations with one named Web Lock for the current origin. The complete transaction runs inside the exclusive lock:
+
+1. read the latest progress state;
+2. derive the action toggle, active choice or reset from that fresh state;
+3. write the new complete state;
+4. notify local subscribers.
+
+This keeps independent action updates from same-origin tabs from overwriting each other. Conflicting updates to the **same** action are intentionally ordered by lock acquisition; the later transaction sees the earlier result and applies its own requested operation against that current state.
+
+The authentication model is unchanged. `sessionStorage` remains tab-scoped, so another tab must still hold its own valid ShiftGuide session before it can reach protected UI. Web Locks coordinate only the shared non-sensitive progress document; they do not share credentials or create a collaborative multi-user session.
+
+If Web Locks are unavailable or fail before the transaction enters the critical section, ShiftGuide falls back to an in-page FIFO queue. That fallback prevents races inside the current page but cannot provide a cross-tab guarantee. The UI surfaces a warning telling the operator not to modify ShiftGuide in multiple tabs simultaneously. A mutation that throws after entering a Web Lock is propagated and is never replayed automatically.
+
 ## Shared persistence contracts
 
 `shared/shiftGuidePersistence.js` and `shared/shiftGuideProgress.js` are also non-throwing when their supplied storage implementation fails. This is defense in depth: future callers cannot accidentally turn a storage exception into a ShiftGuide render failure simply by bypassing the browser adapter.
@@ -33,4 +50,6 @@ The browser adapter remains important because it preserves a coherent in-memory 
 
 ## What this does not solve
 
-This boundary does not provide transactional multi-tab progress writes. `localStorage` read/modify/write races between tabs remain a separate concurrency concern. It also does not make browser storage a durable database or replace server-side persistence if cross-device or multi-operator state becomes a product requirement.
+The lock is browser-local and same-origin only. It does not turn browser storage into a server-side source of truth, coordinate different devices or users, provide durable distributed transactions, or replace server persistence if cross-device or genuinely collaborative operational state becomes a product requirement.
+
+When persistent storage itself has degraded to page memory, tabs no longer share the same backing progress state; the existing persistence warning takes precedence over the multi-tab warning because durability is already lost.
