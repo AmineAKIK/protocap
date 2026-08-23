@@ -10,7 +10,8 @@ export function createDeepSeekProvider({
   apiKey,
   fetchImpl = fetch,
   timeoutMs = 45_000,
-  model = 'deepseek-chat',
+  model = 'deepseek-v4-flash',
+  maxTokens = 4_000,
 } = {}) {
   if (!apiKey) return null;
 
@@ -27,7 +28,9 @@ export function createDeepSeekProvider({
           body: JSON.stringify({
             model,
             messages: [{ role: 'system', content: systemPrompt }, ...history],
+            thinking: { type: 'disabled' },
             temperature: 0.2,
+            max_tokens: maxTokens,
             response_format: { type: 'json_object' },
           }),
           signal: AbortSignal.timeout(timeoutMs),
