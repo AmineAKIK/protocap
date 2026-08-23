@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createCelineAuthority } from '../server/celineAuthority.mjs';
 import { buildCelineSystemPrompt } from '../server/celinePrompt.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
 
@@ -7,7 +8,7 @@ const sampleData = {
   modules: [
     {
       id: 'm1',
-      title: 'Debut poste',
+      title: 'Début poste',
       description: 'demo',
       type: 'standard',
       actions: [
@@ -22,22 +23,27 @@ const sampleData = {
   systemPromptExtra: 'Contexte test',
 };
 
-test('buildCelineSystemPrompt contains server procedures and mandatory response contract', () => {
-  const prompt = buildCelineSystemPrompt(sampleData);
+function buildPrompt(data = sampleData) {
+  const authority = createCelineAuthority(data);
+  return buildCelineSystemPrompt(data, authority);
+}
 
-  assert.match(prompt, /Reponds TOUJOURS en JSON valide/);
-  assert.match(prompt, /"actionId":"dp_01"/);
-  assert.match(prompt, /actionId.*OBLIGATOIRE/);
-  assert.match(prompt, /DEBUT POSTE — 2 actions/);
-  assert.match(prompt, /1\. \[dp_01\] Action une/);
-  assert.match(prompt, /2\. \[dp_02\] Action deux \[Important\]/);
-  assert.match(prompt, /Note: Fin module/);
-  assert.match(prompt, /OC : Ordre de conditionnement/);
-  assert.match(prompt, /CONTEXTE SUPPLEMENTAIRE/);
+test('buildCelineSystemPrompt exposes only closed server-owned decisions', () => {
+  const prompt = buildPrompt();
+
+  assert.match(prompt, /FRONTIERE D'AUTORITE/);
+  assert.match(prompt, /"kind":"route","id":"\.\.\."/);
+  assert.match(prompt, /module:m1: Début poste/);
+  assert.match(prompt, /debut_oc_precedent/);
+  assert.match(prompt, /SIGLES AUTORISES/);
+  assert.match(prompt, /OC/);
+  assert.match(prompt, /CONTEXTE SITE NON AUTORITATIF/);
   assert.match(prompt, /Contexte test/);
+  assert.doesNotMatch(prompt, /Action une/);
+  assert.doesNotMatch(prompt, /Action deux/);
 });
 
-test('buildCelineSystemPrompt derives emergency guidance from the typed runtime payload', () => {
+test('buildCelineSystemPrompt does not expose emergency wording for free-form reproduction', () => {
   const customUrgences = {
     ...DEFAULT_SHIFTGUIDE_URGENCES,
     emergencyNumbers: ['112'],
@@ -46,18 +52,17 @@ test('buildCelineSystemPrompt derives emergency guidance from the typed runtime 
       instruction: 'Instruction test',
       steps: ['Étape A', 'Étape B'],
     },
-    goldenRules: [{ id: 'test', label: 'Règle test', description: 'Description test' }],
   };
-  const prompt = buildCelineSystemPrompt({ ...sampleData, urgences: customUrgences });
+  const prompt = buildPrompt({ ...sampleData, urgences: customUrgences });
 
-  assert.match(prompt, /Numeros : 112/);
-  assert.match(prompt, /Signal test — Instruction test/);
-  assert.match(prompt, /Étape A -> Étape B/);
-  assert.match(prompt, /RÈGLE TEST — Description test/i);
-  assert.doesNotMatch(prompt, /Numeros : 15 ou 18/);
+  assert.match(prompt, /general_alarm/);
+  assert.match(prompt, /accident/);
+  assert.doesNotMatch(prompt, /Signal test/);
+  assert.doesNotMatch(prompt, /Étape A/);
+  assert.doesNotMatch(prompt, /112/);
 });
 
-test('buildCelineSystemPrompt omits supplemental section when empty', () => {
-  const prompt = buildCelineSystemPrompt({ ...sampleData, systemPromptExtra: '' });
-  assert.doesNotMatch(prompt, /CONTEXTE SUPPLEMENTAIRE/);
+test('buildCelineSystemPrompt omits supplemental context when empty', () => {
+  const prompt = buildPrompt({ ...sampleData, systemPromptExtra: '' });
+  assert.doesNotMatch(prompt, /CONTEXTE SITE NON AUTORITATIF/);
 });
