@@ -34,7 +34,7 @@ export class ShiftGuideMutationCoordinator {
   }
 
   async runExclusive<T>(name: string, task: () => Promise<T> | T): Promise<T> {
-    let lockManager: LockManagerLike | null = null;
+    let lockManager: LockManagerLike | null;
     try {
       lockManager = this.resolveLockManager();
     } catch {
