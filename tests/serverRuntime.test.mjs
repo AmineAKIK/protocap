@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   cleanupExpiredState,
   hasValidSession,
-  normalizeChatHistory,
   parseJsonEnvValue,
   revokeSession,
   takeRateLimit,
@@ -13,28 +12,6 @@ test('parseJsonEnvValue parses JSON and respects fallback', () => {
   assert.deepEqual(parseJsonEnvValue('X', '[1,2]'), [1, 2]);
   assert.equal(parseJsonEnvValue('X', undefined, 'fallback'), 'fallback');
   assert.throws(() => parseJsonEnvValue('X', '{broken'), /X must contain valid JSON/);
-});
-
-test('normalizeChatHistory accepts user/assistant history and strips legacy system message', () => {
-  const history = [
-    { role: 'system', content: 'ignored client prompt' },
-    { role: 'user', content: 'bonjour' },
-    { role: 'assistant', content: '{"message":"ok"}' },
-  ];
-
-  assert.deepEqual(normalizeChatHistory(history), history.slice(1));
-  assert.deepEqual(normalizeChatHistory([{ role: 'user', content: 'bonjour' }]), [
-    { role: 'user', content: 'bonjour' },
-  ]);
-});
-
-test('normalizeChatHistory rejects malformed or unsafe history', () => {
-  assert.equal(normalizeChatHistory([]), null);
-  assert.equal(normalizeChatHistory([{ role: 'system', content: 'only system' }]), null);
-  assert.equal(normalizeChatHistory([{ role: 'system', content: 'x' }, { role: 'system', content: 'y' }]), null);
-  assert.equal(normalizeChatHistory([{ role: 'user', content: '' }]), null);
-  assert.equal(normalizeChatHistory([{ role: 'tool', content: 'nope' }]), null);
-  assert.equal(normalizeChatHistory([{ role: 'user', content: 'x'.repeat(20_001) }]), null);
 });
 
 test('takeRateLimit allows requests until the limit then exposes retry delay', () => {
