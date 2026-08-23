@@ -26,45 +26,40 @@ export function takeRateLimit(store, key, maxRequests, windowMs, now = Date.now(
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
-export function normalizeChatHistory(messages) {
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
-
-  const history = messages[0]?.role === 'system' ? messages.slice(1) : messages;
-  if (history.length === 0) return null;
-
-  const valid = history.every((message) => {
-    if (!message || typeof message !== 'object') return false;
-    if (!['user', 'assistant'].includes(message.role)) return false;
-    return typeof message.content === 'string' && message.content.length > 0 && message.content.length <= 20_000;
-  });
-
-  return valid ? history : null;
-}
-
-export function revokeSession(sessions, chatRequests, token) {
+export function revokeSession(sessions, chatRequests, token, celineContexts = null) {
   if (!token) return false;
   const existed = sessions.delete(token);
   chatRequests.delete(token);
+  celineContexts?.delete(token);
   return existed;
 }
 
-export function hasValidSession(sessions, chatRequests, token, now = Date.now()) {
+export function hasValidSession(
+  sessions,
+  chatRequests,
+  token,
+  now = Date.now(),
+  celineContexts = null
+) {
   if (!token) return false;
 
   const expiresAt = sessions.get(token);
   if (!expiresAt) return false;
   if (expiresAt <= now) {
-    revokeSession(sessions, chatRequests, token);
+    revokeSession(sessions, chatRequests, token, celineContexts);
     return false;
   }
 
   return true;
 }
 
-export function cleanupExpiredState({ sessions, unlockAttempts, chatRequests }, now = Date.now()) {
+export function cleanupExpiredState(
+  { sessions, unlockAttempts, chatRequests, celineContexts },
+  now = Date.now()
+) {
   for (const [token, expiresAt] of sessions) {
     if (expiresAt <= now) {
-      revokeSession(sessions, chatRequests, token);
+      revokeSession(sessions, chatRequests, token, celineContexts);
     }
   }
 

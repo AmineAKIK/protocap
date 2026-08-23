@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe('requestCelineResponse', () => {
-  it('consumes the Protocap DTO without knowing the provider response shape', async () => {
+  it('sends only the latest operator turn and consumes the Protocap DTO', async () => {
     sessionStorage.setItem('shiftguide_auth_token', 'token');
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       message: 'Action suivante.',
@@ -22,7 +22,11 @@ describe('requestCelineResponse', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await requestCelineResponse(
-      [{ role: 'user', content: 'bonjour' }],
+      [
+        { role: 'user', content: 'ancien contexte opérateur' },
+        { role: 'assistant', content: '{"message":"ancienne réponse avec checklist"}' },
+        { role: 'user', content: 'bonjour' },
+      ],
       new AbortController().signal
     );
 
@@ -30,6 +34,21 @@ describe('requestCelineResponse', () => {
     expect(result.checklist[0].actionId).toBe('a1');
     const [, options] = fetchMock.mock.calls[0];
     expect(options.headers.Authorization).toBe('Bearer token');
+    expect(JSON.parse(options.body)).toEqual({
+      messages: [{ role: 'user', content: 'bonjour' }],
+    });
+  });
+
+  it('rejects requests without an operator turn before network access', async () => {
+    sessionStorage.setItem('shiftguide_auth_token', 'token');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(requestCelineResponse(
+      [{ role: 'assistant', content: 'réponse locale' }],
+      new AbortController().signal
+    )).rejects.toThrow('Requête IA invalide.');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fails closed on a 401 and clears the local ShiftGuide session', async () => {

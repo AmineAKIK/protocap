@@ -7,6 +7,14 @@ export interface CelineApiMessage {
   content: string;
 }
 
+function getLatestUserMessage(history: CelineApiMessage[]): CelineApiMessage | null {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const message = history[index];
+    if (message?.role === 'user' && message.content.length > 0) return message;
+  }
+  return null;
+}
+
 export async function requestCelineResponse(
   history: CelineApiMessage[],
   signal: AbortSignal
@@ -16,13 +24,18 @@ export async function requestCelineResponse(
     throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
   }
 
+  const latestUserMessage = getLatestUserMessage(history);
+  if (!latestUserMessage) {
+    throw new Error('Requête IA invalide.');
+  }
+
   const response = await fetch('/api/celine/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages: history }),
+    body: JSON.stringify({ messages: [latestUserMessage] }),
     signal,
   });
 
