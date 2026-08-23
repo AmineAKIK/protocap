@@ -28,6 +28,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getSgModules } from '../../data/shiftguideModules';
 import { requestCelineResponse } from '../../features/shiftguide/celineClient';
 import type { CelineApiMessage } from '../../features/shiftguide/celineClient';
+import { getShiftGuidePersistentStorage } from '../../features/shiftguide/shiftGuideStorage';
 import { setSharedActionStatus } from '../../hooks/useModuleProgress';
 
 interface ISpeechRecognitionEvent {
@@ -49,6 +50,7 @@ type SpeechRecognitionCtor = new () => ISpeechRecognition;
 
 const w = window as unknown as Record<string, unknown>;
 const SpeechRecognitionAPI = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SpeechRecognitionCtor | undefined;
+const localStorage = getShiftGuidePersistentStorage();
 
 function useSpeechInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
