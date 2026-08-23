@@ -25,9 +25,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AccessibleDialog } from '../../components/AccessibleDialog';
 import { getSgModules } from '../../data/shiftguideModules';
 import { requestCelineResponse } from '../../features/shiftguide/celineClient';
-import type { CelineApiMessage } from '../../features/shiftguide/celineClient';
 import { getShiftGuidePersistentStorage } from '../../features/shiftguide/shiftGuideStorage';
 import { setSharedActionStatus } from '../../hooks/useModuleProgress';
 
@@ -56,6 +56,16 @@ function useSpeechInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const recRef = useRef<ISpeechRecognition | null>(null);
 
+  useEffect(() => () => {
+    const rec = recRef.current;
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onend = null;
+    rec.onerror = null;
+    rec.stop();
+    recRef.current = null;
+  }, []);
+
   const toggle = () => {
     if (!SpeechRecognitionAPI) return;
 
@@ -73,8 +83,14 @@ function useSpeechInput(onResult: (text: string) => void) {
       const transcript = e.results[0][0].transcript;
       onResult(transcript);
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      if (recRef.current === rec) recRef.current = null;
+      setListening(false);
+    };
+    rec.onerror = () => {
+      if (recRef.current === rec) recRef.current = null;
+      setListening(false);
+    };
 
     recRef.current = rec;
     rec.start();
@@ -105,11 +121,11 @@ interface CelineMessage {
 
 function findProgressScope(actionId: string): string | undefined {
   for (const module of getSgModules()) {
-    if (module.type === 'standard' && module.actions?.some((action) => action.id === actionId)) {
+    if (module.type === 'standard' && module.actions.some((action) => action.id === actionId)) {
       return module.id;
     }
     if (module.type === 'choice') {
-      const subModule = module.subModules?.find((sub) =>
+      const subModule = module.subModules.find((sub) =>
         sub.actions.some((action) => action.id === actionId)
       );
       if (subModule) return subModule.id;
@@ -118,23 +134,11 @@ function findProgressScope(actionId: string): string | undefined {
   return undefined;
 }
 
-function toApiHistory(msgs: CelineMessage[]): CelineApiMessage[] {
-  return msgs
-    .filter((m) => !m.loading)
-    .map((m) => ({
-      role: m.role,
-      content:
-        m.role === 'assistant'
-          ? JSON.stringify({ message: m.content, checklist: m.checklist, followUp: m.followUp })
-          : m.content,
-    }));
-}
-
-async function callOpenAI(
-  history: CelineApiMessage[],
+async function requestCelineGuidance(
+  userMessage: string,
   signal: AbortSignal
 ): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
-  const response = await requestCelineResponse(history, signal);
+  const response = await requestCelineResponse(userMessage, signal);
   const createdAt = Date.now();
   return {
     message: response.message,
@@ -149,7 +153,6 @@ async function callOpenAI(
 }
 
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-const PROMPT_VERSION = 'v12';
 
 function isValidMessage(m: unknown): m is CelineMessage {
   if (!m || typeof m !== 'object') return false;
@@ -177,9 +180,6 @@ function normalizeMessage(m: CelineMessage): CelineMessage {
 
 function loadHistory(): CelineMessage[] {
   try {
-    if (localStorage.getItem('shiftguide_prompt_version') !== PROMPT_VERSION) {
-      localStorage.setItem('shiftguide_prompt_version', PROMPT_VERSION);
-    }
     const saved = localStorage.getItem(STORAGE_KEY_HISTORY);
     if (!saved) return [];
     const parsed = JSON.parse(saved);
@@ -270,32 +270,37 @@ function WelcomeScreen({ onSuggest }: { onSuggest: (text: string) => void }) {
 }
 
 function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <div className="px-5 py-5">
-          <p className="text-sm font-bold text-slate-950">Quitter Céline ?</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-            Tu veux vraiment quitter ? L'historique reste sauvegardé, tu pourras reprendre.
-          </p>
-        </div>
-        <div className="flex border-t border-slate-100 bg-slate-50">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3.5 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950"
-          >
-            Annuler
-          </button>
-          <div className="w-px bg-slate-100" />
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-3.5 text-sm font-semibold text-red-700 transition hover:bg-red-50"
-          >
-            Quitter
-          </button>
-        </div>
+    <AccessibleDialog
+      title="Quitter Céline ?"
+      description="Tu veux vraiment quitter ? L'historique reste sauvegardé, tu pourras reprendre."
+      onClose={onCancel}
+      hideCloseButton
+      initialFocusRef={cancelRef}
+      className="max-w-sm"
+      contentClassName="p-0"
+    >
+      <div className="flex border-t border-slate-100 bg-slate-50">
+        <button
+          ref={cancelRef}
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-3.5 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
+        >
+          Annuler
+        </button>
+        <div className="w-px bg-slate-100" />
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="flex-1 py-3.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-700/20"
+        >
+          Quitter
+        </button>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 }
 
@@ -334,14 +339,16 @@ function Checklist({
               className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
             >
               <button
+                type="button"
                 onClick={() => onAction(msgId, item.id, 'done')}
+                aria-label={item.done ? `Annuler la validation : ${item.text}` : `Valider : ${item.text}`}
                 className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
                   item.done
                     ? 'border-emerald-600 bg-emerald-600 text-white'
                     : 'border-slate-300 text-transparent hover:border-emerald-600'
                 }`}
               >
-                <Check size={13} />
+                <Check size={13} aria-hidden="true" />
               </button>
 
               <div className="min-w-0 flex-1">
@@ -359,7 +366,9 @@ function Checklist({
               </div>
 
               <button
+                type="button"
                 onClick={() => onAction(msgId, item.id, 'na')}
+                aria-label={item.na ? `Annuler non applicable : ${item.text}` : `Marquer non applicable : ${item.text}`}
                 className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
                   item.na
                     ? 'bg-slate-700 text-white'
@@ -552,8 +561,6 @@ export function CelinePage() {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
 
-    const currentMessages = messages;
-
     const userMsg: CelineMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
@@ -580,10 +587,7 @@ export function CelinePage() {
     inputRef.current?.focus();
 
     try {
-      const result = await callOpenAI(
-        toApiHistory([...currentMessages, userMsg]),
-        abortRef.current.signal
-      );
+      const result = await requestCelineGuidance(trimmed, abortRef.current.signal);
       setMessages((prev) => [
         ...prev.filter((m) => !m.loading),
         {
@@ -770,13 +774,16 @@ export function CelinePage() {
         <div className="flex-none border-t border-zinc-200 bg-white/95 px-4 py-2">
           <div className="mx-auto flex max-w-[1500px] items-center gap-2">
           <button
+            type="button"
             onClick={clearSession}
+            aria-label="Effacer l'historique Céline"
             className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-black text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
             title="Effacer"
           >
-            <Trash2 size={11} />
+            <Trash2 size={11} aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={clearSession}
             className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-black text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
           >
@@ -803,22 +810,26 @@ export function CelinePage() {
           </div>
           {micSupported && (
             <button
+              type="button"
               onClick={toggleMic}
+              aria-label={listening ? "Arrêter l'écoute vocale" : 'Démarrer la saisie vocale'}
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition active:scale-95 ${
                 listening
                   ? 'animate-pulse bg-red-600 text-white'
                   : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800'
               }`}
             >
-              {listening ? <MicOff size={18} /> : <Mic size={18} />}
+              {listening ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
             </button>
           )}
           <button
+            type="button"
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || loading}
+            aria-label="Envoyer le message"
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-zinc-950 transition hover:bg-teal-500 active:scale-95 disabled:opacity-40"
           >
-            <Send size={18} />
+            <Send size={18} aria-hidden="true" />
           </button>
         </div>
       </div>
