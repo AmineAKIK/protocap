@@ -62,6 +62,51 @@ test.describe('ShiftGuide critical journeys', () => {
     await expect(page.getByText('Terminé')).toBeVisible();
   });
 
+  test('serializes progress mutations behind the same-origin Web Lock', async ({ page, context }) => {
+    await unlock(page, '/shiftguide/module/module_standard');
+    const secondPage = await context.newPage();
+    await unlock(secondPage, '/shiftguide/module/module_standard');
+
+    expect(await page.evaluate(() => 'locks' in navigator)).toBe(true);
+
+    await page.evaluate(async () => {
+      await new Promise<void>((resolveReady) => {
+        void navigator.locks.request('protocap:shiftguide:progress', async () => {
+          await new Promise<void>((resolveRelease) => {
+            const target = window as typeof window & {
+              __releaseShiftGuideProgressLock?: () => void;
+            };
+            target.__releaseShiftGuideProgressLock = resolveRelease;
+            resolveReady();
+          });
+        });
+      });
+    });
+
+    await secondPage.getByRole('button', { name: 'Valider' }).click();
+    await secondPage.waitForTimeout(150);
+
+    expect(await secondPage.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}');
+      return state.actions?.action_standard_1;
+    })).toBeUndefined();
+
+    await page.evaluate(() => {
+      const target = window as typeof window & {
+        __releaseShiftGuideProgressLock?: () => void;
+      };
+      target.__releaseShiftGuideProgressLock?.();
+      delete target.__releaseShiftGuideProgressLock;
+    });
+
+    await expect.poll(() => secondPage.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}');
+      return state.actions?.action_standard_1;
+    })).toBe('validated');
+    await expect(secondPage.getByText('1 / 1 actions traitées')).toBeVisible();
+    await secondPage.close();
+  });
+
   test('keeps incomplete-module confirmation keyboard safe and restores focus', async ({ page }) => {
     await unlock(page, '/shiftguide/module/module_standard');
 
