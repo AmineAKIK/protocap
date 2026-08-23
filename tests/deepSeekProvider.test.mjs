@@ -29,7 +29,9 @@ test('DeepSeek adapter owns provider request shape and returns only assistant co
   assert.equal(captured.url, 'https://api.deepseek.com/chat/completions');
   assert.equal(captured.options.headers.Authorization, 'Bearer secret');
   const body = JSON.parse(captured.options.body);
-  assert.equal(body.model, 'deepseek-chat');
+  assert.equal(body.model, 'deepseek-v4-flash');
+  assert.deepEqual(body.thinking, { type: 'disabled' });
+  assert.equal(body.max_tokens, 4_000);
   assert.deepEqual(body.messages, [
     { role: 'system', content: 'system' },
     { role: 'user', content: 'bonjour' },
