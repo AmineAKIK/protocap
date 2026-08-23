@@ -16,7 +16,12 @@ export function createDeepSeekProvider({
   if (!apiKey) return null;
 
   return {
-    async complete({ systemPrompt, history }) {
+    async complete({ systemPrompt, history, signal = null }) {
+      const timeoutSignal = AbortSignal.timeout(timeoutMs);
+      const requestSignal = signal
+        ? AbortSignal.any([signal, timeoutSignal])
+        : timeoutSignal;
+
       let upstream;
       try {
         upstream = await fetchImpl('https://api.deepseek.com/chat/completions', {
@@ -33,10 +38,13 @@ export function createDeepSeekProvider({
             max_tokens: maxTokens,
             response_format: { type: 'json_object' },
           }),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: requestSignal,
         });
       } catch (error) {
-        if (error instanceof Error && error.name === 'TimeoutError') {
+        if (signal?.aborted) {
+          throw new CelineProviderError('cancelled', 'DeepSeek request cancelled because the client disconnected.', { cause: error });
+        }
+        if (timeoutSignal.aborted) {
           throw new CelineProviderError('timeout', 'DeepSeek request timed out.', { cause: error });
         }
         throw new CelineProviderError('unavailable', 'DeepSeek request failed.', { cause: error });
