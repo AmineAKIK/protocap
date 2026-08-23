@@ -10,7 +10,10 @@ import { useShiftGuideShell } from '../hooks/useShiftGuideShell';
 
 export function ShiftGuideLayout() {
   const { logout } = useShiftGuideAuth();
-  const { persistentStorageDegraded } = useShiftGuideStorageHealth();
+  const {
+    persistentStorageDegraded,
+    concurrencyProtectionDegraded,
+  } = useShiftGuideStorageHealth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -31,16 +34,22 @@ export function ShiftGuideLayout() {
     ? 'shiftguide-shell h-[100dvh] overflow-hidden bg-[#f3f5f7]'
     : 'shiftguide-shell min-h-screen bg-[#f3f5f7]';
 
+  const degradedMessage = persistentStorageDegraded
+    ? 'Persistance locale indisponible. Le travail reste utilisable dans cette page, mais certains changements peuvent être perdus après rechargement.'
+    : concurrencyProtectionDegraded
+      ? 'Protection multi-onglets indisponible. Évite de modifier ShiftGuide dans plusieurs onglets en même temps.'
+      : null;
+
   return (
     <div className={shellClass}>
       <ShiftGuideDesktopNavigation loggingOut={loggingOut} onLogout={handleLogout} />
 
-      {persistentStorageDegraded && (
+      {degradedMessage && (
         <div
           role="status"
           className="fixed left-1/2 top-3 z-[70] w-[min(92vw,42rem)] -translate-x-1/2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950 shadow-lg"
         >
-          Persistance locale indisponible. Le travail reste utilisable dans cette page, mais certains changements peuvent être perdus après rechargement.
+          {degradedMessage}
         </div>
       )}
 
