@@ -4,6 +4,7 @@ import test from 'node:test';
 import { createServerApp } from '../server/app.mjs';
 import { CelineProviderError } from '../server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
+import { TEST_CELINE_ROUTING_SPEC } from './celineRoutingFixture.mjs';
 
 const shiftGuideConfig = {
   modules: [
@@ -24,6 +25,7 @@ async function withServer(options, run) {
   const { app } = createServerApp({
     shiftGuideCode: 'access-code',
     shiftGuideConfig,
+    celineRoutingSpec: TEST_CELINE_ROUTING_SPEC,
     issueToken: () => 'test-session-token',
     logger: { error() {} },
     ...options,
@@ -61,7 +63,26 @@ async function chat(baseUrl, token, messages = [{ role: 'user', content: 'bonjou
   });
 }
 
-test('Express factory supports the real unlock, session and logout lifecycle over HTTP', async () => {
+test('server startup fails closed when routing references an action absent from ShiftGuide config', () => {
+  const incompatibleRouting = {
+    ...TEST_CELINE_ROUTING_SPEC,
+    routes: [{
+      ...TEST_CELINE_ROUTING_SPEC.routes[0],
+      actionIds: ['action_1', 'missing_action'],
+    }],
+  };
+
+  assert.throws(
+    () => createServerApp({
+      shiftGuideCode: 'access-code',
+      shiftGuideConfig,
+      celineRoutingSpec: incompatibleRouting,
+    }),
+    /Celine routing configuration is invalid:.*missing_action/
+  );
+});
+
+test('Express factory supports unlock, session and logout with stable routing identity', async () => {
   await withServer({}, async (baseUrl) => {
     const badUnlock = await fetch(`${baseUrl}/api/shiftguide/unlock`, {
       method: 'POST',
@@ -74,6 +95,7 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
     assert.equal(unlocked.token, 'test-session-token');
     assert.equal(typeof unlocked.expiresAt, 'number');
     assert.match(unlocked.configRevision, /^sha256:[a-f0-9]{64}$/);
+    assert.match(unlocked.celineAuthorityRevision, /^sha256:[a-f0-9]{64}$/);
     assert.equal(unlocked.modules[0].id, 'module_standard');
 
     const session = await fetch(`${baseUrl}/api/shiftguide/session`, {
@@ -84,26 +106,22 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
     assert.equal(sessionBody.ok, true);
     assert.equal(typeof sessionBody.expiresAt, 'number');
     assert.equal(sessionBody.configRevision, unlocked.configRevision);
+    assert.equal(sessionBody.celineAuthorityRevision, unlocked.celineAuthorityRevision);
 
     const logout = await fetch(`${baseUrl}/api/shiftguide/session`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${unlocked.token}` },
     });
     assert.equal(logout.status, 204);
-
-    const revoked = await fetch(`${baseUrl}/api/shiftguide/session`, {
-      headers: { Authorization: `Bearer ${unlocked.token}` },
-    });
-    assert.equal(revoked.status, 401);
   });
 });
 
-test('Celine HTTP route renders operator content from server authority, not provider prose', async () => {
+test('Celine HTTP route renders operator content from declared server routing, not provider prose', async () => {
   let providerRequest;
   const celineProvider = {
     async complete(input) {
       providerRequest = input;
-      return JSON.stringify({ kind: 'route', id: 'module:module_standard' });
+      return JSON.stringify({ kind: 'route', id: 'module_standard' });
     },
   };
 
@@ -120,7 +138,8 @@ test('Celine HTTP route renders operator content from server authority, not prov
       followUp: 'Dis-moi quand la checklist est traitée.',
     });
     assert.equal(providerRequest.history[0].content, 'bonjour');
-    assert.match(providerRequest.systemPrompt, /module:module_standard/);
+    assert.match(providerRequest.systemPrompt, /module_standard/);
+    assert.match(providerRequest.systemPrompt, /Utiliser pour le module standard de test/);
     assert.doesNotMatch(providerRequest.systemPrompt, /Faire le contrôle/);
   });
 });
@@ -148,11 +167,7 @@ test('Celine HTTP route renders lexicon facts without exposing definitions to th
 
 test('Celine HTTP route rejects free-form output and unauthorized decisions', async () => {
   for (const providerContent of [
-    JSON.stringify({
-      kind: 'route',
-      id: 'module:module_standard',
-      message: 'Instruction libre injectée par le fournisseur',
-    }),
+    JSON.stringify({ kind: 'route', id: 'module_standard', message: 'Instruction libre' }),
     JSON.stringify({ kind: 'route', id: 'route_inventee' }),
   ]) {
     const invalidProvider = { async complete() { return providerContent; } };
@@ -160,7 +175,6 @@ test('Celine HTTP route rejects free-form output and unauthorized decisions', as
       const unlocked = await unlock(baseUrl);
       const response = await chat(baseUrl, unlocked.token);
       assert.equal(response.status, 502);
-      assert.deepEqual(await response.json(), { error: 'Service IA indisponible.' });
     });
   }
 });

@@ -29,10 +29,30 @@ const config = {
   systemPromptExtra: 'Texte libre non autoritatif',
 };
 
-const authority = createCelineAuthority(config);
+const routingSpec = {
+  version: 1,
+  routes: [
+    {
+      id: 'standard_flow',
+      label: 'Module standard',
+      decisionGuide: 'Utiliser pour le scénario standard.',
+      actionIds: ['action_1', 'action_2'],
+    },
+  ],
+  clarifications: [
+    {
+      id: 'clarifier_situation',
+      question: 'Peux-tu préciser la situation ?',
+      decisionGuide: 'Utiliser si la situation est ambiguë.',
+    },
+  ],
+  classifierRules: ['Ne jamais supposer un état absent.'],
+};
+
+const authority = createCelineAuthority(config, routingSpec);
 
 test('route decisions render only canonical configured procedure content', () => {
-  assert.deepEqual(resolveCelineDecision(authority, { kind: 'route', id: 'module:module_standard' }), {
+  assert.deepEqual(resolveCelineDecision(authority, { kind: 'route', id: 'standard_flow' }), {
     message: 'Suis la séquence « Module standard » dans l’ordre indiqué.',
     checklist: [
       {
@@ -53,8 +73,8 @@ test('route decisions render only canonical configured procedure content', () =>
 });
 
 test('clarification, lexicon and emergency decisions render server-owned text', () => {
-  assert.deepEqual(resolveCelineDecision(authority, { kind: 'clarify', id: 'debut_oc_precedent' }), {
-    message: 'L’OC précédent est-il déjà clôturé ?',
+  assert.deepEqual(resolveCelineDecision(authority, { kind: 'clarify', id: 'clarifier_situation' }), {
+    message: 'Peux-tu préciser la situation ?',
     checklist: [],
     followUp: null,
   });
@@ -80,9 +100,4 @@ test('unknown and unauthorized decisions fail closed', () => {
   assert.equal(resolveCelineDecision(authority, { kind: 'clarify', id: 'question_inventee' }), null);
   assert.equal(resolveCelineDecision(authority, { kind: 'lexicon', id: 'INCONNU' }), null);
   assert.equal(resolveCelineDecision(authority, { kind: 'emergency', id: 'invented' }), null);
-});
-
-test('fixed operational routes are exposed only when every referenced action exists', () => {
-  assert.equal(authority.routes.has('debut_oc'), false);
-  assert.equal(authority.routes.has('module:module_standard'), true);
 });

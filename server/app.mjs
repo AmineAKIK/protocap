@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
 import { validateShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
-import { CELINE_AUTHORITY_REVISION } from './celineAuthorityRevision.mjs';
+import {
+  createCelineAuthorityRevision,
+  validateCelineRoutingSpec,
+} from './celineRoutingContract.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import {
@@ -61,6 +64,7 @@ function mapProviderError(error) {
 export function createServerApp({
   shiftGuideCode,
   shiftGuideConfig,
+  celineRoutingSpec,
   celineProvider = null,
   runtimeState = createServerRuntimeState(),
   distDir = null,
@@ -73,9 +77,21 @@ export function createServerApp({
     throw new Error(`ShiftGuide configuration is invalid: ${validation.errors.join('; ')}`);
   }
 
+  const routingValidation = validation.ok
+    ? validateCelineRoutingSpec(celineRoutingSpec, shiftGuideConfig)
+    : { ok: false, errors: ['ShiftGuide configuration must be valid before routing validation'] };
+  if (shiftGuideCode && !routingValidation.ok) {
+    throw new Error(`Celine routing configuration is invalid: ${routingValidation.errors.join('; ')}`);
+  }
+
   const configRevision = validation.ok ? createShiftGuideConfigRevision(shiftGuideConfig) : null;
   const shiftGuideClientData = validation.ok ? toClientShiftGuideData(shiftGuideConfig) : null;
-  const celineAuthority = validation.ok ? createCelineAuthority(shiftGuideConfig) : null;
+  const celineAuthority = validation.ok && routingValidation.ok
+    ? createCelineAuthority(shiftGuideConfig, celineRoutingSpec)
+    : null;
+  const celineAuthorityRevision = routingValidation.ok
+    ? createCelineAuthorityRevision(celineRoutingSpec)
+    : null;
   const celineSystemPrompt = celineAuthority
     ? buildCelineSystemPrompt(shiftGuideConfig, celineAuthority)
     : null;
@@ -117,7 +133,13 @@ export function createServerApp({
   });
 
   app.post('/api/shiftguide/unlock', (req, res) => {
-    if (!shiftGuideCode || !celineSystemPrompt || !shiftGuideClientData || !configRevision) {
+    if (
+      !shiftGuideCode ||
+      !celineSystemPrompt ||
+      !shiftGuideClientData ||
+      !configRevision ||
+      !celineAuthorityRevision
+    ) {
       return res.status(503).json({ error: 'Accès ShiftGuide non configuré.' });
     }
 
@@ -147,7 +169,7 @@ export function createServerApp({
     return res.json({
       ...issueSession(),
       configRevision,
-      celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      celineAuthorityRevision,
       ...shiftGuideClientData,
     });
   });
@@ -161,7 +183,7 @@ export function createServerApp({
       ok: true,
       expiresAt: sessions.get(token),
       configRevision,
-      celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      celineAuthorityRevision,
     });
   });
 

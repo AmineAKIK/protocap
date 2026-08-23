@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
+import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 import { cleanupExpiredState, parseJsonEnvValue } from './server/runtimeUtils.mjs';
@@ -24,12 +25,18 @@ const shiftGuideConfig = {
     DEFAULT_SHIFTGUIDE_URGENCES
   ),
 };
+const celineRoutingSpec = parseJsonEnvValue(
+  'SG_CELINE_ROUTING',
+  process.env.SG_CELINE_ROUTING,
+  DEFAULT_CELINE_ROUTING_SPEC
+);
 
 const runtimeState = createServerRuntimeState();
 const celineProvider = createDeepSeekProvider({ apiKey: deepSeekApiKey });
 const { app } = createServerApp({
   shiftGuideCode,
   shiftGuideConfig,
+  celineRoutingSpec,
   celineProvider,
   runtimeState,
   distDir,
