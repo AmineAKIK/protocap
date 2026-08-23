@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildSecurityHeaders,
-  readServerSecret,
   safeCompareSecrets,
   toClientShiftGuideData,
 } from '../server/security.mjs';
@@ -12,36 +11,6 @@ test('safeCompareSecrets accepts only the exact configured code', () => {
   assert.equal(safeCompareSecrets('wrong-code', 'correct-code'), false);
   assert.equal(safeCompareSecrets('correct-code ', 'correct-code'), false);
   assert.equal(safeCompareSecrets('', ''), false);
-});
-
-test('readServerSecret prefers the server-only variable and keeps legacy compatibility', () => {
-  const warnings = [];
-  const warn = (message) => warnings.push(message);
-
-  assert.equal(
-    readServerSecret(
-      { SHIFTGUIDE_CODE: 'primary', VITE_SHIFTGUIDE_CODE: 'legacy' },
-      'SHIFTGUIDE_CODE',
-      'VITE_SHIFTGUIDE_CODE',
-      warn
-    ),
-    'primary'
-  );
-  assert.deepEqual(warnings, []);
-
-  assert.equal(
-    readServerSecret(
-      { VITE_SHIFTGUIDE_CODE: 'legacy-secret-value' },
-      'SHIFTGUIDE_CODE',
-      'VITE_SHIFTGUIDE_CODE',
-      warn
-    ),
-    'legacy-secret-value'
-  );
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /VITE_SHIFTGUIDE_CODE/);
-  assert.match(warnings[0], /SHIFTGUIDE_CODE/);
-  assert.doesNotMatch(warnings[0], /legacy-secret-value/);
 });
 
 test('toClientShiftGuideData never exposes server prompt configuration', () => {

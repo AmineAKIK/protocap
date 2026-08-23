@@ -3,6 +3,7 @@ import { hoursUntil } from './date';
 
 export function getElementStatus(element: ContactElement, now = new Date()): ElementStatus {
   const remaining = hoursUntil(element.expiresAt, now);
+  if (!Number.isFinite(remaining)) return 'expired';
   if (remaining <= 0) return 'expired';
   if (remaining <= 48) return 'warning';
   return 'ok';

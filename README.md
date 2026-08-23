@@ -75,7 +75,7 @@ The Vite PWA service worker pre-caches built static assets and supports standalo
 npm run check
 ```
 
-It runs server syntax checks, the Node test suite, frontend Vitest coverage, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally checks that generated directories are not tracked, installs Chromium, runs critical Playwright E2E journeys and audits production dependencies.
+It runs server syntax checks, the Node test suite, the frontend Vitest suite, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally checks that generated directories are not tracked, installs Chromium, runs critical Playwright E2E journeys and audits production dependencies.
 
 The automated suite covers server/runtime security helpers, ShiftGuide validation and progress semantics, session/rate-limit behavior, Céline prompt/provider/domain contracts, browser authentication boundaries, shared UI primitives and critical ShiftGuide browser journeys.
 
