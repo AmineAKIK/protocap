@@ -31,12 +31,14 @@ Procedure progress is stored as one revision-bound JSON document. A single `loca
 
 `src/features/shiftguide/shiftGuideConcurrency.ts` serializes these progress mutations with one named Web Lock for the current origin. The complete transaction runs inside the exclusive lock:
 
-1. read the latest progress state;
-2. derive the action toggle, active choice or reset from that fresh state;
+1. read the latest progress document;
+2. apply the explicit action intent, active-choice change or reset to that fresh document;
 3. write the new complete state;
 4. notify local subscribers.
 
-This keeps independent action updates from same-origin tabs from overwriting each other. Conflicting updates to the **same** action are intentionally ordered by lock acquisition; the later transaction sees the earlier result and applies its own requested operation against that current state.
+For action buttons, the intent is derived from what the operator actually sees in that tab before the transaction starts. A pending action followed by a `Valider` click becomes an explicit `set validated` operation, not a global toggle evaluated after another tab has already written. This makes identical concurrent intents idempotent while still composing them with unrelated fresh progress under the lock.
+
+This keeps independent action updates from same-origin tabs from overwriting each other. Conflicting explicit intents for the **same** action are intentionally ordered by lock acquisition: the later transaction applies its requested target state to the latest document.
 
 The authentication model is unchanged. `sessionStorage` remains tab-scoped, so another tab must still hold its own valid ShiftGuide session before it can reach protected UI. Web Locks coordinate only the shared non-sensitive progress document; they do not share credentials or create a collaborative multi-user session.
 
