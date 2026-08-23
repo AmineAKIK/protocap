@@ -72,12 +72,22 @@ export interface SharedShiftGuideConfig extends SharedShiftGuideData {
   systemPromptExtra?: string | null;
 }
 
+export interface CanonicalShiftGuideConfig extends SharedShiftGuideData {
+  systemPromptExtra: string | null;
+}
+
 export interface ValidationResult {
   ok: boolean;
   errors: string[];
 }
 
+export type ParseResult<T> =
+  | { ok: true; errors: []; value: T }
+  | { ok: false; errors: string[]; value: null };
+
 export function validateShiftGuideData(value: unknown): ValidationResult;
 export function validateShiftGuideConfig(value: unknown): ValidationResult;
+export function parseShiftGuideData(value: unknown): ParseResult<SharedShiftGuideData>;
+export function parseShiftGuideConfig(value: unknown): ParseResult<CanonicalShiftGuideConfig>;
 export function isValidShiftGuideData(value: unknown): value is SharedShiftGuideData;
 export function isValidShiftGuideConfig(value: unknown): value is SharedShiftGuideConfig;
