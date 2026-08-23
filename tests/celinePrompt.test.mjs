@@ -23,22 +23,42 @@ const sampleData = {
   systemPromptExtra: 'Contexte test',
 };
 
+const routingSpec = {
+  version: 1,
+  routes: [
+    {
+      id: 'debut_poste_test',
+      label: 'Début poste',
+      decisionGuide: 'Utiliser lorsque le début de poste est confirmé.',
+      actionIds: ['dp_01', 'dp_02'],
+    },
+  ],
+  clarifications: [
+    {
+      id: 'etat_ligne',
+      question: 'Quel est l’état de la ligne ?',
+      decisionGuide: 'Utiliser si l’état de ligne manque.',
+    },
+  ],
+  classifierRules: ['Le message courant prime sur l’historique.'],
+};
+
 function buildPrompt(data = sampleData) {
-  const authority = createCelineAuthority(data);
+  const authority = createCelineAuthority(data, routingSpec);
   return buildCelineSystemPrompt(data, authority);
 }
 
-test('buildCelineSystemPrompt exposes only closed server-owned decisions', () => {
+test('buildCelineSystemPrompt exposes only routing declared by the server contract', () => {
   const prompt = buildPrompt();
 
   assert.match(prompt, /FRONTIERE D'AUTORITE/);
   assert.match(prompt, /"kind":"route","id":"\.\.\."/);
-  assert.match(prompt, /module:m1: Début poste/);
-  assert.match(prompt, /debut_oc_precedent/);
+  assert.match(prompt, /debut_poste_test: Début poste/);
+  assert.match(prompt, /Utiliser lorsque le début de poste est confirmé/);
+  assert.match(prompt, /etat_ligne/);
+  assert.match(prompt, /Le message courant prime sur l’historique/);
   assert.match(prompt, /SIGLES AUTORISES/);
-  assert.match(prompt, /OC/);
   assert.match(prompt, /CONTEXTE SITE NON AUTORITATIF/);
-  assert.match(prompt, /Contexte test/);
   assert.doesNotMatch(prompt, /Action une/);
   assert.doesNotMatch(prompt, /Action deux/);
 });
@@ -56,7 +76,6 @@ test('buildCelineSystemPrompt does not expose emergency wording for free-form re
   const prompt = buildPrompt({ ...sampleData, urgences: customUrgences });
 
   assert.match(prompt, /general_alarm/);
-  assert.match(prompt, /accident/);
   assert.doesNotMatch(prompt, /Signal test/);
   assert.doesNotMatch(prompt, /Étape A/);
   assert.doesNotMatch(prompt, /112/);
