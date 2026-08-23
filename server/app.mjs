@@ -82,6 +82,7 @@ export function createServerApp({
   distDir = null,
   logger = console,
   now = () => Date.now(),
+  telemetryNow = () => Date.now(),
   issueToken = defaultIssueToken,
 } = {}) {
   const log = createStructuredLogger(logger);
@@ -128,7 +129,7 @@ export function createServerApp({
     for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
     next();
   });
-  attachRequestObservability(app, { logger: log, now });
+  attachRequestObservability(app, { logger: log, now: telemetryNow });
   app.use('/api', (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
@@ -258,7 +259,7 @@ export function createServerApp({
       userMessage
     );
     const clientDisconnect = createClientDisconnectSignal(res);
-    const providerStartedAt = now();
+    const providerStartedAt = telemetryNow();
 
     try {
       const providerContent = await celineProvider.complete({
@@ -266,7 +267,7 @@ export function createServerApp({
         history: providerHistory,
         signal: clientDisconnect.signal,
       });
-      const providerDurationMs = Math.max(0, now() - providerStartedAt);
+      const providerDurationMs = Math.max(0, telemetryNow() - providerStartedAt);
       const decision = parseCelineDecision(providerContent);
       const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
       const storedDecision = response && decision ? decision : { kind: 'unknown' };
@@ -290,7 +291,7 @@ export function createServerApp({
       });
       return res.json(response);
     } catch (error) {
-      const durationMs = Math.max(0, now() - providerStartedAt);
+      const durationMs = Math.max(0, telemetryNow() - providerStartedAt);
       if (error instanceof CelineProviderError && error.code === 'cancelled') {
         log.info('celine_provider', {
           requestId: req.requestId,
