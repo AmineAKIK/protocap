@@ -2,11 +2,11 @@ import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
-import { validateShiftGuideConfig } from '../shared/shiftGuideContract.js';
+import { parseShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
 import {
   createCelineAuthorityRevision,
-  validateCelineRoutingSpec,
+  parseCelineRoutingSpec,
 } from './celineRoutingContract.mjs';
 import { createCelineSafeFallbackResponse } from './celineFallback.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
@@ -88,28 +88,30 @@ export function createServerApp({
   ingressTrust = DIRECT_INGRESS_TRUST,
 } = {}) {
   const log = createStructuredLogger(logger);
-  const validation = validateShiftGuideConfig(shiftGuideConfig);
-  if (shiftGuideCode && !validation.ok) {
-    throw new Error(`ShiftGuide configuration is invalid: ${validation.errors.join('; ')}`);
+  const parsedConfig = parseShiftGuideConfig(shiftGuideConfig);
+  if (shiftGuideCode && !parsedConfig.ok) {
+    throw new Error(`ShiftGuide configuration is invalid: ${parsedConfig.errors.join('; ')}`);
   }
+  const canonicalConfig = parsedConfig.value;
 
-  const routingValidation = validation.ok
-    ? validateCelineRoutingSpec(celineRoutingSpec, shiftGuideConfig)
-    : { ok: false, errors: ['ShiftGuide configuration must be valid before routing validation'] };
-  if (shiftGuideCode && !routingValidation.ok) {
-    throw new Error(`Celine routing configuration is invalid: ${routingValidation.errors.join('; ')}`);
+  const parsedRouting = canonicalConfig
+    ? parseCelineRoutingSpec(celineRoutingSpec, canonicalConfig)
+    : { ok: false, errors: ['ShiftGuide configuration must be valid before routing validation'], value: null };
+  if (shiftGuideCode && !parsedRouting.ok) {
+    throw new Error(`Celine routing configuration is invalid: ${parsedRouting.errors.join('; ')}`);
   }
+  const canonicalRouting = parsedRouting.value;
 
-  const configRevision = validation.ok ? createShiftGuideConfigRevision(shiftGuideConfig) : null;
-  const shiftGuideClientData = validation.ok ? toClientShiftGuideData(shiftGuideConfig) : null;
-  const celineAuthority = validation.ok && routingValidation.ok
-    ? createCelineAuthority(shiftGuideConfig, celineRoutingSpec)
+  const configRevision = canonicalConfig ? createShiftGuideConfigRevision(canonicalConfig) : null;
+  const shiftGuideClientData = canonicalConfig ? toClientShiftGuideData(canonicalConfig) : null;
+  const celineAuthority = canonicalConfig && canonicalRouting
+    ? createCelineAuthority(canonicalConfig, canonicalRouting)
     : null;
-  const celineAuthorityRevision = routingValidation.ok
-    ? createCelineAuthorityRevision(celineRoutingSpec)
+  const celineAuthorityRevision = canonicalRouting
+    ? createCelineAuthorityRevision(canonicalRouting)
     : null;
-  const celineSystemPrompt = celineAuthority
-    ? buildCelineSystemPrompt(shiftGuideConfig, celineAuthority)
+  const celineSystemPrompt = canonicalConfig && celineAuthority
+    ? buildCelineSystemPrompt(canonicalConfig, celineAuthority)
     : null;
   const readiness = createReadinessSnapshot({
     shiftGuideCode,

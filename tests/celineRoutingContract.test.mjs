@@ -3,6 +3,7 @@ import test from 'node:test';
 import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 import {
   createCelineAuthorityRevision,
+  parseCelineRoutingSpec,
   validateCelineRoutingSpec,
 } from '../server/celineRoutingContract.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
@@ -29,6 +30,22 @@ const spec = {
 
 test('routing contract accepts a complete spec compatible with ShiftGuide actions', () => {
   assert.deepEqual(validateCelineRoutingSpec(spec, config), { ok: true, errors: [] });
+});
+
+test('routing parsing tolerates metadata but gives it no semantic identity', () => {
+  const raw = {
+    ...spec,
+    deploymentNote: 'ignored',
+    routes: [{ ...spec.routes[0], source: 'ignored' }],
+    clarifications: [{ ...spec.clarifications[0], owner: 'ignored' }],
+  };
+  const parsed = parseCelineRoutingSpec(raw, config);
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(parsed.value, spec);
+  assert.equal(
+    createCelineAuthorityRevision(parsed.value),
+    createCelineAuthorityRevision(spec)
+  );
 });
 
 test('routing contract rejects unknown actions and duplicate route/action ids', () => {

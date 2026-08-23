@@ -213,6 +213,86 @@ function validateUrgences(value, path, errors) {
   validateStringBudget(value.priorityDescription, `${path}.priorityDescription`, errors, CONFIG_BUDGETS.textChars);
 }
 
+function canonicalizeAction(action) {
+  return {
+    id: action.id,
+    text: action.text,
+    ...(action.note !== undefined ? { note: action.note } : {}),
+  };
+}
+
+function canonicalizeSubModule(subModule) {
+  return {
+    id: subModule.id,
+    title: subModule.title,
+    ...(subModule.description !== undefined ? { description: subModule.description } : {}),
+    actions: subModule.actions.map(canonicalizeAction),
+    ...(subModule.footerNote !== undefined ? { footerNote: subModule.footerNote } : {}),
+  };
+}
+
+function canonicalizeModule(module) {
+  const common = {
+    id: module.id,
+    title: module.title,
+    ...(module.icon !== undefined ? { icon: module.icon } : {}),
+    description: module.description,
+    type: module.type,
+  };
+
+  if (module.type === 'standard') {
+    return {
+      ...common,
+      actions: module.actions.map(canonicalizeAction),
+      ...(module.footerNote !== undefined ? { footerNote: module.footerNote } : {}),
+    };
+  }
+
+  return {
+    ...common,
+    subModules: module.subModules.map(canonicalizeSubModule),
+    ...(module.footerNote !== undefined ? { footerNote: module.footerNote } : {}),
+  };
+}
+
+function canonicalizeUrgencyStep(step) {
+  return {
+    id: step.id,
+    label: step.label,
+    description: step.description,
+  };
+}
+
+function canonicalizeUrgences(urgences) {
+  return {
+    emergencyNumbers: [...urgences.emergencyNumbers],
+    generalAlarm: {
+      signal: urgences.generalAlarm.signal,
+      instruction: urgences.generalAlarm.instruction,
+      steps: [...urgences.generalAlarm.steps],
+    },
+    drill: {
+      schedule: urgences.drill.schedule,
+      instruction: urgences.drill.instruction,
+    },
+    accidentSteps: urgences.accidentSteps.map(canonicalizeUrgencyStep),
+    goldenRules: urgences.goldenRules.map(canonicalizeUrgencyStep),
+    priorityMessage: urgences.priorityMessage,
+    priorityDescription: urgences.priorityDescription,
+  };
+}
+
+function canonicalizeValidShiftGuideData(value) {
+  return {
+    modules: value.modules.map(canonicalizeModule),
+    lexique: value.lexique.map((entry) => ({
+      sigle: entry.sigle,
+      definition: entry.definition,
+    })),
+    urgences: canonicalizeUrgences(value.urgences),
+  };
+}
+
 export function validateShiftGuideData(value) {
   const errors = [];
   if (!isRecord(value)) return { ok: false, errors: ['ShiftGuide data must be an object'] };
@@ -255,6 +335,25 @@ export function validateShiftGuideConfig(value) {
   const errors = [...result.errors];
   validateStringBudget(value.systemPromptExtra, 'systemPromptExtra', errors, CONFIG_BUDGETS.systemPromptExtraChars);
   return { ok: errors.length === 0, errors };
+}
+
+export function parseShiftGuideData(value) {
+  const validation = validateShiftGuideData(value);
+  if (!validation.ok) return { ...validation, value: null };
+  return { ok: true, errors: [], value: canonicalizeValidShiftGuideData(value) };
+}
+
+export function parseShiftGuideConfig(value) {
+  const validation = validateShiftGuideConfig(value);
+  if (!validation.ok) return { ...validation, value: null };
+  return {
+    ok: true,
+    errors: [],
+    value: {
+      ...canonicalizeValidShiftGuideData(value),
+      systemPromptExtra: value.systemPromptExtra ?? null,
+    },
+  };
 }
 
 export function isValidShiftGuideData(value) {

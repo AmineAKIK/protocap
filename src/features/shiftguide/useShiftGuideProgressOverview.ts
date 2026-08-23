@@ -6,7 +6,7 @@ import {
 } from '../../../shared/shiftGuideProgress.js';
 import type { SharedProgressSummary } from '../../../shared/shiftGuideProgress.js';
 import { getSgModules } from '../../data/shiftguideModules';
-import type { SGChoiceModule, SGModule } from '../../data/shiftguideModules';
+import type { SGModule } from '../../data/shiftguideModules';
 import { subscribeShiftGuideProgress } from '../../hooks/useModuleProgress';
 import { getShiftGuidePersistentStorage } from './shiftGuideStorage';
 import type { StorageLike } from './shiftGuideStorage';
@@ -18,12 +18,6 @@ export interface ShiftGuideProgressOverview {
   completionPct: number;
 }
 
-const EMPTY_SUMMARY: SharedProgressSummary = {
-  treatedCount: 0,
-  totalActions: 0,
-  isComplete: false,
-};
-
 export function buildShiftGuideProgressOverview(
   modules: SGModule[],
   storage: StorageLike
@@ -32,8 +26,8 @@ export function buildShiftGuideProgressOverview(
   const summaries: Record<string, SharedProgressSummary> = {};
 
   for (const module of modules) {
-    if (module.type === 'choice' && module.subModules) {
-      const summary = summarizeChoiceModule(state, module as SGChoiceModule);
+    if (module.type === 'choice') {
+      const summary = summarizeChoiceModule(state, module);
       summaries[module.id] = {
         treatedCount: summary.treatedCount,
         totalActions: summary.totalActions,
@@ -42,9 +36,10 @@ export function buildShiftGuideProgressOverview(
       continue;
     }
 
-    summaries[module.id] = module.actions
-      ? summarizeActions(state, module.actions.map((action) => action.id))
-      : EMPTY_SUMMARY;
+    summaries[module.id] = summarizeActions(
+      state,
+      module.actions.map((action) => action.id)
+    );
   }
 
   const treatedActions = Object.values(summaries).reduce(
