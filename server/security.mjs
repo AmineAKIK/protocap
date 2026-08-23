@@ -28,19 +28,6 @@ export function safeCompareSecrets(candidate, expected) {
   return timingSafeEqual(digestSecret(candidate), digestSecret(expected));
 }
 
-export function readServerSecret(env, primaryName, legacyName, warn = console.warn) {
-  const primary = env[primaryName];
-  if (primary !== undefined) return primary;
-
-  const legacy = env[legacyName];
-  if (legacy !== undefined) {
-    warn(`[config] ${legacyName} is deprecated; migrate Railway to ${primaryName}.`);
-    return legacy;
-  }
-
-  return '';
-}
-
 export function toClientShiftGuideData(config) {
   return {
     modules: config.modules,
