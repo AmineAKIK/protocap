@@ -5,6 +5,7 @@ import {
   calculateExactPacking,
   calculatePackingOptions,
   getPackingRecommendation,
+  isValidPackingInput,
   parsePositiveIntegerInput,
   type PackingInput,
   type PackingPolicy
@@ -42,7 +43,8 @@ function parsePackingInput(form: PackingFormState): PackingInput | null {
   const cartonsPerPalette = parsePositiveIntegerInput(form.cartonsPerPalette);
 
   if (quantity === null || unitsPerCarton === null || cartonsPerPalette === null) return null;
-  return { quantity, unitsPerCarton, cartonsPerPalette };
+  const input = { quantity, unitsPerCarton, cartonsPerPalette };
+  return isValidPackingInput(input) ? input : null;
 }
 
 function ResultMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
@@ -81,6 +83,11 @@ export function PackingCalculatorPage() {
   const quantityState = fieldState(form.quantity);
   const unitsPerCartonState = fieldState(form.unitsPerCarton);
   const cartonsPerPaletteState = fieldState(form.cartonsPerPalette);
+  const combinationInvalid =
+    quantityState === 'valid' &&
+    unitsPerCartonState === 'valid' &&
+    cartonsPerPaletteState === 'valid' &&
+    !input;
   const neutral = !calculation || !input;
 
   return (
@@ -151,6 +158,15 @@ export function PackingCalculatorPage() {
             </div>
           </div>
 
+          {combinationInvalid ? (
+            <div role="alert" className="mt-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" />
+              <p>
+                Cette combinaison dépasse la précision entière exacte prise en charge par le calculateur. Réduisez la quantité ou le conditionnement avant de calculer.
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-5">
             <p className="label mb-2">Politique opérationnelle</p>
             <div className="grid gap-2 min-[520px]:grid-cols-3">
@@ -182,7 +198,9 @@ export function PackingCalculatorPage() {
                 <p className="mt-1 text-sm text-slate-600">
                   {input && calculation
                     ? `1 palette = ${formatNumber(input.cartonsPerPalette)} cartons × ${formatNumber(input.unitsPerCarton)} unités = ${formatNumber(calculation.exact.unitsPerPalette)} unités.`
-                    : 'Renseignez des nombres entiers positifs pour afficher la capacité palette.'}
+                    : combinationInvalid
+                      ? 'Le calcul est bloqué tant que tous les totaux dérivés ne sont pas représentables exactement.'
+                      : 'Renseignez des nombres entiers positifs pour afficher la capacité palette.'}
                 </p>
               </div>
             </div>
@@ -204,7 +222,9 @@ export function PackingCalculatorPage() {
               <Scale size={36} className="mx-auto mb-3 text-slate-300" />
               <h2 className="text-lg font-bold text-slate-950">Calcul en attente</h2>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                Saisissez une quantité, des unités par carton et des cartons par palette avec des nombres entiers positifs.
+                {combinationInvalid
+                  ? 'La combinaison saisie dépasse le domaine de calcul exact. Réduisez les valeurs avant de poursuivre.'
+                  : 'Saisissez une quantité, des unités par carton et des cartons par palette avec des nombres entiers positifs.'}
               </p>
             </div>
           ) : (
