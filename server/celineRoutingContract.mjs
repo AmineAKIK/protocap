@@ -147,6 +147,7 @@ export function parseCelineRoutingSpec(spec, shiftGuideConfig) {
 }
 
 export function createCelineAuthorityRevision(routingSpec) {
-  const canonical = stableSerialize({ protocolRevision: PROTOCOL_REVISION, routingSpec });
+  const semanticSpec = canonicalizeValidRoutingSpec(routingSpec);
+  const canonical = stableSerialize({ protocolRevision: PROTOCOL_REVISION, routingSpec: semanticSpec });
   return `sha256:${createHash('sha256').update(canonical, 'utf8').digest('hex')}`;
 }
