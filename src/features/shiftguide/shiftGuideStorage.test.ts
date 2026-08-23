@@ -88,7 +88,7 @@ describe('strict ShiftGuide session storage', () => {
 
   it('fails closed and rolls back keys when session storage rejects a write', () => {
     const original = Storage.prototype.setItem;
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
       if (key === 'b') throw new DOMException('full', 'QuotaExceededError');
       return original.call(this, key, value);
     });
