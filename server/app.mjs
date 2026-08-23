@@ -8,6 +8,7 @@ import {
   createCelineAuthorityRevision,
   validateCelineRoutingSpec,
 } from './celineRoutingContract.mjs';
+import { createCelineSafeFallbackResponse } from './celineFallback.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import {
@@ -235,7 +236,7 @@ export function createServerApp({
       const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
       if (!response) {
         logger.error('Celine provider returned an unauthorized or invalid decision');
-        return res.status(502).json({ error: 'Service IA indisponible.' });
+        return res.json(createCelineSafeFallbackResponse());
       }
       return res.json(response);
     } catch (error) {

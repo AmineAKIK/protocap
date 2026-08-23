@@ -21,12 +21,9 @@ export function parseCelineDecision(rawContent) {
   }
 
   if (!isRecord(parsed) || !DECISION_KINDS.has(parsed.kind)) return null;
-  if (parsed.kind === 'unknown') {
-    return Object.keys(parsed).every((key) => key === 'kind') ? { kind: 'unknown' } : null;
-  }
+  if (parsed.kind === 'unknown') return { kind: 'unknown' };
 
   if (typeof parsed.id !== 'string' || parsed.id.length === 0 || parsed.id.length > 200) return null;
-  if (!Object.keys(parsed).every((key) => key === 'kind' || key === 'id')) return null;
   return { kind: parsed.kind, id: parsed.id };
 }
 

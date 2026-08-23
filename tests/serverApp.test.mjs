@@ -165,18 +165,36 @@ test('Celine HTTP route renders lexicon facts without exposing definitions to th
   });
 });
 
-test('Celine HTTP route rejects free-form output and unauthorized decisions', async () => {
-  for (const providerContent of [
-    JSON.stringify({ kind: 'route', id: 'module_standard', message: 'Instruction libre' }),
-    JSON.stringify({ kind: 'route', id: 'route_inventee' }),
-  ]) {
-    const invalidProvider = { async complete() { return providerContent; } };
-    await withServer({ celineProvider: invalidProvider }, async (baseUrl) => {
-      const unlocked = await unlock(baseUrl);
-      const response = await chat(baseUrl, unlocked.token);
-      assert.equal(response.status, 502);
+test('Celine HTTP route discards provider prose and degrades safely on unauthorized decisions', async () => {
+  const providerWithExtraProse = {
+    async complete() {
+      return JSON.stringify({ kind: 'route', id: 'module_standard', message: 'Instruction libre' });
+    },
+  };
+  await withServer({ celineProvider: providerWithExtraProse }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const response = await chat(baseUrl, unlocked.token);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.message, 'Suis la séquence « Module standard » dans l’ordre indiqué.');
+    assert.doesNotMatch(JSON.stringify(body), /Instruction libre/);
+  });
+
+  const unauthorizedProvider = {
+    async complete() {
+      return JSON.stringify({ kind: 'route', id: 'route_inventee' });
+    },
+  };
+  await withServer({ celineProvider: unauthorizedProvider }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const response = await chat(baseUrl, unlocked.token);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      message: 'Je n’ai pas pu déterminer une réponse fiable à partir de ta demande. Précise la situation terrain ou vois avec ton responsable.',
+      checklist: [],
+      followUp: null,
     });
-  }
+  });
 });
 
 test('Celine HTTP route maps provider failures', async () => {
