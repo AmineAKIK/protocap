@@ -15,6 +15,7 @@ import {
   buildCelineProviderHistory,
   extractLatestCelineUserMessage,
 } from './celineProviderContext.mjs';
+import { DIRECT_INGRESS_TRUST } from './ingressTrust.mjs';
 import {
   attachRequestObservability,
   createStructuredLogger,
@@ -84,6 +85,7 @@ export function createServerApp({
   now = () => Date.now(),
   telemetryNow = () => Date.now(),
   issueToken = defaultIssueToken,
+  ingressTrust = DIRECT_INGRESS_TRUST,
 } = {}) {
   const log = createStructuredLogger(logger);
   const validation = validateShiftGuideConfig(shiftGuideConfig);
@@ -122,10 +124,9 @@ export function createServerApp({
 
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', 1);
 
   app.use((req, res, next) => {
-    const headers = buildSecurityHeaders({ secure: req.secure });
+    const headers = buildSecurityHeaders({ secure: ingressTrust.isSecure(req) });
     for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
     next();
   });
@@ -171,7 +172,7 @@ export function createServerApp({
       return res.status(503).json({ error: 'Accès ShiftGuide non configuré.' });
     }
 
-    const clientKey = req.ip || 'unknown';
+    const clientKey = ingressTrust.clientAddress(req);
     const limit = takeRateLimit(
       unlockAttempts,
       clientKey,
@@ -226,7 +227,7 @@ export function createServerApp({
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
 
-    const clientKey = req.ip || 'unknown';
+    const clientKey = ingressTrust.clientAddress(req);
     const clientLimit = takeRateLimit(
       chatRequests,
       `ip:${clientKey}`,
