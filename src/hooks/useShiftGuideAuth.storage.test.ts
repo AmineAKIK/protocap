@@ -27,7 +27,7 @@ describe('ShiftGuide auth storage failure policy', () => {
     })));
 
     const originalSetItem = Storage.prototype.setItem;
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
       if (this === sessionStorage && key === 'shiftguide_session_expires_at') {
         throw new DOMException('quota', 'QuotaExceededError');
       }
