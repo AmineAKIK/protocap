@@ -7,7 +7,7 @@ const now = new Date('2026-08-24T12:00:00.000Z');
 
 function element(expiresAt: string): ContactElement {
   return {
-    id: 'element-1',
+    type: 'fillingBlock',
     label: 'Bloc',
     lastChangedAt: '2026-08-20T12:00:00.000Z',
     expiresAt,
@@ -22,6 +22,7 @@ function line(expiresAt: string): ConditioningLine {
     name: 'Ligne 1',
     product: 'Produit',
     vat: 'Cuve 1',
+    conditioningStartedAt: '2026-08-20T12:00:00.000Z',
     elements: [element(expiresAt)],
   };
 }
