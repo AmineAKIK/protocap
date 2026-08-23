@@ -7,34 +7,73 @@ export const LEGACY_PROGRESS_V2_STORAGE_KEY = 'shiftguide_progress_v2';
 export const LEGACY_PROGRESS_STORAGE_KEY = 'shiftguide_progress_v1';
 export const LEGACY_MODULE_PREFIX = 'shiftguide_module_';
 
+function safeGetItem(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage, key, value) {
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemoveItem(storage, key) {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Persistence cleanup must not crash ShiftGuide.
+  }
+}
+
+function safeKeys(storage) {
+  const keys = [];
+  let length = 0;
+  try {
+    length = storage.length;
+  } catch {
+    return keys;
+  }
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const key = storage.key(index);
+      if (typeof key === 'string') keys.push(key);
+    } catch {
+      return keys;
+    }
+  }
+  return keys;
+}
+
 export function clearCelineHistory(storage) {
-  storage.removeItem(CELINE_HISTORY_STORAGE_KEY);
-  storage.removeItem(CELINE_PROMPT_VERSION_STORAGE_KEY);
+  safeRemoveItem(storage, CELINE_HISTORY_STORAGE_KEY);
+  safeRemoveItem(storage, CELINE_PROMPT_VERSION_STORAGE_KEY);
 }
 
 export function clearRevisionBoundShiftGuideData(storage) {
   clearCelineHistory(storage);
-  storage.removeItem(PROGRESS_STORAGE_KEY);
-  storage.removeItem(LEGACY_PROGRESS_V2_STORAGE_KEY);
-  storage.removeItem(LEGACY_PROGRESS_STORAGE_KEY);
+  safeRemoveItem(storage, PROGRESS_STORAGE_KEY);
+  safeRemoveItem(storage, LEGACY_PROGRESS_V2_STORAGE_KEY);
+  safeRemoveItem(storage, LEGACY_PROGRESS_STORAGE_KEY);
 
-  const legacyModuleKeys = [];
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (typeof key === 'string' && key.startsWith(LEGACY_MODULE_PREFIX)) {
-      legacyModuleKeys.push(key);
-    }
+  for (const key of safeKeys(storage)) {
+    if (key.startsWith(LEGACY_MODULE_PREFIX)) safeRemoveItem(storage, key);
   }
-  for (const key of legacyModuleKeys) storage.removeItem(key);
 }
 
 export function reconcileShiftGuideConfigRevision(storage, configRevision) {
   if (typeof configRevision !== 'string' || configRevision.length === 0) return false;
 
-  const previousRevision = storage.getItem(CONFIG_REVISION_STORAGE_KEY);
+  const previousRevision = safeGetItem(storage, CONFIG_REVISION_STORAGE_KEY);
   if (previousRevision !== configRevision) {
     clearRevisionBoundShiftGuideData(storage);
-    storage.setItem(CONFIG_REVISION_STORAGE_KEY, configRevision);
+    safeSetItem(storage, CONFIG_REVISION_STORAGE_KEY, configRevision);
     return true;
   }
 
@@ -44,10 +83,10 @@ export function reconcileShiftGuideConfigRevision(storage, configRevision) {
 export function reconcileCelineAuthorityRevision(storage, authorityRevision) {
   if (typeof authorityRevision !== 'string' || authorityRevision.length === 0) return false;
 
-  const previousRevision = storage.getItem(CELINE_AUTHORITY_REVISION_STORAGE_KEY);
+  const previousRevision = safeGetItem(storage, CELINE_AUTHORITY_REVISION_STORAGE_KEY);
   if (previousRevision !== authorityRevision) {
     clearCelineHistory(storage);
-    storage.setItem(CELINE_AUTHORITY_REVISION_STORAGE_KEY, authorityRevision);
+    safeSetItem(storage, CELINE_AUTHORITY_REVISION_STORAGE_KEY, authorityRevision);
     return true;
   }
 
