@@ -459,6 +459,8 @@ export function CelinePage() {
   const autoSentRef = useRef<Set<string>>(new Set());
   const sendMessageRef = useRef<(text: string) => void>(() => {});
 
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const { listening, toggle: toggleMic, supported: micSupported } = useSpeechInput((transcript) => {
     sendMessageRef.current(transcript);
   });
