@@ -1,13 +1,17 @@
 function listRoutes(authority) {
   return [...authority.routes.values()]
-    .map((route) => `- ${route.id}: ${route.label}`)
+    .map((route) => `- ${route.id}: ${route.label} — ${route.decisionGuide}`)
     .join('\n');
 }
 
 function listClarifications(authority) {
   return [...authority.clarifications.entries()]
-    .map(([id, question]) => `- ${id}: ${question}`)
+    .map(([id, clarification]) => `- ${id}: ${clarification.decisionGuide} Question serveur: ${clarification.question}`)
     .join('\n');
+}
+
+function listClassifierRules(authority) {
+  return authority.classifierRules.map((rule) => `- ${rule}`).join('\n');
 }
 
 function listLexicon(authority) {
@@ -35,23 +39,15 @@ Une seule des formes suivantes, sans aucun autre champ :
 
 === METHODE DE DECISION ===
 1. Identifie la situation terrain a partir du message courant en priorite, puis de l'historique.
-2. Ne suppose jamais un etat absent. Si un prerequis necessaire manque, choisis une clarification autorisee.
-3. Si tous les prerequis sont connus, choisis exactement une route autorisee correspondant a la situation.
-4. Pour une demande de definition d'un sigle present dans le lexique, utilise kind=lexicon avec le sigle exact.
-5. Pour une urgence, utilise kind=emergency.
-6. Si aucune decision autorisee ne correspond, utilise kind=unknown.
+2. Applique les regles de classification declarees ci-dessous.
+3. Si un prerequis necessaire manque, choisis exactement une clarification autorisee.
+4. Si tous les prerequis sont connus, choisis exactement une route autorisee dont le decisionGuide correspond.
+5. Pour une demande de definition d'un sigle present dans le lexique, utilise kind=lexicon avec le sigle exact.
+6. Pour une urgence, utilise kind=emergency.
+7. Si aucune decision autorisee ne correspond, utilise kind=unknown.
 
-=== REGLES DE CONTEXTE IMPORTANTES ===
-- "je clôture l'OC" / "je veux finir l'OC" = action a faire.
-- "l'OC est clôturé" / "c'est fait" / "deja ferme" = etat connu.
-- "j'ai fini mon OC" est ambigu : utilise la clarification fin_oc_ambigu si disponible.
-- changement OC : le type Lot/Pays/Formule/Format et l'etat de cloture de l'OC precedent sont requis.
-- debut poste : l'etat ligne arretee/en production est requis ; si arretee, savoir si un OC est a lancer est requis.
-- fin poste : savoir s'il reste un OC et/ou une cuve ouverts est requis.
-- debut cuve : savoir si un OC est ouvert est requis.
-- fin cuve : savoir si une cuve est ouverte est requis.
-- En cas de conflit, le message courant prime sur l'historique.
-- Ne selectionne jamais une route uniquement parce que son nom ressemble a la demande : respecte les prerequis.
+=== REGLES DE CLASSIFICATION DECLAREES ===
+${listClassifierRules(authority)}
 
 === ROUTES AUTORISEES ===
 ${listRoutes(authority)}
