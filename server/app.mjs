@@ -15,6 +15,10 @@ import {
   buildCelineProviderHistory,
   extractLatestCelineUserMessage,
 } from './celineProviderContext.mjs';
+import {
+  attachRequestObservability,
+  createStructuredLogger,
+} from './observability.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import { createReadinessSnapshot } from './readiness.mjs';
 import { createClientDisconnectSignal } from './requestCancellation.mjs';
@@ -80,6 +84,7 @@ export function createServerApp({
   now = () => Date.now(),
   issueToken = defaultIssueToken,
 } = {}) {
+  const log = createStructuredLogger(logger);
   const validation = validateShiftGuideConfig(shiftGuideConfig);
   if (shiftGuideCode && !validation.ok) {
     throw new Error(`ShiftGuide configuration is invalid: ${validation.errors.join('; ')}`);
@@ -123,6 +128,7 @@ export function createServerApp({
     for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
     next();
   });
+  attachRequestObservability(app, { logger: log, now });
   app.use('/api', (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
@@ -252,6 +258,7 @@ export function createServerApp({
       userMessage
     );
     const clientDisconnect = createClientDisconnectSignal(res);
+    const providerStartedAt = now();
 
     try {
       const providerContent = await celineProvider.complete({
@@ -259,6 +266,7 @@ export function createServerApp({
         history: providerHistory,
         signal: clientDisconnect.signal,
       });
+      const providerDurationMs = Math.max(0, now() - providerStartedAt);
       const decision = parseCelineDecision(providerContent);
       const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
       const storedDecision = response && decision ? decision : { kind: 'unknown' };
@@ -267,17 +275,37 @@ export function createServerApp({
         appendCelineProviderDecision(celineContexts.get(token), userMessage, storedDecision)
       );
       if (!response) {
-        logger.error('Celine provider returned an unauthorized or invalid decision');
+        log.warn('celine_provider', {
+          requestId: req.requestId,
+          outcome: 'fallback',
+          code: 'invalid_decision',
+          durationMs: providerDurationMs,
+        });
         return res.json(createCelineSafeFallbackResponse());
       }
+      log.info('celine_provider', {
+        requestId: req.requestId,
+        outcome: 'success',
+        durationMs: providerDurationMs,
+      });
       return res.json(response);
     } catch (error) {
+      const durationMs = Math.max(0, now() - providerStartedAt);
       if (error instanceof CelineProviderError && error.code === 'cancelled') {
+        log.info('celine_provider', {
+          requestId: req.requestId,
+          outcome: 'cancelled',
+          durationMs,
+        });
         return;
       }
       const mapped = mapProviderError(error);
-      logger.error('Celine provider request failed', {
+      log.error('celine_provider', {
+        requestId: req.requestId,
+        outcome: 'error',
         code: error instanceof CelineProviderError ? error.code : 'unknown',
+        upstreamStatus: error instanceof CelineProviderError ? error.upstreamStatus : null,
+        durationMs,
       });
       return res.status(mapped.status).json({ error: mapped.error });
     } finally {
@@ -296,8 +324,9 @@ export function createServerApp({
     });
   }
 
-  app.use((error, _req, res, next) => {
-    logger.error('Unhandled server error', {
+  app.use((error, req, res, next) => {
+    log.error('server_error', {
+      requestId: req.requestId ?? null,
       error: error instanceof Error ? error.name : 'UnknownError',
     });
     if (res.headersSent) return next(error);
