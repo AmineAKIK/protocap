@@ -26,21 +26,6 @@ export function takeRateLimit(store, key, maxRequests, windowMs, now = Date.now(
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
-export function normalizeChatHistory(messages) {
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
-
-  const history = messages[0]?.role === 'system' ? messages.slice(1) : messages;
-  if (history.length === 0) return null;
-
-  const valid = history.every((message) => {
-    if (!message || typeof message !== 'object') return false;
-    if (!['user', 'assistant'].includes(message.role)) return false;
-    return typeof message.content === 'string' && message.content.length > 0 && message.content.length <= 20_000;
-  });
-
-  return valid ? history : null;
-}
-
 export function revokeSession(sessions, chatRequests, token, celineContexts = null) {
   if (!token) return false;
   const existed = sessions.delete(token);
