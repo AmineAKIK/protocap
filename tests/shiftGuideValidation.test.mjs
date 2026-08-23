@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 import {
   isValidShiftGuideConfig,
   isValidShiftGuideData,
+  validateShiftGuideConfig,
   validateShiftGuideData,
 } from '../shared/shiftGuideContract.js';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
@@ -112,4 +114,50 @@ test('shared ShiftGuide contract rejects duplicated lexicon sigles case-insensit
     }),
     false
   );
+});
+
+test('ShiftGuide budgets reject excessive cardinality and field length', () => {
+  const tooManyModules = Array.from({ length: CONFIG_BUDGETS.modules + 1 }, (_, index) => ({
+    id: `m${index}`,
+    title: `Module ${index}`,
+    description: '',
+    type: 'standard',
+    actions: [{ id: `a${index}`, text: 'Action' }],
+  }));
+  const cardinality = validateShiftGuideData({ ...validConfig, modules: tooManyModules });
+  assert.equal(cardinality.ok, false);
+  assert.match(cardinality.errors.join('\n'), new RegExp(`modules must contain at most ${CONFIG_BUDGETS.modules} entries`));
+
+  const oversizedText = validateShiftGuideData({
+    ...validConfig,
+    modules: [{ ...validConfig.modules[0], actions: [{ id: 'a-long', text: 'x'.repeat(CONFIG_BUDGETS.textChars + 1) }] }],
+  });
+  assert.equal(oversizedText.ok, false);
+  assert.match(oversizedText.errors.join('\n'), new RegExp(`at most ${CONFIG_BUDGETS.textChars} characters`));
+});
+
+test('ShiftGuide budgets bound total actions across otherwise valid scopes', () => {
+  const modules = Array.from({ length: 11 }, (_, moduleIndex) => ({
+    id: `m${moduleIndex}`,
+    title: `Module ${moduleIndex}`,
+    description: '',
+    type: 'standard',
+    actions: Array.from({ length: 190 }, (_, actionIndex) => ({
+      id: `m${moduleIndex}_a${actionIndex}`,
+      text: 'Action',
+    })),
+  }));
+  assert.ok(modules.every((module) => module.actions.length <= CONFIG_BUDGETS.actionsPerScope));
+  const result = validateShiftGuideData({ ...validConfig, modules });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), new RegExp(`at most ${CONFIG_BUDGETS.totalActions} actions in total`));
+});
+
+test('ShiftGuide config bounds supplemental Celine context', () => {
+  const result = validateShiftGuideConfig({
+    ...validConfig,
+    systemPromptExtra: 'x'.repeat(CONFIG_BUDGETS.systemPromptExtraChars + 1),
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), new RegExp(`at most ${CONFIG_BUDGETS.systemPromptExtraChars} characters`));
 });
