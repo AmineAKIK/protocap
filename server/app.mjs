@@ -16,6 +16,7 @@ import {
   revokeSession,
   takeRateLimit,
 } from './runtimeUtils.mjs';
+import { createShiftGuideConfigRevision } from './shiftGuideRevision.mjs';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const UNLOCK_WINDOW_MS = 10 * 60 * 1000;
@@ -70,6 +71,7 @@ export function createServerApp({
     throw new Error(`ShiftGuide configuration is invalid: ${validation.errors.join('; ')}`);
   }
 
+  const configRevision = validation.ok ? createShiftGuideConfigRevision(shiftGuideConfig) : null;
   const shiftGuideClientData = validation.ok ? toClientShiftGuideData(shiftGuideConfig) : null;
   const celineSystemPrompt = validation.ok ? buildCelineSystemPrompt(shiftGuideConfig) : null;
   const actionCatalog = validation.ok
@@ -113,7 +115,7 @@ export function createServerApp({
   });
 
   app.post('/api/shiftguide/unlock', (req, res) => {
-    if (!shiftGuideCode || !celineSystemPrompt || !shiftGuideClientData) {
+    if (!shiftGuideCode || !celineSystemPrompt || !shiftGuideClientData || !configRevision) {
       return res.status(503).json({ error: 'Accès ShiftGuide non configuré.' });
     }
 
@@ -140,7 +142,7 @@ export function createServerApp({
       return res.status(401).json({ error: 'Code incorrect.' });
     }
 
-    return res.json({ ...issueSession(), ...shiftGuideClientData });
+    return res.json({ ...issueSession(), configRevision, ...shiftGuideClientData });
   });
 
   app.get('/api/shiftguide/session', (req, res) => {
@@ -148,7 +150,7 @@ export function createServerApp({
     if (!hasValidSession(sessions, chatRequests, token, now())) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
-    return res.json({ ok: true, expiresAt: sessions.get(token) });
+    return res.json({ ok: true, expiresAt: sessions.get(token), configRevision });
   });
 
   app.delete('/api/shiftguide/session', (req, res) => {

@@ -62,6 +62,7 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
     const unlocked = await unlock(baseUrl);
     assert.equal(unlocked.token, 'test-session-token');
     assert.equal(typeof unlocked.expiresAt, 'number');
+    assert.match(unlocked.configRevision, /^sha256:[a-f0-9]{64}$/);
     assert.equal(unlocked.modules[0].id, 'module_standard');
 
     const session = await fetch(`${baseUrl}/api/shiftguide/session`, {
@@ -71,6 +72,7 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
     const sessionBody = await session.json();
     assert.equal(sessionBody.ok, true);
     assert.equal(typeof sessionBody.expiresAt, 'number');
+    assert.equal(sessionBody.configRevision, unlocked.configRevision);
 
     const logout = await fetch(`${baseUrl}/api/shiftguide/session`, {
       method: 'DELETE',

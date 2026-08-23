@@ -11,8 +11,8 @@ flowchart TB
   subgraph Browser
     Public[Public prototype routes]
     ShiftUI[ShiftGuide UI]
-    SessionStore[sessionStorage\nShiftGuide token + protected config]
-    LocalStore[localStorage\nlocal demo/progress state]
+    SessionStore[sessionStorage\nShiftGuide token + protected config + revision]
+    LocalStore[localStorage\nrevision-bound progress/history]
   end
 
   subgraph Express
@@ -46,7 +46,7 @@ The root React router owns the public application surface and delegates `/shiftg
 
 Within ShiftGuide, `ShiftGuideLayout` is a shell composer rather than a browser-effects container. Desktop/mobile navigation lives in `src/components/shiftguide/ShiftGuideNavigation.tsx`; scroll restoration, route scroll reset, Céline desktop focus, mobile document locking and `visualViewport` sizing live behind `useShiftGuideShell`.
 
-Progress presentation also consumes a feature-level selector rather than rebuilding persistence semantics inside a page. `useShiftGuideProgressOverview` reads the canonical `shiftguide_progress_v2` contract, applies the shared standard/choice summary rules and subscribes to progress changes. Pages therefore do not need to know how alternative choice branches are represented in storage.
+Progress presentation also consumes a feature-level selector rather than rebuilding persistence semantics inside a page. `useShiftGuideProgressOverview` reads the canonical `shiftguide_progress_v3` contract, which is bound to the server-issued ShiftGuide configuration revision, applies the shared standard/choice summary rules and subscribes to progress changes. Pages therefore do not need to know how alternative choice branches or persistence provenance are represented in storage.
 
 These boundaries are intentionally pragmatic rather than framework-driven: there is no global state library or artificial component hierarchy. Large presentation-heavy pages are left intact unless extracting a boundary removes coupling or creates a meaningful test seam.
 
@@ -58,9 +58,13 @@ Knowledge Base is driven by repository data. LinePulse is a visual decision-supp
 
 ## ShiftGuide boundary
 
-ShiftGuide code is part of the public client bundle, but protected operational configuration is not. The server reads `SG_MODULES`, `SG_LEXIQUE`, `SG_URGENCES` and `SG_SYSTEM_PROMPT` from its environment. Unlock succeeds only when a server-side code comparison passes, after which the server returns a random session token and the protected client payload.
+ShiftGuide code is part of the public client bundle, but protected operational configuration is not. The server reads `SG_MODULES`, `SG_LEXIQUE`, `SG_URGENCES` and `SG_SYSTEM_PROMPT` from its environment. Unlock succeeds only when a server-side code comparison passes, after which the server returns a random session token, the protected client payload and a deterministic `configRevision`.
 
-The browser stores the active ShiftGuide token and protected payload in `sessionStorage`. The server validates the token for protected API calls.
+The revision is a SHA-256 identity derived server-side from the validated operational configuration: modules and action text, lexicon, emergency guidance and the additional Céline context. Object-key insertion order does not affect the result. A semantic configuration change therefore creates a new identity even when action IDs are reused.
+
+The browser stores the active ShiftGuide token, protected payload, expiry and revision in `sessionStorage`. The server returns the same revision during session validation. A revision mismatch fails closed instead of allowing an old browser session to claim compatibility with a different procedure.
+
+Revision-bound local data uses a separate persistent copy of the current revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock instead of being silently attributed to the current procedure. Céline history is also cleared when the authoritative revision changes. Format version and procedure revision are separate concepts: one describes JSON shape, the other describes operational meaning.
 
 ### Shared runtime contract
 
@@ -103,7 +107,9 @@ The server also verifies every checklist `actionId` against the validated ShiftG
 - timing-safe secret comparison;
 - random 256-bit session tokens;
 - eight-hour session TTL;
-- per-IP unlock throttling and per-session chat throttling;
+- reactive browser expiry enforcement with foreground revalidation;
+- server-issued configuration revision enforced across session, progress and Céline-history lifecycles;
+- per-IP unlock throttling, per-IP chat throttling and per-session chat throttling;
 - 128 KB JSON body limit;
 - generic client-facing provider/server errors;
 - CSP, frame denial, MIME sniffing protection, restrictive permissions policy and referrer policy;

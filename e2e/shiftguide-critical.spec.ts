@@ -23,8 +23,14 @@ test.describe('ShiftGuide critical journeys', () => {
     await page.getByRole('button', { name: 'Déverrouiller' }).click();
     await expect(page.getByText('Valider le contrôle E2E')).toBeVisible();
 
-    const token = await page.evaluate(() => sessionStorage.getItem('shiftguide_auth_token'));
-    expect(token).toBeTruthy();
+    const session = await page.evaluate(() => ({
+      token: sessionStorage.getItem('shiftguide_auth_token'),
+      configRevision: sessionStorage.getItem('shiftguide_session_config_revision'),
+      persistedRevision: localStorage.getItem('shiftguide_config_revision'),
+    }));
+    expect(session.token).toBeTruthy();
+    expect(session.configRevision).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(session.persistedRevision).toBe(session.configRevision);
 
     await page.locator('aside').getByRole('button', { name: 'Quitter' }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -34,7 +40,7 @@ test.describe('ShiftGuide critical journeys', () => {
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('shiftguide_auth_token'))).toBeNull();
   });
 
-  test('persists standard-module progress across a full reload', async ({ page }) => {
+  test('persists standard-module progress across a full reload for the same config revision', async ({ page }) => {
     await unlock(page, '/shiftguide/module/module_standard');
     await expect(page.getByText('Valider le contrôle E2E')).toBeVisible();
 
@@ -42,9 +48,14 @@ test.describe('ShiftGuide critical journeys', () => {
     await expect(page.getByText('1 / 1 actions traitées')).toBeVisible();
     await expect(page.getByText('Terminé')).toBeVisible();
 
-    const storedBeforeReload = await page.evaluate(() => localStorage.getItem('shiftguide_progress_v2'));
-    expect(storedBeforeReload).toContain('action_standard_1');
-    expect(storedBeforeReload).toContain('validated');
+    const storedBeforeReload = await page.evaluate(() => JSON.parse(
+      localStorage.getItem('shiftguide_progress_v3') ?? '{}'
+    ));
+    expect(storedBeforeReload.version).toBe(3);
+    expect(storedBeforeReload.configRevision).toBe(
+      await page.evaluate(() => localStorage.getItem('shiftguide_config_revision'))
+    );
+    expect(storedBeforeReload.actions?.action_standard_1).toBe('validated');
 
     await page.reload();
     await expect(page.getByText('1 / 1 actions traitées')).toBeVisible();
@@ -77,10 +88,13 @@ test.describe('ShiftGuide critical journeys', () => {
     await page.getByRole('button', { name: 'Valider' }).click();
     await expect(page.getByText('Terminé')).toBeVisible();
 
-    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('shiftguide_progress_v2') ?? '{}'));
+    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}'));
     expect(state.activeChoices?.module_choice).toBe('scenario_a');
     expect(state.actions?.choice_action_a).toBe('validated');
     expect(state.actions?.choice_action_b).toBeUndefined();
+    expect(state.configRevision).toBe(
+      await page.evaluate(() => localStorage.getItem('shiftguide_config_revision'))
+    );
 
     await page.goto('/shiftguide');
     const moduleCard = page.locator('a[href="/shiftguide/module/module_choice"]').filter({ hasText: 'Module à choix' }).first();

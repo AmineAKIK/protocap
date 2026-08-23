@@ -1,18 +1,25 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { PROGRESS_STORAGE_KEY } from '../../shared/shiftGuideProgress.js';
+import {
+  CONFIG_REVISION_STORAGE_KEY,
+  PROGRESS_STORAGE_KEY,
+} from '../../shared/shiftGuideProgress.js';
 import { shiftGuideFixture } from '../test/shiftGuideFixture';
 import { useModuleProgress } from './useModuleProgress';
+
+const CONFIG_REVISION = 'sha256:test-config-revision';
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  localStorage.setItem(CONFIG_REVISION_STORAGE_KEY, CONFIG_REVISION);
   sessionStorage.setItem('shiftguide_auth_token', 'test-token');
   sessionStorage.setItem('shiftguide_data', JSON.stringify(shiftGuideFixture));
+  sessionStorage.setItem('shiftguide_session_config_revision', CONFIG_REVISION);
 });
 
 describe('useModuleProgress', () => {
-  it('persists an action through the canonical v2 store and updates the hook subscriber', async () => {
+  it('persists an action through the canonical revision-bound store and updates the hook subscriber', async () => {
     const { result } = renderHook(() =>
       useModuleProgress('module_standard', ['action_1', 'action_2'])
     );
@@ -27,9 +34,11 @@ describe('useModuleProgress', () => {
 
     const stored = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) ?? '{}') as {
       version?: number;
+      configRevision?: string;
       actions?: Record<string, string>;
     };
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
+    expect(stored.configRevision).toBe(CONFIG_REVISION);
     expect(stored.actions).toEqual({ action_1: 'validated' });
   });
 

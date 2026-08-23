@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShiftGuideAuthProvider, useShiftGuideAuth } from './ShiftGuideAuthContext';
 import { shiftGuideFixture } from '../test/shiftGuideFixture';
 
+const CONFIG_REVISION = 'sha256:test-config-revision';
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -14,6 +16,7 @@ function storeSession(expiresAt: number) {
   sessionStorage.setItem('shiftguide_auth_token', 'session-token');
   sessionStorage.setItem('shiftguide_data', JSON.stringify(shiftGuideFixture));
   sessionStorage.setItem('shiftguide_session_expires_at', String(expiresAt));
+  sessionStorage.setItem('shiftguide_session_config_revision', CONFIG_REVISION);
 }
 
 function AuthProbe() {
@@ -49,7 +52,10 @@ describe('ShiftGuideAuthProvider session lifecycle', () => {
     vi.setSystemTime(new Date('2026-08-23T12:00:00.000Z'));
     const expiresAt = Date.now() + 1_000;
     storeSession(expiresAt);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ ok: true, expiresAt })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ ok: true, expiresAt, configRevision: CONFIG_REVISION }))
+    );
 
     render(
       <ShiftGuideAuthProvider>
@@ -67,6 +73,7 @@ describe('ShiftGuideAuthProvider session lifecycle', () => {
     expect(screen.getByTestId('status').textContent).toBe('locked');
     expect(sessionStorage.getItem('shiftguide_auth_token')).toBeNull();
     expect(sessionStorage.getItem('shiftguide_session_expires_at')).toBeNull();
+    expect(sessionStorage.getItem('shiftguide_session_config_revision')).toBeNull();
   });
 
   it('revalidates immediately on focus and locks when the server revoked the session', async () => {
@@ -74,7 +81,7 @@ describe('ShiftGuideAuthProvider session lifecycle', () => {
     storeSession(expiresAt);
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ ok: true, expiresAt }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true, expiresAt, configRevision: CONFIG_REVISION }))
       .mockResolvedValueOnce(new Response(null, { status: 401 }));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -123,7 +130,7 @@ describe('ShiftGuideAuthProvider session lifecycle', () => {
     expect(screen.getByTestId('status').textContent).toBe('locked');
 
     await act(async () => {
-      resolveValidation?.(jsonResponse({ ok: true, expiresAt }));
+      resolveValidation?.(jsonResponse({ ok: true, expiresAt, configRevision: CONFIG_REVISION }));
       await validationResponse;
       await Promise.resolve();
     });

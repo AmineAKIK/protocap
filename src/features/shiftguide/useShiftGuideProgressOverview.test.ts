@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { SGModule } from '../../data/shiftguideModules';
 import { buildShiftGuideProgressOverview } from './useShiftGuideProgressOverview';
 
+const CONFIG_REVISION = 'sha256:test-config-revision';
+
 const modules: SGModule[] = [
   {
     id: 'standard',
@@ -36,17 +38,25 @@ const modules: SGModule[] = [
   },
 ];
 
+function storeProgress(state: Record<string, unknown>) {
+  localStorage.setItem('shiftguide_config_revision', CONFIG_REVISION);
+  localStorage.setItem('shiftguide_progress_v3', JSON.stringify({
+    version: 3,
+    configRevision: CONFIG_REVISION,
+    updatedAt: 1,
+    ...state,
+  }));
+}
+
 describe('buildShiftGuideProgressOverview', () => {
   it('uses the active choice scenario instead of aggregating alternative branches', () => {
-    localStorage.setItem('shiftguide_progress_v2', JSON.stringify({
-      version: 2,
+    storeProgress({
       actions: {
         std_1: 'validated',
         choice_a_1: 'validated',
       },
       activeChoices: { choice: 'choice_a' },
-      updatedAt: 1,
-    }));
+    });
 
     const overview = buildShiftGuideProgressOverview(modules, localStorage);
 
@@ -66,12 +76,7 @@ describe('buildShiftGuideProgressOverview', () => {
   });
 
   it('keeps an untouched choice module out of the global action denominator', () => {
-    localStorage.setItem('shiftguide_progress_v2', JSON.stringify({
-      version: 2,
-      actions: {},
-      activeChoices: {},
-      updatedAt: 1,
-    }));
+    storeProgress({ actions: {}, activeChoices: {} });
 
     const overview = buildShiftGuideProgressOverview(modules, localStorage);
 

@@ -1,7 +1,20 @@
-export const PROGRESS_STORAGE_KEY = 'shiftguide_progress_v2';
-export const LEGACY_PROGRESS_STORAGE_KEY = 'shiftguide_progress_v1';
-export const LEGACY_MODULE_PREFIX = 'shiftguide_module_';
-export const PROGRESS_VERSION = 2;
+import {
+  CONFIG_REVISION_STORAGE_KEY,
+  LEGACY_MODULE_PREFIX,
+  LEGACY_PROGRESS_STORAGE_KEY,
+  LEGACY_PROGRESS_V2_STORAGE_KEY,
+  PROGRESS_STORAGE_KEY,
+} from './shiftGuidePersistence.js';
+
+export {
+  CONFIG_REVISION_STORAGE_KEY,
+  LEGACY_MODULE_PREFIX,
+  LEGACY_PROGRESS_STORAGE_KEY,
+  LEGACY_PROGRESS_V2_STORAGE_KEY,
+  PROGRESS_STORAGE_KEY,
+} from './shiftGuidePersistence.js';
+
+export const PROGRESS_VERSION = 3;
 
 const VALID_STATUSES = new Set(['validated', 'na']);
 
@@ -43,19 +56,23 @@ function sanitizeActiveChoices(value) {
   return activeChoices;
 }
 
-function normalizeCurrentState(value) {
+function normalizeCurrentState(value, configRevision) {
   if (!isRecord(value)) return null;
+  if (value.version !== PROGRESS_VERSION) return null;
+  if (value.configRevision !== configRevision) return null;
   return {
     version: PROGRESS_VERSION,
+    configRevision,
     actions: sanitizeActions(value.actions),
     activeChoices: sanitizeActiveChoices(value.activeChoices),
     updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : 0,
   };
 }
 
-function emptyState() {
+function emptyState(configRevision) {
   return {
     version: PROGRESS_VERSION,
+    configRevision,
     actions: {},
     activeChoices: {},
     updatedAt: 0,
@@ -71,35 +88,37 @@ function getLegacyKeys(storage) {
   return keys;
 }
 
-function mergeLegacyActions(target, raw) {
-  const parsed = parseJson(raw);
-  const legacyActions = sanitizeActions(isRecord(parsed) ? parsed.actions : null);
-  for (const [actionId, status] of Object.entries(legacyActions)) {
-    if (!target[actionId]) target[actionId] = status;
-  }
+function clearLegacyProgress(storage) {
+  storage.removeItem(LEGACY_PROGRESS_STORAGE_KEY);
+  storage.removeItem(LEGACY_PROGRESS_V2_STORAGE_KEY);
+  for (const key of getLegacyKeys(storage)) storage.removeItem(key);
 }
 
 export function readProgressState(storage) {
-  const current = normalizeCurrentState(parseJson(storage.getItem(PROGRESS_STORAGE_KEY)));
-  const state = current ?? emptyState();
-  const legacyKeys = getLegacyKeys(storage);
-  const hasLegacyGlobal = storage.getItem(LEGACY_PROGRESS_STORAGE_KEY) !== null;
-  const needsMigration = !current || hasLegacyGlobal || legacyKeys.length > 0;
+  const configRevision = storage.getItem(CONFIG_REVISION_STORAGE_KEY);
+  if (!configRevision) return emptyState('');
 
-  if (!needsMigration) return state;
+  const current = normalizeCurrentState(parseJson(storage.getItem(PROGRESS_STORAGE_KEY)), configRevision);
+  const hasLegacy =
+    storage.getItem(LEGACY_PROGRESS_STORAGE_KEY) !== null ||
+    storage.getItem(LEGACY_PROGRESS_V2_STORAGE_KEY) !== null ||
+    getLegacyKeys(storage).length > 0;
 
-  mergeLegacyActions(state.actions, storage.getItem(LEGACY_PROGRESS_STORAGE_KEY));
-  for (const key of legacyKeys) mergeLegacyActions(state.actions, storage.getItem(key));
+  if (current && !hasLegacy) return current;
 
-  const migrated = { ...state, updatedAt: Date.now() };
-  storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(migrated));
-  storage.removeItem(LEGACY_PROGRESS_STORAGE_KEY);
-  for (const key of legacyKeys) storage.removeItem(key);
-  return migrated;
+  clearLegacyProgress(storage);
+  if (current) return current;
+
+  const fresh = { ...emptyState(configRevision), updatedAt: Date.now() };
+  storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(fresh));
+  return fresh;
 }
 
 export function writeProgressState(storage, state) {
-  const normalized = normalizeCurrentState(state) ?? emptyState();
+  const configRevision = storage.getItem(CONFIG_REVISION_STORAGE_KEY);
+  if (!configRevision) return emptyState('');
+
+  const normalized = normalizeCurrentState(state, configRevision) ?? emptyState(configRevision);
   const next = { ...normalized, updatedAt: Date.now() };
   storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(next));
   return next;
