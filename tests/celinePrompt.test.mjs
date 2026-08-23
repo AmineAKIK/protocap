@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 import { createCelineAuthority } from '../server/celineAuthority.mjs';
 import { buildCelineSystemPrompt } from '../server/celinePrompt.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
@@ -43,8 +44,8 @@ const routingSpec = {
   classifierRules: ['Le message courant prime sur l’historique.'],
 };
 
-function buildPrompt(data = sampleData) {
-  const authority = createCelineAuthority(data, routingSpec);
+function buildPrompt(data = sampleData, routing = routingSpec) {
+  const authority = createCelineAuthority(data, routing);
   return buildCelineSystemPrompt(data, authority);
 }
 
@@ -84,4 +85,18 @@ test('buildCelineSystemPrompt does not expose emergency wording for free-form re
 test('buildCelineSystemPrompt omits supplemental context when empty', () => {
   const prompt = buildPrompt({ ...sampleData, systemPromptExtra: '' });
   assert.doesNotMatch(prompt, /CONTEXTE SITE NON AUTORITATIF/);
+});
+
+test('buildCelineSystemPrompt rejects an oversized aggregate UTF-8 prompt', () => {
+  const oversizedRouting = {
+    ...routingSpec,
+    routes: [{
+      ...routingSpec.routes[0],
+      decisionGuide: 'é'.repeat(CONFIG_BUDGETS.celineSystemPromptBytes),
+    }],
+  };
+  assert.throws(
+    () => buildPrompt(sampleData, oversizedRouting),
+    new RegExp(`exceeds ${CONFIG_BUDGETS.celineSystemPromptBytes} UTF-8 bytes`)
+  );
 });

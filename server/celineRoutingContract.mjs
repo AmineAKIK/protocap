@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
+import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 
 const PROTOCOL_REVISION = 'decision-v2';
-const MAX_ROUTE_ACTIONS = 200;
-const MAX_RULES = 100;
 
 function isRecord(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -10,6 +9,12 @@ function isRecord(value) {
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function validateStringBudget(value, path, errors, maxChars) {
+  if (typeof value === 'string' && value.length > maxChars) {
+    errors.push(`${path} must contain at most ${maxChars} characters`);
+  }
 }
 
 function stableSerialize(value) {
@@ -38,10 +43,14 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
   const errors = [];
   if (!isRecord(spec)) return { ok: false, errors: ['Celine routing spec must be an object'] };
   if (!Number.isInteger(spec.version) || spec.version < 1) errors.push('routing.version must be a positive integer');
-  if (!Array.isArray(spec.routes) || spec.routes.length === 0) errors.push('routing.routes must contain at least one route');
-  if (!Array.isArray(spec.clarifications) || spec.clarifications.length === 0) errors.push('routing.clarifications must contain at least one clarification');
-  if (!Array.isArray(spec.classifierRules) || spec.classifierRules.length === 0 || spec.classifierRules.length > MAX_RULES) {
-    errors.push(`routing.classifierRules must contain between 1 and ${MAX_RULES} rules`);
+  if (!Array.isArray(spec.routes) || spec.routes.length === 0 || spec.routes.length > CONFIG_BUDGETS.routes) {
+    errors.push(`routing.routes must contain between 1 and ${CONFIG_BUDGETS.routes} routes`);
+  }
+  if (!Array.isArray(spec.clarifications) || spec.clarifications.length === 0 || spec.clarifications.length > CONFIG_BUDGETS.clarifications) {
+    errors.push(`routing.clarifications must contain between 1 and ${CONFIG_BUDGETS.clarifications} clarifications`);
+  }
+  if (!Array.isArray(spec.classifierRules) || spec.classifierRules.length === 0 || spec.classifierRules.length > CONFIG_BUDGETS.classifierRules) {
+    errors.push(`routing.classifierRules must contain between 1 and ${CONFIG_BUDGETS.classifierRules} rules`);
   }
 
   const actionIds = collectActionIds(shiftGuideConfig.modules);
@@ -58,8 +67,11 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
       if (!isNonEmptyString(route.id)) errors.push(`${path}.id must be a non-empty string`);
       if (!isNonEmptyString(route.label)) errors.push(`${path}.label must be a non-empty string`);
       if (!isNonEmptyString(route.decisionGuide)) errors.push(`${path}.decisionGuide must be a non-empty string`);
-      if (!Array.isArray(route.actionIds) || route.actionIds.length === 0 || route.actionIds.length > MAX_ROUTE_ACTIONS) {
-        errors.push(`${path}.actionIds must contain between 1 and ${MAX_ROUTE_ACTIONS} action ids`);
+      validateStringBudget(route.id, `${path}.id`, errors, CONFIG_BUDGETS.idChars);
+      validateStringBudget(route.label, `${path}.label`, errors, CONFIG_BUDGETS.shortTextChars);
+      validateStringBudget(route.decisionGuide, `${path}.decisionGuide`, errors, CONFIG_BUDGETS.textChars);
+      if (!Array.isArray(route.actionIds) || route.actionIds.length === 0 || route.actionIds.length > CONFIG_BUDGETS.routeActions) {
+        errors.push(`${path}.actionIds must contain between 1 and ${CONFIG_BUDGETS.routeActions} action ids`);
       } else {
         const seen = new Set();
         for (const actionId of route.actionIds) {
@@ -67,6 +79,7 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
             errors.push(`${path}.actionIds must contain only non-empty strings`);
             continue;
           }
+          validateStringBudget(actionId, `${path}.actionIds`, errors, CONFIG_BUDGETS.idChars);
           if (seen.has(actionId)) errors.push(`${path}.actionIds duplicates "${actionId}"`);
           seen.add(actionId);
           if (!actionIds.has(actionId)) errors.push(`${path}.actionIds references unknown action "${actionId}"`);
@@ -89,6 +102,9 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
       if (!isNonEmptyString(clarification.id)) errors.push(`${path}.id must be a non-empty string`);
       if (!isNonEmptyString(clarification.question)) errors.push(`${path}.question must be a non-empty string`);
       if (!isNonEmptyString(clarification.decisionGuide)) errors.push(`${path}.decisionGuide must be a non-empty string`);
+      validateStringBudget(clarification.id, `${path}.id`, errors, CONFIG_BUDGETS.idChars);
+      validateStringBudget(clarification.question, `${path}.question`, errors, CONFIG_BUDGETS.textChars);
+      validateStringBudget(clarification.decisionGuide, `${path}.decisionGuide`, errors, CONFIG_BUDGETS.textChars);
       if (isNonEmptyString(clarification.id)) {
         if (clarificationIds.has(clarification.id)) errors.push(`${path}.id duplicates clarification "${clarification.id}"`);
         clarificationIds.add(clarification.id);
@@ -99,6 +115,7 @@ export function validateCelineRoutingSpec(spec, shiftGuideConfig) {
   if (Array.isArray(spec.classifierRules)) {
     spec.classifierRules.forEach((rule, index) => {
       if (!isNonEmptyString(rule)) errors.push(`routing.classifierRules[${index}] must be a non-empty string`);
+      validateStringBudget(rule, `routing.classifierRules[${index}]`, errors, CONFIG_BUDGETS.textChars);
     });
   }
 
