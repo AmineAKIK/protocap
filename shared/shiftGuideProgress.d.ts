@@ -1,7 +1,8 @@
 export type SharedActionStatus = 'pending' | 'validated' | 'na';
 
 export interface SharedProgressState {
-  version: 2;
+  version: 3;
+  configRevision: string;
   actions: Record<string, Exclude<SharedActionStatus, 'pending'>>;
   activeChoices: Record<string, string>;
   updatedAt: number;
@@ -40,10 +41,12 @@ interface ChoiceModule {
   subModules: ChoiceSubModule[];
 }
 
-export const PROGRESS_STORAGE_KEY: 'shiftguide_progress_v2';
+export const CONFIG_REVISION_STORAGE_KEY: 'shiftguide_config_revision';
+export const PROGRESS_STORAGE_KEY: 'shiftguide_progress_v3';
+export const LEGACY_PROGRESS_V2_STORAGE_KEY: 'shiftguide_progress_v2';
 export const LEGACY_PROGRESS_STORAGE_KEY: 'shiftguide_progress_v1';
 export const LEGACY_MODULE_PREFIX: 'shiftguide_module_';
-export const PROGRESS_VERSION: 2;
+export const PROGRESS_VERSION: 3;
 
 export function readProgressState(storage: StorageLike): SharedProgressState;
 export function writeProgressState(storage: StorageLike, state: SharedProgressState): SharedProgressState;
