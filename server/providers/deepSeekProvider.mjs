@@ -6,6 +6,20 @@ export class CelineProviderError extends Error {
   }
 }
 
+function getAbortProviderError(signal, timeoutSignal, cause) {
+  if (signal?.aborted) {
+    return new CelineProviderError(
+      'cancelled',
+      'DeepSeek request cancelled because the client disconnected.',
+      { cause }
+    );
+  }
+  if (timeoutSignal.aborted) {
+    return new CelineProviderError('timeout', 'DeepSeek request timed out.', { cause });
+  }
+  return null;
+}
+
 export function createDeepSeekProvider({
   apiKey,
   fetchImpl = fetch,
@@ -41,12 +55,8 @@ export function createDeepSeekProvider({
           signal: requestSignal,
         });
       } catch (error) {
-        if (signal?.aborted) {
-          throw new CelineProviderError('cancelled', 'DeepSeek request cancelled because the client disconnected.', { cause: error });
-        }
-        if (timeoutSignal.aborted) {
-          throw new CelineProviderError('timeout', 'DeepSeek request timed out.', { cause: error });
-        }
+        const abortError = getAbortProviderError(signal, timeoutSignal, error);
+        if (abortError) throw abortError;
         throw new CelineProviderError('unavailable', 'DeepSeek request failed.', { cause: error });
       }
 
@@ -61,8 +71,13 @@ export function createDeepSeekProvider({
       try {
         payload = await upstream.json();
       } catch (error) {
+        const abortError = getAbortProviderError(signal, timeoutSignal, error);
+        if (abortError) throw abortError;
         throw new CelineProviderError('invalid_response', 'DeepSeek returned invalid JSON.', { cause: error });
       }
+
+      const abortError = getAbortProviderError(signal, timeoutSignal);
+      if (abortError) throw abortError;
 
       const content = payload?.choices?.[0]?.message?.content;
       if (typeof content !== 'string' || content.length === 0) {
