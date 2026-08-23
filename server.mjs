@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
 import { resolveServerSecret } from './server/envCompat.mjs';
+import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 import { cleanupExpiredState, parseJsonEnvValue } from './server/runtimeUtils.mjs';
@@ -49,6 +50,7 @@ const cleanupTimer = setInterval(
 );
 cleanupTimer.unref();
 
+const log = createStructuredLogger(console);
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  log.info('server_started', { port: Number(port) });
 });
