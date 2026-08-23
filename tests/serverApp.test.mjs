@@ -61,13 +61,16 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
 
     const unlocked = await unlock(baseUrl);
     assert.equal(unlocked.token, 'test-session-token');
+    assert.equal(typeof unlocked.expiresAt, 'number');
     assert.equal(unlocked.modules[0].id, 'module_standard');
 
     const session = await fetch(`${baseUrl}/api/shiftguide/session`, {
       headers: { Authorization: `Bearer ${unlocked.token}` },
     });
     assert.equal(session.status, 200);
-    assert.deepEqual(await session.json(), { ok: true });
+    const sessionBody = await session.json();
+    assert.equal(sessionBody.ok, true);
+    assert.equal(typeof sessionBody.expiresAt, 'number');
 
     const logout = await fetch(`${baseUrl}/api/shiftguide/session`, {
       method: 'DELETE',
@@ -82,7 +85,7 @@ test('Express factory supports the real unlock, session and logout lifecycle ove
   });
 });
 
-test('Celine HTTP route returns the Protocap DTO instead of a provider payload', async () => {
+test('Celine HTTP route returns canonical Protocap action data instead of provider text', async () => {
   let providerRequest;
   const celineProvider = {
     async complete(input) {
@@ -90,7 +93,7 @@ test('Celine HTTP route returns the Protocap DTO instead of a provider payload',
       return JSON.stringify({
         message: 'Action suivante.',
         checklist: [
-          { actionId: 'action_1', text: 'Faire le contrôle', note: null, module: 'Module standard' },
+          { actionId: 'action_1', text: 'Texte fournisseur non fiable', note: 'x', module: 'x' },
         ],
         followUp: null,
       });
