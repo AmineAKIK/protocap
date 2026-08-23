@@ -44,6 +44,21 @@ test('config revision is deterministic and independent from object key insertion
   assert.equal(second, first);
 });
 
+test('config revision ignores unknown non-semantic fields at every nested level', () => {
+  const decorated = clone(baseConfig);
+  decorated.deploymentNote = 'metadata only';
+  decorated.modules[0].owner = 'metadata only';
+  decorated.modules[0].actions[0].source = 'metadata only';
+  decorated.lexique[0].source = 'metadata only';
+  decorated.urgences.owner = 'metadata only';
+  decorated.urgences.generalAlarm.source = 'metadata only';
+
+  assert.equal(
+    createShiftGuideConfigRevision(decorated),
+    createShiftGuideConfigRevision(baseConfig)
+  );
+});
+
 test('config revision changes when operational procedure text changes without changing ids', () => {
   const changed = clone(baseConfig);
   changed.modules[0].actions[0].text = 'Contrôler la pression et consigner la valeur';
