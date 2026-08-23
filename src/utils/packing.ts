@@ -25,7 +25,7 @@ export interface PackingOption {
 }
 
 export function isPositiveInteger(value: number): boolean {
-  return Number.isFinite(value) && Number.isInteger(value) && value > 0;
+  return Number.isSafeInteger(value) && value > 0;
 }
 
 export function parsePositiveIntegerInput(value: string): number | null {
@@ -36,15 +36,7 @@ export function parsePositiveIntegerInput(value: string): number | null {
   return isPositiveInteger(parsed) ? parsed : null;
 }
 
-export function isValidPackingInput(input: PackingInput): boolean {
-  return (
-    isPositiveInteger(input.quantity) &&
-    isPositiveInteger(input.unitsPerCarton) &&
-    isPositiveInteger(input.cartonsPerPalette)
-  );
-}
-
-export function calculateExactPacking(input: PackingInput): PackingExactResult {
+function calculateExactPackingUnchecked(input: PackingInput): PackingExactResult {
   const unitsPerPalette = input.unitsPerCarton * input.cartonsPerPalette;
   const palettesCompletes = Math.floor(input.quantity / unitsPerPalette);
   const resteApresPalettes = input.quantity % unitsPerPalette;
@@ -60,8 +52,50 @@ export function calculateExactPacking(input: PackingInput): PackingExactResult {
   };
 }
 
+export function isValidPackingInput(input: PackingInput): boolean {
+  if (
+    !isPositiveInteger(input.quantity) ||
+    !isPositiveInteger(input.unitsPerCarton) ||
+    !isPositiveInteger(input.cartonsPerPalette)
+  ) {
+    return false;
+  }
+
+  const unitsPerPalette = input.unitsPerCarton * input.cartonsPerPalette;
+  if (!Number.isSafeInteger(unitsPerPalette)) return false;
+
+  const exact = calculateExactPackingUnchecked(input);
+  const cartonCount = exact.unitesRestantes > 0 ? exact.cartonsComplets + 1 : exact.cartonsComplets;
+  const completePaletteUnits = exact.palettesCompletes * exact.unitsPerPalette;
+  const roundedCartonUnits = cartonCount * input.unitsPerCarton;
+  const roundCartonTotal = completePaletteUnits + roundedCartonUnits;
+  const paletteCount = exact.resteApresPalettes > 0 ? exact.palettesCompletes + 1 : exact.palettesCompletes;
+  const roundPaletteTotal = paletteCount * exact.unitsPerPalette;
+
+  return (
+    Number.isSafeInteger(completePaletteUnits) &&
+    Number.isSafeInteger(roundedCartonUnits) &&
+    Number.isSafeInteger(roundCartonTotal) &&
+    Number.isSafeInteger(roundCartonTotal - input.quantity) &&
+    Number.isSafeInteger(roundPaletteTotal) &&
+    Number.isSafeInteger(roundPaletteTotal - input.quantity)
+  );
+}
+
+function assertValidPackingInput(input: PackingInput): void {
+  if (!isValidPackingInput(input)) {
+    throw new RangeError('Packing input must use positive safe integers with exactly representable derived totals.');
+  }
+}
+
+export function calculateExactPacking(input: PackingInput): PackingExactResult {
+  assertValidPackingInput(input);
+  return calculateExactPackingUnchecked(input);
+}
+
 export function calculatePackingOptions(input: PackingInput): PackingOption[] {
-  const exact = calculateExactPacking(input);
+  assertValidPackingInput(input);
+  const exact = calculateExactPackingUnchecked(input);
   const exactOption: PackingOption = {
     policy: 'no-overrun',
     label: 'Exact, sans dépassement',
