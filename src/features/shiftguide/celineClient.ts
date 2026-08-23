@@ -2,21 +2,8 @@ import { isCelineResponse } from '../../../shared/celineContract.js';
 import type { SharedCelineResponse } from '../../../shared/celineContract.js';
 import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
 
-export interface CelineApiMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-function getLatestUserMessage(history: CelineApiMessage[]): CelineApiMessage | null {
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    const message = history[index];
-    if (message?.role === 'user' && message.content.length > 0) return message;
-  }
-  return null;
-}
-
 export async function requestCelineResponse(
-  history: CelineApiMessage[],
+  userMessage: string,
   signal: AbortSignal
 ): Promise<SharedCelineResponse> {
   const token = getShiftGuideToken();
@@ -24,8 +11,7 @@ export async function requestCelineResponse(
     throw new Error('Session ShiftGuide expirée. Recharge la page pour te reconnecter.');
   }
 
-  const latestUserMessage = getLatestUserMessage(history);
-  if (!latestUserMessage) {
+  if (userMessage.trim().length === 0) {
     throw new Error('Requête IA invalide.');
   }
 
@@ -35,7 +21,7 @@ export async function requestCelineResponse(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages: [latestUserMessage] }),
+    body: JSON.stringify({ messages: [{ role: 'user', content: userMessage }] }),
     signal,
   });
 

@@ -31,7 +31,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">Protocap</p>
           <h1 className="mt-3 text-2xl font-black tracking-tight">L’interface a rencontré une erreur.</h1>
           <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
-            Aucune donnée n’a été envoyée. Recharge la page pour repartir d’un état propre.
+            Recharge la page pour reconstruire l’interface à partir de l’état disponible.
           </p>
           <button
             type="button"

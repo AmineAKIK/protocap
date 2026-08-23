@@ -1,7 +1,6 @@
 export const CONFIG_REVISION_STORAGE_KEY = 'shiftguide_config_revision';
 export const CELINE_AUTHORITY_REVISION_STORAGE_KEY = 'shiftguide_celine_authority_revision';
 export const CELINE_HISTORY_STORAGE_KEY = 'shiftguide_celine_history';
-export const CELINE_PROMPT_VERSION_STORAGE_KEY = 'shiftguide_prompt_version';
 export const PROGRESS_STORAGE_KEY = 'shiftguide_progress_v3';
 export const LEGACY_PROGRESS_V2_STORAGE_KEY = 'shiftguide_progress_v2';
 export const LEGACY_PROGRESS_STORAGE_KEY = 'shiftguide_progress_v1';
@@ -53,7 +52,6 @@ function safeKeys(storage) {
 
 export function clearCelineHistory(storage) {
   safeRemoveItem(storage, CELINE_HISTORY_STORAGE_KEY);
-  safeRemoveItem(storage, CELINE_PROMPT_VERSION_STORAGE_KEY);
 }
 
 export function clearRevisionBoundShiftGuideData(storage) {
