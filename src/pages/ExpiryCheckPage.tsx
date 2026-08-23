@@ -8,8 +8,7 @@ import {
   Plus,
   RefreshCcw,
   Route,
-  ShieldCheck,
-  X
+  ShieldCheck
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
@@ -125,46 +124,35 @@ function BlockedModal({ line, onClose, onDeclare }: {
   onDeclare: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 p-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))] backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[calc(100dvh_-_1rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-slide-in sm:rounded-2xl">
-        <div className="flex items-start justify-between gap-4 bg-rose-600 px-4 py-4 text-white sm:px-6 sm:py-5">
-          <div className="flex items-center gap-3">
-            <Ban size={26} className="shrink-0" />
-            <h2 className="text-lg font-bold text-white">
-              Bloc de remplissage expiré — démarrage bloqué
-            </h2>
-          </div>
-          <button onClick={onClose} className="grid min-h-11 min-w-11 place-items-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white" aria-label="Fermer">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
-          <p className="text-slate-700 leading-6">
+    <Modal title="Bloc de remplissage expiré — démarrage bloqué" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-900">
+          <Ban size={22} className="mt-0.5 shrink-0 text-rose-600" />
+          <p className="leading-6">
             Sur <strong>{line.name}</strong>, le bloc de remplissage a dépassé sa période d'utilisation de {line.elements[0]?.validityDays ?? 5} jours.
           </p>
+        </div>
 
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-rose-900">Bloc de remplissage</p>
-              <Badge tone="red">Expiré</Badge>
-            </div>
-            <BlockValidityBar line={line} />
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-rose-900">Bloc de remplissage</p>
+            <Badge tone="red">Expiré</Badge>
           </div>
+          <BlockValidityBar line={line} />
+        </div>
 
-          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
-            Déclarez le remplacement du bloc pour débloquer le démarrage.
-          </div>
+        <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+          Déclarez le remplacement du bloc pour débloquer le démarrage.
+        </div>
 
-          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-            <Button className="w-full sm:w-auto" variant="ghost" onClick={onClose}>Voir quand même</Button>
-            <Button className="w-full sm:w-auto" variant="danger" icon={<Plus size={15} />} onClick={onDeclare}>
-              Déclarer le remplacement
-            </Button>
-          </div>
+        <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+          <Button className="w-full sm:w-auto" variant="ghost" onClick={onClose}>Voir quand même</Button>
+          <Button className="w-full sm:w-auto" variant="danger" icon={<Plus size={15} />} onClick={onDeclare}>
+            Déclarer le remplacement
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
