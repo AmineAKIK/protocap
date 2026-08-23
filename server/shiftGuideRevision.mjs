@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { parseShiftGuideConfig } from '../shared/shiftGuideContract.js';
 
 function stableSerialize(value) {
   if (Array.isArray(value)) {
@@ -16,12 +17,11 @@ function stableSerialize(value) {
 }
 
 export function createShiftGuideConfigRevision(config) {
-  const canonical = stableSerialize({
-    modules: config.modules,
-    lexique: config.lexique,
-    urgences: config.urgences,
-    systemPromptExtra: config.systemPromptExtra ?? null,
-  });
+  const parsed = parseShiftGuideConfig(config);
+  if (!parsed.ok) {
+    throw new Error(`Cannot create ShiftGuide revision from invalid configuration: ${parsed.errors.join('; ')}`);
+  }
 
+  const canonical = stableSerialize(parsed.value);
   return `sha256:${createHash('sha256').update(canonical, 'utf8').digest('hex')}`;
 }
