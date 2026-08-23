@@ -1,0 +1,62 @@
+import { randomUUID } from 'node:crypto';
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+
+function normalizeRequestId(value) {
+  return typeof value === 'string' && REQUEST_ID_PATTERN.test(value) ? value : null;
+}
+
+export function createRequestId(headerValue) {
+  return normalizeRequestId(headerValue) ?? randomUUID();
+}
+
+export function createStructuredLogger(base = console) {
+  function write(level, event, fields = {}) {
+    const payload = {
+      ts: new Date().toISOString(),
+      level,
+      event,
+      ...fields,
+    };
+    const line = JSON.stringify(payload);
+    const sink = typeof base[level] === 'function'
+      ? base[level].bind(base)
+      : typeof base.log === 'function'
+        ? base.log.bind(base)
+        : null;
+    sink?.(line);
+  }
+
+  return {
+    info(event, fields) {
+      write('info', event, fields);
+    },
+    warn(event, fields) {
+      write('warn', event, fields);
+    },
+    error(event, fields) {
+      write('error', event, fields);
+    },
+  };
+}
+
+export function attachRequestObservability(app, { logger, now = () => Date.now() }) {
+  app.use('/api', (req, res, next) => {
+    const requestId = createRequestId(req.get('x-request-id'));
+    const startedAt = now();
+    req.requestId = requestId;
+    res.set('X-Request-Id', requestId);
+
+    res.once('finish', () => {
+      logger.info('http_request', {
+        requestId,
+        method: req.method,
+        path: req.route?.path ?? req.path,
+        status: res.statusCode,
+        durationMs: Math.max(0, now() - startedAt),
+      });
+    });
+
+    next();
+  });
+}
