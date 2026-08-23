@@ -106,7 +106,7 @@ function emptyState(configRevision) {
 
 function getLegacyKeys(storage) {
   const keys = [];
-  let length = 0;
+  let length;
   try {
     length = storage.length;
   } catch {
