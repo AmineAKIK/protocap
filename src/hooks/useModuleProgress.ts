@@ -15,6 +15,7 @@ import {
 import type { SharedProgressSummary } from '../../shared/shiftGuideProgress.js';
 import { getSgModules } from '../data/shiftguideModules';
 import type { SGChoiceModule, SGSubModule } from '../data/shiftguideModules';
+import { getShiftGuidePersistentStorage } from '../features/shiftguide/shiftGuideStorage';
 
 export type ActionStatus = 'pending' | 'validated' | 'na';
 
@@ -45,11 +46,11 @@ function findChoiceParentForSubModule(subModuleId: string): ChoiceTarget | null 
 }
 
 function readState() {
-  return readProgressState(localStorage);
+  return readProgressState(getShiftGuidePersistentStorage());
 }
 
 function writeState(state: ReturnType<typeof readState>) {
-  writeProgressState(localStorage, state);
+  writeProgressState(getShiftGuidePersistentStorage(), state);
   notifyProgressChanged();
 }
 
