@@ -7,6 +7,8 @@ function sequence(prefix, start, end) {
   );
 }
 
+const FIN_POSTE_AFTER_FIN_OC = ['fp_01', 'fp_03', 'fp_04', 'fp_06', 'bf_01', 'bf_02'];
+
 const FIXED_ROUTE_SPECS = [
   {
     id: 'badgeage_debut',
@@ -41,17 +43,22 @@ const FIXED_ROUTE_SPECS = [
   {
     id: 'fin_poste_avec_oc',
     label: 'Fin de poste — OC ouvert',
-    actionIds: [...sequence('foc', 1, 10), 'fp_01', 'fp_02', 'fp_03', 'fp_04', 'fp_06', 'bf_01', 'bf_02'],
+    actionIds: [...sequence('foc', 1, 10), ...FIN_POSTE_AFTER_FIN_OC],
   },
   {
     id: 'fin_poste_avec_cuve_oc',
     label: 'Fin de poste — cuve et OC ouverts',
-    actionIds: [...sequence('fc', 1, 3), ...sequence('foc', 1, 10), 'fp_01', 'fp_02', 'fp_03', 'fp_04', 'fp_06', 'bf_01', 'bf_02'],
+    actionIds: [...sequence('fc', 1, 3), ...sequence('foc', 1, 10), ...FIN_POSTE_AFTER_FIN_OC],
   },
   {
     id: 'debut_oc',
     label: 'Début OC',
     actionIds: sequence('doc', 1, 16),
+  },
+  {
+    id: 'debut_oc_precedent_ouvert',
+    label: 'Début OC — clôturer d’abord l’OC précédent',
+    actionIds: [...sequence('foc', 1, 10), ...sequence('doc', 1, 16)],
   },
   {
     id: 'fin_oc',
@@ -62,6 +69,11 @@ const FIXED_ROUTE_SPECS = [
     id: 'debut_cuve',
     label: 'Début cuve',
     actionIds: sequence('dc', 1, 6),
+  },
+  {
+    id: 'debut_cuve_sans_oc',
+    label: 'Début cuve — ouvrir d’abord un OC',
+    actionIds: [...sequence('doc', 1, 16), ...sequence('dc', 1, 6)],
   },
   {
     id: 'fin_cuve',
