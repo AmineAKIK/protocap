@@ -22,7 +22,7 @@ describe('ShiftGuideMutationCoordinator', () => {
     const secondTab = new ShiftGuideMutationCoordinator(() => locks);
     let sharedActions: string[] = [];
 
-    let releaseFirst: (() => void) | null = null;
+    let releaseFirst!: () => void;
     const firstMayFinish = new Promise<void>((resolve) => {
       releaseFirst = resolve;
     });
@@ -49,7 +49,7 @@ describe('ShiftGuideMutationCoordinator', () => {
     await Promise.resolve();
     expect(secondEntered).not.toHaveBeenCalled();
 
-    releaseFirst?.();
+    releaseFirst();
     await Promise.all([firstMutation, secondMutation]);
 
     expect(sharedActions).toEqual(['action-a', 'action-b']);
