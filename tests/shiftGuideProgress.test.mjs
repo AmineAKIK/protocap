@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  CONFIG_REVISION_STORAGE_KEY,
   LEGACY_MODULE_PREFIX,
   LEGACY_PROGRESS_STORAGE_KEY,
+  LEGACY_PROGRESS_V2_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
   readProgressState,
   resolveActiveChoice,
@@ -13,6 +15,8 @@ import {
   withoutActions,
   writeProgressState,
 } from '../shared/shiftGuideProgress.js';
+
+const CONFIG_REVISION = 'sha256:test-config-revision';
 
 class MemoryStorage {
   constructor(entries = {}) {
@@ -35,6 +39,21 @@ class MemoryStorage {
   }
 }
 
+function revisionStorage(entries = {}) {
+  return new MemoryStorage({ [CONFIG_REVISION_STORAGE_KEY]: CONFIG_REVISION, ...entries });
+}
+
+function progressState(overrides = {}) {
+  return {
+    version: 3,
+    configRevision: CONFIG_REVISION,
+    actions: {},
+    activeChoices: {},
+    updatedAt: 0,
+    ...overrides,
+  };
+}
+
 const choiceModule = {
   id: 'changement_oc',
   type: 'choice',
@@ -44,51 +63,65 @@ const choiceModule = {
   ],
 };
 
-test('progress migration merges v1 and module keys once then removes legacy storage', () => {
-  const storage = new MemoryStorage({
-    [LEGACY_PROGRESS_STORAGE_KEY]: JSON.stringify({
-      actions: { a1: 'validated', a2: 'pending', bad: 'unknown' },
-      updatedAt: 10,
-    }),
-    [`${LEGACY_MODULE_PREFIX}module-a`]: JSON.stringify({
-      actions: { a1: 'na', a3: 'na' },
-      updatedAt: 20,
-    }),
-  });
-
-  const state = readProgressState(storage);
-
-  assert.deepEqual(state.actions, { a1: 'validated', a3: 'na' });
-  assert.equal(storage.getItem(LEGACY_PROGRESS_STORAGE_KEY), null);
-  assert.equal(storage.getItem(`${LEGACY_MODULE_PREFIX}module-a`), null);
-  assert.ok(storage.getItem(PROGRESS_STORAGE_KEY));
-
-  const secondRead = readProgressState(storage);
-  assert.deepEqual(secondRead.actions, state.actions);
-});
-
-test('current v2 state wins over stale legacy values during final migration', () => {
-  const storage = new MemoryStorage({
-    [PROGRESS_STORAGE_KEY]: JSON.stringify({
+test('pre-revision progress is discarded instead of being attributed to the current procedure', () => {
+  const storage = revisionStorage({
+    [LEGACY_PROGRESS_STORAGE_KEY]: JSON.stringify({ actions: { a1: 'validated' } }),
+    [LEGACY_PROGRESS_V2_STORAGE_KEY]: JSON.stringify({
       version: 2,
-      actions: { a1: 'na' },
+      actions: { a2: 'validated' },
       activeChoices: {},
       updatedAt: 30,
     }),
-    [`${LEGACY_MODULE_PREFIX}module-a`]: JSON.stringify({ actions: { a1: 'validated', a2: 'validated' } }),
+    [`${LEGACY_MODULE_PREFIX}module-a`]: JSON.stringify({ actions: { a3: 'na' } }),
   });
 
   const state = readProgressState(storage);
-  assert.deepEqual(state.actions, { a1: 'na', a2: 'validated' });
+
+  assert.equal(state.version, 3);
+  assert.equal(state.configRevision, CONFIG_REVISION);
+  assert.deepEqual(state.actions, {});
+  assert.equal(storage.getItem(LEGACY_PROGRESS_STORAGE_KEY), null);
+  assert.equal(storage.getItem(LEGACY_PROGRESS_V2_STORAGE_KEY), null);
+  assert.equal(storage.getItem(`${LEGACY_MODULE_PREFIX}module-a`), null);
+});
+
+test('a v3 state from another config revision is reset even when action ids still match', () => {
+  const storage = revisionStorage({
+    [PROGRESS_STORAGE_KEY]: JSON.stringify({
+      version: 3,
+      configRevision: 'sha256:old-config',
+      actions: { a1: 'validated' },
+      activeChoices: {},
+      updatedAt: 30,
+    }),
+  });
+
+  const state = readProgressState(storage);
+  assert.equal(state.configRevision, CONFIG_REVISION);
+  assert.deepEqual(state.actions, {});
+
+  const persisted = JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY));
+  assert.equal(persisted.configRevision, CONFIG_REVISION);
+  assert.deepEqual(persisted.actions, {});
+});
+
+test('current revision-bound progress remains stable across reads', () => {
+  const storage = revisionStorage({
+    [PROGRESS_STORAGE_KEY]: JSON.stringify(progressState({
+      actions: { a1: 'na' },
+      updatedAt: 30,
+    })),
+  });
+
+  const state = readProgressState(storage);
+  assert.deepEqual(state.actions, { a1: 'na' });
+  assert.deepEqual(readProgressState(storage), state);
 });
 
 test('choice summary follows only the explicitly selected scenario', () => {
-  let state = {
-    version: 2,
+  let state = progressState({
     actions: { lot_1: 'validated', form_1: 'validated' },
-    activeChoices: {},
-    updatedAt: 0,
-  };
+  });
 
   state = withActiveChoice(state, 'changement_oc', 'ch_formule');
   const summary = summarizeChoiceModule(state, choiceModule);
@@ -102,24 +135,19 @@ test('choice summary follows only the explicitly selected scenario', () => {
 });
 
 test('choice summary infers the most advanced legacy scenario when no selection exists', () => {
-  const state = {
-    version: 2,
+  const state = progressState({
     actions: { lot_1: 'validated', form_1: 'validated', form_2: 'na' },
-    activeChoices: {},
-    updatedAt: 0,
-  };
+  });
 
   assert.equal(resolveActiveChoice(state, choiceModule), 'ch_formule');
   assert.equal(summarizeChoiceModule(state, choiceModule).isComplete, true);
 });
 
 test('switching active choice preserves historical actions but changes the parent meaning', () => {
-  let state = {
-    version: 2,
+  let state = progressState({
     actions: { lot_1: 'validated', form_1: 'validated' },
     activeChoices: { changement_oc: 'ch_lot' },
-    updatedAt: 0,
-  };
+  });
 
   assert.equal(summarizeChoiceModule(state, choiceModule).isComplete, true);
   state = withActiveChoice(state, 'changement_oc', 'ch_formule');
@@ -131,8 +159,8 @@ test('switching active choice preserves historical actions but changes the paren
   assert.equal(summary.isComplete, false);
 });
 
-test('action updates and scoped reset keep unrelated progress intact', () => {
-  const storage = new MemoryStorage();
+test('action updates and scoped reset keep unrelated progress intact within one revision', () => {
+  const storage = revisionStorage();
   let state = readProgressState(storage);
   state = withActionStatus(state, 'a1', 'validated');
   state = withActionStatus(state, 'a2', 'na');
