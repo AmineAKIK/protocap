@@ -11,39 +11,12 @@ export interface SharedCelineResponse {
   followUp: string | null;
 }
 
-export interface SharedCelineActionDefinition {
-  text: string;
-  note: string | null;
-  module: string | null;
-}
+export type SharedCelineDecision =
+  | { kind: 'route'; id: string }
+  | { kind: 'clarify'; id: string }
+  | { kind: 'lexicon'; id: string }
+  | { kind: 'emergency'; id: string }
+  | { kind: 'unknown' };
 
-export function parseCelineAssistantContent(
-  rawContent: unknown,
-  actionCatalog: ReadonlyMap<string, SharedCelineActionDefinition>
-): SharedCelineResponse | null;
-
-export function collectShiftGuideActions(
-  modules: Array<{
-    title: string;
-    type: 'standard' | 'choice';
-    actions?: Array<{ id: string; text: string; note?: string }>;
-    subModules?: Array<{
-      title: string;
-      actions: Array<{ id: string; text: string; note?: string }>;
-    }>;
-  }>
-): Map<string, SharedCelineActionDefinition>;
-
-export function collectShiftGuideActionIds(
-  modules: Array<{
-    title: string;
-    type: 'standard' | 'choice';
-    actions?: Array<{ id: string; text: string; note?: string }>;
-    subModules?: Array<{
-      title: string;
-      actions: Array<{ id: string; text: string; note?: string }>;
-    }>;
-  }>
-): Set<string>;
-
+export function parseCelineDecision(rawContent: unknown): SharedCelineDecision | null;
 export function isCelineResponse(value: unknown): value is SharedCelineResponse;
