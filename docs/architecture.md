@@ -12,7 +12,7 @@ flowchart TB
     Public[Public prototype routes]
     ShiftUI[ShiftGuide UI]
     SessionStore[sessionStorage\nShiftGuide token + protected config + revisions]
-    LocalStore[localStorage\nrevision-bound progress/history]
+    LocalStore[localStorage\nrevision-bound progress + session-lifetime Céline history]
   end
 
   subgraph Express
@@ -71,7 +71,9 @@ The configuration revision is a SHA-256 identity derived server-side from the va
 
 The browser stores the active ShiftGuide token, protected payload, expiry and both server revisions in `sessionStorage`. The server returns the same identities during session validation. A revision mismatch fails closed instead of allowing an old browser session to claim compatibility with a different procedure or AI authority protocol.
 
-Revision-bound local data uses a separate persistent copy of the current configuration revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock. Céline history is cleared when either the operational configuration changes or the Céline authority protocol/routing changes. A routing-only change does not erase operator progress.
+Revision-bound local data uses a separate persistent copy of the current configuration revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock.
+
+Céline conversation history has a different lifetime from procedure progress. It may be persisted locally while the current ShiftGuide session is active so navigation and reloads can resume the conversation, but the authentication boundary owns its lifecycle. Every successful unlock starts with fresh Céline memory, and every certain session termination or invalidation — logout, local expiry, server `401`, or config/authority revision mismatch — clears the conversation. Legacy persistent Céline history from earlier builds is also removed. A transient network failure during validation does not erase memory because it does not prove that the server session ended. Operator progress is not cleared by these conversation-lifecycle events.
 
 ### Runtime contracts
 
@@ -101,14 +103,15 @@ Céline is server-mediated and the model is not an operational-content authority
 2. the server verifies the session, request shape and rate limits;
 3. the server owns the classification prompt, provider credential and validated routing contract;
 4. `server/providers/deepSeekProvider.mjs` owns the DeepSeek-specific request/response envelope and timeout;
-5. the provider may return only a compact decision such as a route ID, clarification ID, lexicon key, emergency topic or `unknown`;
-6. `shared/celineContract.js` rejects free-form provider fields and malformed decision shapes;
+5. the provider selects a compact decision such as a route ID, clarification ID, lexicon key, emergency topic or `unknown`;
+6. `shared/celineContract.js` normalizes only trusted decision fields (`kind` and, when required, `id`) and discards any additional provider prose instead of allowing it to cross the authority boundary;
 7. `server/celineAuthority.mjs` resolves the decision against the current validated configuration and routing contract, then renders all operator-facing wording, checklist content and follow-up text;
-8. `/api/celine/chat` returns the Protocap-owned `{ message, checklist, followUp }` DTO to the browser.
+8. malformed or unauthorized model decisions degrade to a deterministic server-owned safe response, while genuine provider/network/rate-limit/timeout failures retain their transport error semantics;
+9. `/api/celine/chat` returns the Protocap-owned `{ message, checklist, followUp }` DTO to the browser.
 
 The prompt and resolver derive their route/clarification semantics from the same declarative contract. There is no second list of hard-coded action IDs hidden in the prompt or authority engine. `decisionGuide` values and classifier rules guide model selection, while action text remains server-owned and is not copied into the provider prompt.
 
-Procedure text, lexicon definitions and emergency wording do not need to be copied into the provider prompt to be rendered. A syntactically valid but unknown route is rejected. A provider response that adds its own `message`, checklist or instruction is rejected rather than partially trusted.
+Procedure text, lexicon definitions and emergency wording do not need to be copied into the provider prompt to be rendered. Provider-authored prose is ignored rather than shown to the operator. The server remains the only operational-content authority.
 
 `SG_SYSTEM_PROMPT` remains non-authoritative site context. It may influence classification but cannot introduce new routes, instructions or operator-facing responses.
 
@@ -118,11 +121,13 @@ Procedure text, lexicon definitions and emergency wording do not need to be copi
 - random 256-bit session tokens;
 - eight-hour session TTL;
 - reactive browser expiry enforcement with foreground revalidation;
-- server-issued configuration revision enforced across session, progress and Céline-history lifecycles;
-- content-addressed Céline authority/routing revision with history-only invalidation;
+- server-issued configuration revision enforced across session and progress lifecycles;
+- Céline conversation memory explicitly scoped to the authenticated ShiftGuide session and cleared on certain session termination/invalidation;
+- content-addressed Céline authority/routing revision with conversation-memory invalidation;
 - fail-fast compatibility validation between Céline routes and the active procedure action catalog;
-- closed provider decision protocol with rejection of free-form operator content;
+- provider decision normalization that discards free-form operator content;
 - server-owned rendering of procedure actions, clarification wording, lexicon facts and emergency guidance;
+- safe deterministic fallback for malformed or unauthorized model decisions;
 - per-IP unlock throttling, per-IP chat throttling and per-session chat throttling;
 - 128 KB JSON body limit;
 - generic client-facing provider/server errors;
