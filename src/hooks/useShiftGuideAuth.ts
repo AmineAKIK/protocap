@@ -1,9 +1,11 @@
+import { reconcileShiftGuideConfigRevision } from '../../shared/shiftGuidePersistence.js';
 import { isShiftGuideData } from '../types/shiftGuide';
 import type { ShiftGuideData } from '../types/shiftGuide';
 
 interface ShiftGuideUnlockResponse extends ShiftGuideData {
   token: string;
   expiresAt: number;
+  configRevision: string;
 }
 
 export interface ShiftGuideAuthResult {
@@ -16,11 +18,13 @@ export const SHIFTGUIDE_SESSION_INVALIDATED_EVENT = 'shiftguide:session-invalida
 const SESSION_KEY = 'shiftguide_auth_token';
 const DATA_KEY = 'shiftguide_data';
 const EXPIRY_KEY = 'shiftguide_session_expires_at';
+const REVISION_KEY = 'shiftguide_session_config_revision';
 
 function clearStoredShiftGuideAuth() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(DATA_KEY);
   sessionStorage.removeItem(EXPIRY_KEY);
+  sessionStorage.removeItem(REVISION_KEY);
 }
 
 function notifySessionInvalidated() {
@@ -32,6 +36,11 @@ export function getShiftGuideSessionExpiry(): number | null {
   if (!raw) return null;
   const expiresAt = Number(raw);
   return Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null;
+}
+
+export function getShiftGuideConfigRevision(): string | null {
+  const revision = sessionStorage.getItem(REVISION_KEY);
+  return revision && revision.length > 0 ? revision : null;
 }
 
 export function getShiftGuideToken(): string | null {
@@ -51,7 +60,8 @@ export function getShiftGuideData(): ShiftGuideData | null {
 
 export function isShiftGuideUnlocked(): boolean {
   const expiresAt = getShiftGuideSessionExpiry();
-  if (!expiresAt || expiresAt <= Date.now()) {
+  const configRevision = getShiftGuideConfigRevision();
+  if (!expiresAt || expiresAt <= Date.now() || !configRevision) {
     clearStoredShiftGuideAuth();
     return false;
   }
@@ -62,7 +72,8 @@ export async function validateShiftGuideSession(): Promise<boolean> {
   const token = getShiftGuideToken();
   const data = getShiftGuideData();
   const expiresAt = getShiftGuideSessionExpiry();
-  if (!token || !data || !expiresAt || expiresAt <= Date.now()) {
+  const configRevision = getShiftGuideConfigRevision();
+  if (!token || !data || !expiresAt || expiresAt <= Date.now() || !configRevision) {
     clearStoredShiftGuideAuth();
     return false;
   }
@@ -81,7 +92,11 @@ export async function validateShiftGuideSession(): Promise<boolean> {
         !('expiresAt' in body) ||
         typeof body.expiresAt !== 'number' ||
         !Number.isFinite(body.expiresAt) ||
-        body.expiresAt <= Date.now()
+        body.expiresAt <= Date.now() ||
+        !('configRevision' in body) ||
+        typeof body.configRevision !== 'string' ||
+        body.configRevision.length === 0 ||
+        body.configRevision !== configRevision
       ) {
         clearStoredShiftGuideAuth();
         return false;
@@ -114,25 +129,41 @@ export async function unlockShiftGuide(code: string): Promise<ShiftGuideAuthResu
     }
 
     const response: unknown = await res.json();
-    if (!response || typeof response !== 'object' || !('token' in response) || !('expiresAt' in response)) {
+    if (
+      !response ||
+      typeof response !== 'object' ||
+      !('token' in response) ||
+      !('expiresAt' in response) ||
+      !('configRevision' in response)
+    ) {
       return { ok: false, error: 'Session invalide.' };
     }
 
-    const { token, expiresAt, ...data } = response as Record<string, unknown>;
+    const { token, expiresAt, configRevision, ...data } = response as Record<string, unknown>;
     if (
       typeof token !== 'string' ||
       token.length === 0 ||
       typeof expiresAt !== 'number' ||
       !Number.isFinite(expiresAt) ||
       expiresAt <= Date.now() ||
+      typeof configRevision !== 'string' ||
+      configRevision.length === 0 ||
       !isShiftGuideData(data)
     ) {
       return { ok: false, error: 'Données ShiftGuide invalides.' };
     }
 
-    const validatedResponse: ShiftGuideUnlockResponse = { token, expiresAt, ...data };
+    const validatedResponse: ShiftGuideUnlockResponse = {
+      token,
+      expiresAt,
+      configRevision,
+      ...data,
+    };
+
+    reconcileShiftGuideConfigRevision(localStorage, validatedResponse.configRevision);
     sessionStorage.setItem(SESSION_KEY, validatedResponse.token);
     sessionStorage.setItem(EXPIRY_KEY, String(validatedResponse.expiresAt));
+    sessionStorage.setItem(REVISION_KEY, validatedResponse.configRevision);
     sessionStorage.setItem(DATA_KEY, JSON.stringify(data));
     return { ok: true };
   } catch {
