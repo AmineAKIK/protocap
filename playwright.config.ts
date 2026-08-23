@@ -29,6 +29,25 @@ const modules = [
 ];
 
 const lexique = [{ sigle: 'E2E', definition: 'End-to-end' }];
+const celineRouting = {
+  version: 1,
+  routes: [
+    {
+      id: 'module_standard',
+      label: 'Module standard',
+      decisionGuide: 'Parcours E2E standard.',
+      actionIds: ['action_standard_1'],
+    },
+  ],
+  clarifications: [
+    {
+      id: 'clarifier_situation',
+      question: 'Précise la situation E2E.',
+      decisionGuide: 'Situation E2E ambiguë.',
+    },
+  ],
+  classifierRules: ['Ne jamais supposer un état absent.'],
+};
 
 export default defineConfig({
   testDir: './e2e',
@@ -58,6 +77,7 @@ export default defineConfig({
       SHIFTGUIDE_CODE: 'e2e-access-code',
       SG_MODULES: JSON.stringify(modules),
       SG_LEXIQUE: JSON.stringify(lexique),
+      SG_CELINE_ROUTING: JSON.stringify(celineRouting),
     },
   },
 });
