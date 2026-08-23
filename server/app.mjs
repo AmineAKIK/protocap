@@ -16,6 +16,7 @@ import {
   extractLatestCelineUserMessage,
 } from './celineProviderContext.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
+import { createReadinessSnapshot } from './readiness.mjs';
 import {
   buildSecurityHeaders,
   safeCompareSecrets,
@@ -101,6 +102,15 @@ export function createServerApp({
   const celineSystemPrompt = celineAuthority
     ? buildCelineSystemPrompt(shiftGuideConfig, celineAuthority)
     : null;
+  const readiness = createReadinessSnapshot({
+    shiftGuideCode,
+    shiftGuideClientData,
+    configRevision,
+    celineAuthorityRevision,
+    celineSystemPrompt,
+    celineAuthority,
+    celineProvider,
+  });
   const { sessions, unlockAttempts, chatRequests, celineContexts } = runtimeState;
 
   const app = express();
@@ -136,6 +146,10 @@ export function createServerApp({
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
+  });
+
+  app.get('/api/ready', (_req, res) => {
+    return res.status(readiness.ok ? 200 : 503).json(readiness);
   });
 
   app.post('/api/shiftguide/unlock', (req, res) => {

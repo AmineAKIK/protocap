@@ -4,7 +4,7 @@
 
 **Industrial operations toolkit for manufacturing teams — shop-floor guidance, traceability, logistics workflows and AI-assisted decision support.**
 
-[Live demo](https://protocap-production.up.railway.app/) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
+[Live demo](https://protocap-production.up.railway.app/) · [Architecture](docs/architecture.md) · [Runtime readiness](docs/runtime-readiness.md) · [Product boundaries](docs/product-boundaries.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
 
 Protocap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines independent prototypes with the protected **ShiftGuide** workspace and its AI-assisted operator guide, **Céline**.
 
@@ -110,7 +110,7 @@ Secrets must remain server-side. Do not use `VITE_*` names for secrets: Vite-pre
 
 ## Deployment
 
-The public demonstrator is hosted on Railway. Nixpacks installs dependencies with Node 24, builds the Vite bundle and starts the Express server. Railway gates new deployments on `/api/health` before switching traffic. Deployment configuration and secrets live in Railway; successful CI validates the repository but is not presented as proof that an external deployment completed successfully.
+The public demonstrator is hosted on Railway. Nixpacks installs dependencies with Node 24, builds the Vite bundle and starts the Express server. Railway gates new deployments on `/api/ready` before switching traffic; `/api/health` remains the lightweight process-liveness endpoint. The readiness probe validates local ShiftGuide/Céline bootstrap capabilities without pinging DeepSeek. Deployment configuration and secrets live in Railway; successful CI validates the repository but is not presented as proof that an external deployment completed successfully. See [docs/runtime-readiness.md](docs/runtime-readiness.md).
 
 ## Repository map
 
