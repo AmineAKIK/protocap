@@ -10,6 +10,11 @@ import {
 } from './celineRoutingContract.mjs';
 import { createCelineSafeFallbackResponse } from './celineFallback.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
+import {
+  appendCelineProviderDecision,
+  buildCelineProviderHistory,
+  extractLatestCelineUserMessage,
+} from './celineProviderContext.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import {
   buildSecurityHeaders,
@@ -18,7 +23,6 @@ import {
 } from './security.mjs';
 import {
   hasValidSession,
-  normalizeChatHistory,
   revokeSession,
   takeRateLimit,
 } from './runtimeUtils.mjs';
@@ -37,6 +41,7 @@ export function createServerRuntimeState() {
     sessions: new Map(),
     unlockAttempts: new Map(),
     chatRequests: new Map(),
+    celineContexts: new Map(),
   };
 }
 
@@ -96,7 +101,7 @@ export function createServerApp({
   const celineSystemPrompt = celineAuthority
     ? buildCelineSystemPrompt(shiftGuideConfig, celineAuthority)
     : null;
-  const { sessions, unlockAttempts, chatRequests } = runtimeState;
+  const { sessions, unlockAttempts, chatRequests, celineContexts } = runtimeState;
 
   const app = express();
   app.disable('x-powered-by');
@@ -177,7 +182,7 @@ export function createServerApp({
 
   app.get('/api/shiftguide/session', (req, res) => {
     const token = getSessionToken(req);
-    if (!hasValidSession(sessions, chatRequests, token, now())) {
+    if (!hasValidSession(sessions, chatRequests, token, now(), celineContexts)) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
     return res.json({
@@ -189,13 +194,13 @@ export function createServerApp({
   });
 
   app.delete('/api/shiftguide/session', (req, res) => {
-    revokeSession(sessions, chatRequests, getSessionToken(req));
+    revokeSession(sessions, chatRequests, getSessionToken(req), celineContexts);
     return res.status(204).end();
   });
 
   app.post('/api/celine/chat', async (req, res) => {
     const token = getSessionToken(req);
-    if (!hasValidSession(sessions, chatRequests, token, now())) {
+    if (!hasValidSession(sessions, chatRequests, token, now(), celineContexts)) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
 
@@ -222,18 +227,28 @@ export function createServerApp({
       return res.status(503).json({ error: 'Service IA non configuré.' });
     }
 
-    const history = normalizeChatHistory(req.body?.messages);
-    if (!history) {
+    const userMessage = extractLatestCelineUserMessage(req.body?.messages);
+    if (!userMessage) {
       return res.status(400).json({ error: 'Requête IA invalide.' });
     }
+
+    const providerHistory = buildCelineProviderHistory(
+      celineContexts.get(token),
+      userMessage
+    );
 
     try {
       const providerContent = await celineProvider.complete({
         systemPrompt: celineSystemPrompt,
-        history,
+        history: providerHistory,
       });
       const decision = parseCelineDecision(providerContent);
       const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
+      const storedDecision = response && decision ? decision : { kind: 'unknown' };
+      celineContexts.set(
+        token,
+        appendCelineProviderDecision(celineContexts.get(token), userMessage, storedDecision)
+      );
       if (!response) {
         logger.error('Celine provider returned an unauthorized or invalid decision');
         return res.json(createCelineSafeFallbackResponse());
