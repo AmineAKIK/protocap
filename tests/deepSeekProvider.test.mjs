@@ -13,6 +13,7 @@ test('DeepSeek adapter owns provider request shape and returns only assistant co
       captured = { url, options };
       return {
         ok: true,
+        status: 200,
         async json() {
           return { choices: [{ message: { content: '{"message":"ok","checklist":[],"followUp":null}' } }] };
         },
@@ -38,23 +39,50 @@ test('DeepSeek adapter owns provider request shape and returns only assistant co
   ]);
 });
 
-test('DeepSeek adapter maps upstream rate limits and invalid payloads to provider errors', async () => {
+test('DeepSeek adapter maps upstream HTTP failures with safe status metadata', async () => {
   const rateLimited = createDeepSeekProvider({
     apiKey: 'secret',
     fetchImpl: async () => ({ ok: false, status: 429 }),
   });
   await assert.rejects(
     () => rateLimited.complete({ systemPrompt: 'x', history: [] }),
-    (error) => error instanceof CelineProviderError && error.code === 'rate_limited'
+    (error) => (
+      error instanceof CelineProviderError &&
+      error.code === 'rate_limited' &&
+      error.upstreamStatus === 429
+    )
   );
 
+  const unauthorized = createDeepSeekProvider({
+    apiKey: 'secret',
+    fetchImpl: async () => ({ ok: false, status: 401 }),
+  });
+  await assert.rejects(
+    () => unauthorized.complete({ systemPrompt: 'x', history: [] }),
+    (error) => (
+      error instanceof CelineProviderError &&
+      error.code === 'unavailable' &&
+      error.upstreamStatus === 401
+    )
+  );
+});
+
+test('DeepSeek adapter keeps upstream success status on invalid provider payloads', async () => {
   const malformed = createDeepSeekProvider({
     apiKey: 'secret',
-    fetchImpl: async () => ({ ok: true, async json() { return { choices: [] }; } }),
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() { return { choices: [] }; },
+    }),
   });
   await assert.rejects(
     () => malformed.complete({ systemPrompt: 'x', history: [] }),
-    (error) => error instanceof CelineProviderError && error.code === 'invalid_response'
+    (error) => (
+      error instanceof CelineProviderError &&
+      error.code === 'invalid_response' &&
+      error.upstreamStatus === 200
+    )
   );
 });
 
@@ -81,7 +109,11 @@ test('DeepSeek adapter propagates client cancellation separately from timeout', 
 
   await assert.rejects(
     () => request,
-    (error) => error instanceof CelineProviderError && error.code === 'cancelled'
+    (error) => (
+      error instanceof CelineProviderError &&
+      error.code === 'cancelled' &&
+      error.upstreamStatus === null
+    )
   );
   assert.equal(capturedSignal.aborted, true);
 });
@@ -97,6 +129,10 @@ test('DeepSeek adapter keeps its own timeout semantics when no client cancellati
 
   await assert.rejects(
     () => provider.complete({ systemPrompt: 'system', history: [] }),
-    (error) => error instanceof CelineProviderError && error.code === 'timeout'
+    (error) => (
+      error instanceof CelineProviderError &&
+      error.code === 'timeout' &&
+      error.upstreamStatus === null
+    )
   );
 });

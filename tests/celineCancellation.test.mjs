@@ -43,9 +43,9 @@ async function unlock(baseUrl) {
   return response.json();
 }
 
-test('client disconnect aborts in-flight Celine provider work without persisting context or logging a provider failure', async () => {
+test('client disconnect aborts in-flight Celine work and records cancellation without provider failure', async () => {
   const runtimeState = createServerRuntimeState();
-  const errors = [];
+  const events = [];
   let providerStartedResolve;
   let providerCancelledResolve;
   const providerStarted = new Promise((resolve) => {
@@ -66,6 +66,7 @@ test('client disconnect aborts in-flight Celine provider work without persisting
       });
     },
   };
+  const capture = (line) => events.push(JSON.parse(line));
 
   const { app } = createServerApp({
     shiftGuideCode: 'access-code',
@@ -74,7 +75,7 @@ test('client disconnect aborts in-flight Celine provider work without persisting
     celineProvider,
     runtimeState,
     issueToken: () => 'cancel-test-token',
-    logger: { error(...args) { errors.push(args); } },
+    logger: { info: capture, warn: capture, error: capture },
   });
   const { server, baseUrl, port } = await listen(app);
 
@@ -92,6 +93,7 @@ test('client disconnect aborts in-flight Celine provider work without persisting
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
         Authorization: `Bearer ${unlocked.token}`,
+        'X-Request-Id': 'cancel-request-1',
       },
     });
     request.on('error', () => {});
@@ -103,7 +105,25 @@ test('client disconnect aborts in-flight Celine provider work without persisting
     await new Promise((resolve) => setImmediate(resolve));
 
     assert.equal(runtimeState.celineContexts.has(unlocked.token), false);
-    assert.deepEqual(errors, []);
+
+    const providerLog = events.find(
+      (event) => event.event === 'celine_provider' && event.requestId === 'cancel-request-1'
+    );
+    assert.ok(providerLog);
+    assert.equal(providerLog.level, 'info');
+    assert.equal(providerLog.outcome, 'cancelled');
+
+    const requestLog = events.find(
+      (event) => event.event === 'http_request' && event.requestId === 'cancel-request-1'
+    );
+    assert.ok(requestLog);
+    assert.equal(requestLog.path, '/api/celine/chat');
+    assert.equal(requestLog.outcome, 'client_disconnected');
+    assert.equal(requestLog.status, null);
+
+    assert.equal(events.some(
+      (event) => event.event === 'celine_provider' && event.level === 'error'
+    ), false);
   } finally {
     server.close();
     await once(server, 'close');

@@ -3,6 +3,9 @@ export class CelineProviderError extends Error {
     super(message, options);
     this.name = 'CelineProviderError';
     this.code = code;
+    this.upstreamStatus = Number.isInteger(options.upstreamStatus)
+      ? options.upstreamStatus
+      : null;
   }
 }
 
@@ -62,9 +65,17 @@ export function createDeepSeekProvider({
 
       if (!upstream.ok) {
         if (upstream.status === 429) {
-          throw new CelineProviderError('rate_limited', 'DeepSeek rate limited the request.');
+          throw new CelineProviderError(
+            'rate_limited',
+            'DeepSeek rate limited the request.',
+            { upstreamStatus: upstream.status }
+          );
         }
-        throw new CelineProviderError('unavailable', `DeepSeek returned ${upstream.status}.`);
+        throw new CelineProviderError(
+          'unavailable',
+          `DeepSeek returned ${upstream.status}.`,
+          { upstreamStatus: upstream.status }
+        );
       }
 
       let payload;
@@ -73,7 +84,10 @@ export function createDeepSeekProvider({
       } catch (error) {
         const abortError = getAbortProviderError(signal, timeoutSignal, error);
         if (abortError) throw abortError;
-        throw new CelineProviderError('invalid_response', 'DeepSeek returned invalid JSON.', { cause: error });
+        throw new CelineProviderError('invalid_response', 'DeepSeek returned invalid JSON.', {
+          cause: error,
+          upstreamStatus: upstream.status,
+        });
       }
 
       const abortError = getAbortProviderError(signal, timeoutSignal);
@@ -81,7 +95,11 @@ export function createDeepSeekProvider({
 
       const content = payload?.choices?.[0]?.message?.content;
       if (typeof content !== 'string' || content.length === 0) {
-        throw new CelineProviderError('invalid_response', 'DeepSeek response content is missing.');
+        throw new CelineProviderError(
+          'invalid_response',
+          'DeepSeek response content is missing.',
+          { upstreamStatus: upstream.status }
+        );
       }
 
       return content;
