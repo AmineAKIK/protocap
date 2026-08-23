@@ -4,6 +4,7 @@ import { CONFIG_BUDGETS } from '../shared/configBudgets.js';
 import {
   isValidShiftGuideConfig,
   isValidShiftGuideData,
+  parseShiftGuideConfig,
   validateShiftGuideConfig,
   validateShiftGuideData,
 } from '../shared/shiftGuideContract.js';
@@ -40,6 +41,40 @@ const validConfig = {
 test('shared ShiftGuide contract accepts the runtime shape used by server and client', () => {
   assert.equal(isValidShiftGuideConfig(validConfig), true);
   assert.equal(isValidShiftGuideData(validConfig), true);
+});
+
+test('ShiftGuide parsing tolerates but strips unknown deployment metadata', () => {
+  const raw = {
+    ...validConfig,
+    deploymentNote: 'ignored',
+    modules: [{
+      ...validConfig.modules[0],
+      unknownModuleField: 'ignored',
+      actions: [{
+        ...validConfig.modules[0].actions[0],
+        unknownActionField: 'ignored',
+      }],
+    }, validConfig.modules[1]],
+    lexique: [{ ...validConfig.lexique[0], source: 'ignored' }],
+    urgences: {
+      ...validConfig.urgences,
+      unknownUrgencyField: 'ignored',
+      generalAlarm: {
+        ...validConfig.urgences.generalAlarm,
+        unknownAlarmField: 'ignored',
+      },
+    },
+  };
+
+  const parsed = parseShiftGuideConfig(raw);
+  assert.equal(parsed.ok, true);
+  assert.equal('deploymentNote' in parsed.value, false);
+  assert.equal('unknownModuleField' in parsed.value.modules[0], false);
+  assert.equal('unknownActionField' in parsed.value.modules[0].actions[0], false);
+  assert.equal('source' in parsed.value.lexique[0], false);
+  assert.equal('unknownUrgencyField' in parsed.value.urgences, false);
+  assert.equal('unknownAlarmField' in parsed.value.urgences.generalAlarm, false);
+  assert.deepEqual(parsed.value, validConfig);
 });
 
 test('shared ShiftGuide contract rejects empty action collections', () => {
