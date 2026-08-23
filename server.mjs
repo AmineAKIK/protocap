@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
+import { resolveServerSecret } from './server/envCompat.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 import { cleanupExpiredState, parseJsonEnvValue } from './server/runtimeUtils.mjs';
@@ -13,8 +14,8 @@ const distDir = existsSync(join(__dirname, 'dist'))
   : resolve(process.cwd(), 'dist');
 
 const port = process.env.PORT || 3000;
-const shiftGuideCode = process.env.SHIFTGUIDE_CODE ?? '';
-const deepSeekApiKey = process.env.DEEPSEEK_API_KEY ?? '';
+const shiftGuideCode = resolveServerSecret(process.env, 'SHIFTGUIDE_CODE', 'VITE_SHIFTGUIDE_CODE');
+const deepSeekApiKey = resolveServerSecret(process.env, 'DEEPSEEK_API_KEY', 'VITE_DEEPSEEK_API_KEY');
 const shiftGuideConfig = {
   modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
   lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
