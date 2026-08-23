@@ -8,6 +8,8 @@ import type { SharedProgressSummary } from '../../../shared/shiftGuideProgress.j
 import { getSgModules } from '../../data/shiftguideModules';
 import type { SGChoiceModule, SGModule } from '../../data/shiftguideModules';
 import { subscribeShiftGuideProgress } from '../../hooks/useModuleProgress';
+import { getShiftGuidePersistentStorage } from './shiftGuideStorage';
+import type { StorageLike } from './shiftGuideStorage';
 
 export interface ShiftGuideProgressOverview {
   summaries: Record<string, SharedProgressSummary>;
@@ -24,7 +26,7 @@ const EMPTY_SUMMARY: SharedProgressSummary = {
 
 export function buildShiftGuideProgressOverview(
   modules: SGModule[],
-  storage: Storage
+  storage: StorageLike
 ): ShiftGuideProgressOverview {
   const state = readProgressState(storage);
   const summaries: Record<string, SharedProgressSummary> = {};
@@ -63,7 +65,7 @@ export function buildShiftGuideProgressOverview(
 }
 
 function readOverview() {
-  return buildShiftGuideProgressOverview(getSgModules(), localStorage);
+  return buildShiftGuideProgressOverview(getSgModules(), getShiftGuidePersistentStorage());
 }
 
 export function useShiftGuideProgressOverview() {
