@@ -103,19 +103,6 @@ export function setSharedActionStatus(
   });
 }
 
-function toggleSharedActionStatus(
-  actionId: string,
-  status: ActionStatus,
-  moduleId?: string
-) {
-  return mutateState((state) => {
-    const current = getActionStatus(state, actionId) as ActionStatus;
-    const nextStatus: ActionStatus = current === status ? 'pending' : status;
-    const next = withActionStatus(state, actionId, nextStatus);
-    return applyChoiceScope(next, moduleId);
-  });
-}
-
 export function setActiveChoiceModule(moduleId: string, subModuleId: string) {
   return mutateState((state) => withActiveChoice(state, moduleId, subModuleId));
 }
@@ -144,8 +131,10 @@ export function useModuleProgress(moduleId: string, actionIds: string[]) {
   }, [moduleId, actionIdsKey]);
 
   const setAction = useCallback((actionId: string, status: ActionStatus) => {
-    void toggleSharedActionStatus(actionId, status, moduleId);
-  }, [moduleId]);
+    const displayedStatus = progress[actionId] ?? 'pending';
+    const nextStatus: ActionStatus = displayedStatus === status ? 'pending' : status;
+    void setSharedActionStatus(actionId, nextStatus, moduleId);
+  }, [moduleId, progress]);
 
   const resetModule = useCallback(() => {
     const stableActionIds = actionIdsKey ? actionIdsKey.split(ACTION_IDS_SEPARATOR) : [];
