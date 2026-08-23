@@ -41,30 +41,40 @@ export function normalizeChatHistory(messages) {
   return valid ? history : null;
 }
 
-export function revokeSession(sessions, chatRequests, token) {
+export function revokeSession(sessions, chatRequests, token, celineContexts = null) {
   if (!token) return false;
   const existed = sessions.delete(token);
   chatRequests.delete(token);
+  celineContexts?.delete(token);
   return existed;
 }
 
-export function hasValidSession(sessions, chatRequests, token, now = Date.now()) {
+export function hasValidSession(
+  sessions,
+  chatRequests,
+  token,
+  now = Date.now(),
+  celineContexts = null
+) {
   if (!token) return false;
 
   const expiresAt = sessions.get(token);
   if (!expiresAt) return false;
   if (expiresAt <= now) {
-    revokeSession(sessions, chatRequests, token);
+    revokeSession(sessions, chatRequests, token, celineContexts);
     return false;
   }
 
   return true;
 }
 
-export function cleanupExpiredState({ sessions, unlockAttempts, chatRequests }, now = Date.now()) {
+export function cleanupExpiredState(
+  { sessions, unlockAttempts, chatRequests, celineContexts },
+  now = Date.now()
+) {
   for (const [token, expiresAt] of sessions) {
     if (expiresAt <= now) {
-      revokeSession(sessions, chatRequests, token);
+      revokeSession(sessions, chatRequests, token, celineContexts);
     }
   }
 
