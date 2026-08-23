@@ -56,4 +56,48 @@ describe('useModuleProgress', () => {
     };
     expect(stored.actions).toEqual({});
   });
+
+  it('composes independent action intents instead of losing one read-modify-write update', async () => {
+    const firstTab = renderHook(() =>
+      useModuleProgress('module_standard', ['action_1', 'action_2'])
+    );
+    const secondTab = renderHook(() =>
+      useModuleProgress('module_standard', ['action_1', 'action_2'])
+    );
+
+    act(() => {
+      firstTab.result.current.setAction('action_1', 'validated');
+      secondTab.result.current.setAction('action_2', 'validated');
+    });
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) ?? '{}') as {
+        actions?: Record<string, string>;
+      };
+      expect(stored.actions).toEqual({
+        action_1: 'validated',
+        action_2: 'validated',
+      });
+    });
+  });
+
+  it('keeps identical concurrent intents idempotent when both tabs displayed pending', async () => {
+    const firstTab = renderHook(() => useModuleProgress('module_standard', ['action_1']));
+    const secondTab = renderHook(() => useModuleProgress('module_standard', ['action_1']));
+
+    expect(firstTab.result.current.progress.action_1).toBe('pending');
+    expect(secondTab.result.current.progress.action_1).toBe('pending');
+
+    act(() => {
+      firstTab.result.current.setAction('action_1', 'validated');
+      secondTab.result.current.setAction('action_1', 'validated');
+    });
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) ?? '{}') as {
+        actions?: Record<string, string>;
+      };
+      expect(stored.actions).toEqual({ action_1: 'validated' });
+    });
+  });
 });
