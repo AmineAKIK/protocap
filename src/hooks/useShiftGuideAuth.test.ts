@@ -15,7 +15,6 @@ import { shiftGuideFixture } from '../test/shiftGuideFixture';
 const CONFIG_REVISION = 'sha256:test-config-revision';
 const CELINE_AUTHORITY_REVISION = 'decision-v1';
 const CELINE_HISTORY_KEY = 'shiftguide_celine_history';
-const CELINE_PROMPT_VERSION_KEY = 'shiftguide_prompt_version';
 const PROGRESS_KEY = 'shiftguide_progress_v3';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -59,7 +58,6 @@ function storeProgress() {
 
 function storeCelineMemory(storage: Storage = localStorage) {
   storage.setItem(CELINE_HISTORY_KEY, JSON.stringify([{ id: 'previous-session-message' }]));
-  storage.setItem(CELINE_PROMPT_VERSION_KEY, 'v12');
 }
 
 beforeEach(() => {
@@ -95,9 +93,7 @@ describe('ShiftGuide browser auth boundary', () => {
     await expect(unlockShiftGuide('1234')).resolves.toEqual({ ok: true });
 
     expect(localStorage.getItem(CELINE_HISTORY_KEY)).toBeNull();
-    expect(localStorage.getItem(CELINE_PROMPT_VERSION_KEY)).toBeNull();
     expect(sessionStorage.getItem(CELINE_HISTORY_KEY)).toBeNull();
-    expect(sessionStorage.getItem(CELINE_PROMPT_VERSION_KEY)).toBeNull();
     expect(localStorage.getItem(PROGRESS_KEY)).not.toBeNull();
   });
 
@@ -134,7 +130,6 @@ describe('ShiftGuide browser auth boundary', () => {
 
     expect(localStorage.getItem(PROGRESS_KEY)).not.toBeNull();
     expect(localStorage.getItem(CELINE_HISTORY_KEY)).toBeNull();
-    expect(localStorage.getItem(CELINE_PROMPT_VERSION_KEY)).toBeNull();
     expect(localStorage.getItem('shiftguide_celine_authority_revision')).toBe(CELINE_AUTHORITY_REVISION);
   });
 
