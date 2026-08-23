@@ -56,17 +56,26 @@ export function attachRequestObservability(app, { logger, now = () => Date.now()
   app.use('/api', (req, res, next) => {
     const requestId = createRequestId(req.get('x-request-id'));
     const startedAt = now();
+    let logged = false;
     req.requestId = requestId;
     res.set('X-Request-Id', requestId);
 
-    res.once('finish', () => {
+    const logRequest = (outcome) => {
+      if (logged) return;
+      logged = true;
       logger.info('http_request', {
         requestId,
         method: req.method,
         path: observableApiPath(req),
-        status: res.statusCode,
+        status: outcome === 'completed' ? res.statusCode : null,
+        outcome,
         durationMs: Math.max(0, now() - startedAt),
       });
+    };
+
+    res.once('finish', () => logRequest('completed'));
+    res.once('close', () => {
+      if (!res.writableFinished) logRequest('client_disconnected');
     });
 
     next();
