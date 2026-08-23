@@ -37,13 +37,15 @@ ShiftGuide therefore also caps total actions, and Celine prompt construction ind
 
 These checks are fail-start checks. Invalid or oversized deployment configuration is rejected before the server begins serving ShiftGuide as ready. Error messages identify the offending path and budget where possible.
 
+After validation, ShiftGuide and Celine routing configuration are projected into canonical runtime objects containing only fields understood by Protocap. Unknown deployment metadata remains tolerated at input for compatibility, but it is ignored by runtime behavior, semantic revisions, provider context and browser payloads.
+
 The prompt-size guard is deliberately enforced inside `buildCelineSystemPrompt()` as a final defense even when that function is invoked outside the normal validated startup path.
 
 ## Compatibility boundary
 
 This change does not impose a raw size limit on Railway environment variables and does not require any Railway variable migration. The application budgets are intentionally generous because the repository cannot prove the exact size of an already deployed `SG_*` value.
 
-No Railway variable, secret or `railway.toml` setting is changed by this contract.
+No Railway variable, secret or `railway.toml` setting is changed by this contract. Additional unknown fields in an existing valid configuration are tolerated and ignored rather than rejected.
 
 ## Deliberate non-goals
 
@@ -52,7 +54,6 @@ These budgets do not:
 - replace the existing `128kb` HTTP JSON request-body limit;
 - define DeepSeek's model context window or token accounting;
 - guarantee a particular provider cost;
-- canonicalize or strip unknown configuration fields;
 - coordinate configuration across multiple server instances;
 - change ShiftGuide or Celine business semantics.
 
