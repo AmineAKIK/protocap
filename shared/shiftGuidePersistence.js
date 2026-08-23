@@ -7,7 +7,7 @@ export const LEGACY_PROGRESS_V2_STORAGE_KEY = 'shiftguide_progress_v2';
 export const LEGACY_PROGRESS_STORAGE_KEY = 'shiftguide_progress_v1';
 export const LEGACY_MODULE_PREFIX = 'shiftguide_module_';
 
-function clearCelineHistory(storage) {
+export function clearCelineHistory(storage) {
   storage.removeItem(CELINE_HISTORY_STORAGE_KEY);
   storage.removeItem(CELINE_PROMPT_VERSION_STORAGE_KEY);
 }
