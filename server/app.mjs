@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { join } from 'node:path';
-import { collectShiftGuideActions, parseCelineAssistantContent } from '../shared/celineContract.js';
+import { parseCelineDecision } from '../shared/celineContract.js';
 import { validateShiftGuideConfig } from '../shared/shiftGuideContract.js';
+import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
 import {
@@ -73,10 +74,10 @@ export function createServerApp({
 
   const configRevision = validation.ok ? createShiftGuideConfigRevision(shiftGuideConfig) : null;
   const shiftGuideClientData = validation.ok ? toClientShiftGuideData(shiftGuideConfig) : null;
-  const celineSystemPrompt = validation.ok ? buildCelineSystemPrompt(shiftGuideConfig) : null;
-  const actionCatalog = validation.ok
-    ? collectShiftGuideActions(shiftGuideConfig.modules)
-    : new Map();
+  const celineAuthority = validation.ok ? createCelineAuthority(shiftGuideConfig) : null;
+  const celineSystemPrompt = celineAuthority
+    ? buildCelineSystemPrompt(shiftGuideConfig, celineAuthority)
+    : null;
   const { sessions, unlockAttempts, chatRequests } = runtimeState;
 
   const app = express();
@@ -183,7 +184,7 @@ export function createServerApp({
       return res.status(429).json({ error: 'Trop de requêtes. Réessaie dans un moment.' });
     }
 
-    if (!celineProvider || !celineSystemPrompt) {
+    if (!celineProvider || !celineSystemPrompt || !celineAuthority) {
       return res.status(503).json({ error: 'Service IA non configuré.' });
     }
 
@@ -197,9 +198,10 @@ export function createServerApp({
         systemPrompt: celineSystemPrompt,
         history,
       });
-      const response = parseCelineAssistantContent(providerContent, actionCatalog);
+      const decision = parseCelineDecision(providerContent);
+      const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
       if (!response) {
-        logger.error('Celine provider returned an invalid domain response');
+        logger.error('Celine provider returned an unauthorized or invalid decision');
         return res.status(502).json({ error: 'Service IA indisponible.' });
       }
       return res.json(response);
