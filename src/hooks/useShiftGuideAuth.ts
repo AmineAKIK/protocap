@@ -27,7 +27,7 @@ function notifySessionInvalidated() {
   window.dispatchEvent(new Event(SHIFTGUIDE_SESSION_INVALIDATED_EVENT));
 }
 
-function getStoredExpiry(): number | null {
+export function getShiftGuideSessionExpiry(): number | null {
   const raw = sessionStorage.getItem(EXPIRY_KEY);
   if (!raw) return null;
   const expiresAt = Number(raw);
@@ -50,7 +50,7 @@ export function getShiftGuideData(): ShiftGuideData | null {
 }
 
 export function isShiftGuideUnlocked(): boolean {
-  const expiresAt = getStoredExpiry();
+  const expiresAt = getShiftGuideSessionExpiry();
   if (!expiresAt || expiresAt <= Date.now()) {
     clearStoredShiftGuideAuth();
     return false;
@@ -61,7 +61,7 @@ export function isShiftGuideUnlocked(): boolean {
 export async function validateShiftGuideSession(): Promise<boolean> {
   const token = getShiftGuideToken();
   const data = getShiftGuideData();
-  const expiresAt = getStoredExpiry();
+  const expiresAt = getShiftGuideSessionExpiry();
   if (!token || !data || !expiresAt || expiresAt <= Date.now()) {
     clearStoredShiftGuideAuth();
     return false;
