@@ -25,10 +25,10 @@ export function createRequestId(headerValue) {
 export function createStructuredLogger(base = console) {
   function write(level, event, fields = {}) {
     const payload = {
+      ...fields,
       ts: new Date().toISOString(),
       level,
       event,
-      ...fields,
     };
     const line = JSON.stringify(payload);
     const sink = typeof base[level] === 'function'
