@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import express from 'express';
 import { join } from 'node:path';
-import { collectShiftGuideActionIds, parseCelineAssistantContent } from '../shared/celineContract.js';
+import { collectShiftGuideActions, parseCelineAssistantContent } from '../shared/celineContract.js';
 import { validateShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { buildCelineSystemPrompt } from './celinePrompt.mjs';
 import { CelineProviderError } from './providers/deepSeekProvider.mjs';
@@ -23,6 +23,7 @@ const UNLOCK_MAX_ATTEMPTS = 10;
 const MAX_UNLOCK_CODE_LENGTH = 256;
 const CHAT_WINDOW_MS = 60 * 1000;
 const CHAT_MAX_REQUESTS = 30;
+const CHAT_IP_MAX_REQUESTS = 60;
 
 export function createServerRuntimeState() {
   return {
@@ -71,9 +72,9 @@ export function createServerApp({
 
   const shiftGuideClientData = validation.ok ? toClientShiftGuideData(shiftGuideConfig) : null;
   const celineSystemPrompt = validation.ok ? buildCelineSystemPrompt(shiftGuideConfig) : null;
-  const allowedActionIds = validation.ok
-    ? collectShiftGuideActionIds(shiftGuideConfig.modules)
-    : new Set();
+  const actionCatalog = validation.ok
+    ? collectShiftGuideActions(shiftGuideConfig.modules)
+    : new Map();
   const { sessions, unlockAttempts, chatRequests } = runtimeState;
 
   const app = express();
@@ -102,8 +103,9 @@ export function createServerApp({
 
   function issueSession() {
     const token = issueToken();
-    sessions.set(token, now() + SESSION_TTL_MS);
-    return token;
+    const expiresAt = now() + SESSION_TTL_MS;
+    sessions.set(token, expiresAt);
+    return { token, expiresAt };
   }
 
   app.get('/api/health', (_req, res) => {
@@ -138,8 +140,7 @@ export function createServerApp({
       return res.status(401).json({ error: 'Code incorrect.' });
     }
 
-    unlockAttempts.delete(clientKey);
-    return res.json({ token: issueSession(), ...shiftGuideClientData });
+    return res.json({ ...issueSession(), ...shiftGuideClientData });
   });
 
   app.get('/api/shiftguide/session', (req, res) => {
@@ -147,7 +148,7 @@ export function createServerApp({
     if (!hasValidSession(sessions, chatRequests, token, now())) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
-    return res.json({ ok: true });
+    return res.json({ ok: true, expiresAt: sessions.get(token) });
   });
 
   app.delete('/api/shiftguide/session', (req, res) => {
@@ -161,9 +162,22 @@ export function createServerApp({
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
 
-    const limit = takeRateLimit(chatRequests, token, CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, now());
-    if (!limit.allowed) {
-      res.set('Retry-After', String(limit.retryAfterSeconds));
+    const clientKey = req.ip || 'unknown';
+    const clientLimit = takeRateLimit(
+      chatRequests,
+      `ip:${clientKey}`,
+      CHAT_IP_MAX_REQUESTS,
+      CHAT_WINDOW_MS,
+      now()
+    );
+    if (!clientLimit.allowed) {
+      res.set('Retry-After', String(clientLimit.retryAfterSeconds));
+      return res.status(429).json({ error: 'Trop de requêtes depuis ce client. Réessaie dans un moment.' });
+    }
+
+    const sessionLimit = takeRateLimit(chatRequests, token, CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, now());
+    if (!sessionLimit.allowed) {
+      res.set('Retry-After', String(sessionLimit.retryAfterSeconds));
       return res.status(429).json({ error: 'Trop de requêtes. Réessaie dans un moment.' });
     }
 
@@ -181,7 +195,7 @@ export function createServerApp({
         systemPrompt: celineSystemPrompt,
         history,
       });
-      const response = parseCelineAssistantContent(providerContent, allowedActionIds);
+      const response = parseCelineAssistantContent(providerContent, actionCatalog);
       if (!response) {
         logger.error('Celine provider returned an invalid domain response');
         return res.status(502).json({ error: 'Service IA indisponible.' });
