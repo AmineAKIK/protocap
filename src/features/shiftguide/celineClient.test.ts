@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 describe('requestCelineResponse', () => {
-  it('sends only the latest operator turn and consumes the Protocap DTO', async () => {
+  it('sends exactly one current operator turn and consumes the Protocap DTO', async () => {
     sessionStorage.setItem('shiftguide_auth_token', 'token');
     const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
@@ -22,14 +22,7 @@ describe('requestCelineResponse', () => {
     }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await requestCelineResponse(
-      [
-        { role: 'user', content: 'ancien contexte opérateur' },
-        { role: 'assistant', content: '{"message":"ancienne réponse avec checklist"}' },
-        { role: 'user', content: 'bonjour' },
-      ],
-      controller.signal
-    );
+    const result = await requestCelineResponse('bonjour', controller.signal);
 
     expect(result.message).toBe('Action suivante.');
     expect(result.checklist[0].actionId).toBe('a1');
@@ -52,22 +45,19 @@ describe('requestCelineResponse', () => {
       })
     ));
 
-    const request = requestCelineResponse(
-      [{ role: 'user', content: 'bonjour' }],
-      controller.signal
-    );
+    const request = requestCelineResponse('bonjour', controller.signal);
     controller.abort();
 
     await expect(request).rejects.toMatchObject({ name: 'AbortError' });
   });
 
-  it('rejects requests without an operator turn before network access', async () => {
+  it('rejects blank operator turns before network access', async () => {
     sessionStorage.setItem('shiftguide_auth_token', 'token');
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(requestCelineResponse(
-      [{ role: 'assistant', content: 'réponse locale' }],
+      '   ',
       new AbortController().signal
     )).rejects.toThrow('Requête IA invalide.');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -84,7 +74,7 @@ describe('requestCelineResponse', () => {
     })));
 
     await expect(requestCelineResponse(
-      [{ role: 'user', content: 'bonjour' }],
+      'bonjour',
       new AbortController().signal
     )).rejects.toThrow('Session ShiftGuide expirée');
 
