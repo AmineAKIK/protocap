@@ -63,7 +63,7 @@ export class ShiftGuideMutationCoordinator {
 
 function resolveBrowserLockManager(): LockManagerLike | null {
   try {
-    const candidate = navigator as Navigator & { locks?: LockManagerLike };
+    const candidate = navigator as unknown as { locks?: LockManagerLike };
     return candidate.locks ?? null;
   } catch {
     return null;
