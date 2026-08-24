@@ -3,6 +3,7 @@ import {
   LEGACY_MODULE_PREFIX,
   LEGACY_PROGRESS_STORAGE_KEY,
   LEGACY_PROGRESS_V2_STORAGE_KEY,
+  LEGACY_PROGRESS_V3_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
 } from './shiftGuidePersistence.js';
 
@@ -11,11 +12,12 @@ export {
   LEGACY_MODULE_PREFIX,
   LEGACY_PROGRESS_STORAGE_KEY,
   LEGACY_PROGRESS_V2_STORAGE_KEY,
+  LEGACY_PROGRESS_V3_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
 } from './shiftGuidePersistence.js';
 
-export const PROGRESS_VERSION = 3;
-
+export const PROGRESS_VERSION = 4;
+const MAX_WORKFLOW_RUNS = 50;
 const VALID_STATUSES = new Set(['validated', 'na']);
 
 function isRecord(value) {
@@ -81,6 +83,23 @@ function sanitizeActiveChoices(value) {
   return activeChoices;
 }
 
+function sanitizeWorkflowRuns(value) {
+  if (!isRecord(value)) return {};
+  const entries = [];
+  for (const [runId, run] of Object.entries(value)) {
+    if (!runId || !isRecord(run) || typeof run.workflowId !== 'string' || !run.workflowId) continue;
+    entries.push([runId, {
+      workflowId: run.workflowId,
+      actions: sanitizeActions(run.actions),
+      startedAt: Number.isFinite(run.startedAt) ? run.startedAt : 0,
+      completedAt: Number.isFinite(run.completedAt) ? run.completedAt : null,
+      updatedAt: Number.isFinite(run.updatedAt) ? run.updatedAt : 0,
+    }]);
+  }
+  entries.sort((a, b) => b[1].updatedAt - a[1].updatedAt);
+  return Object.fromEntries(entries.slice(0, MAX_WORKFLOW_RUNS));
+}
+
 function normalizeCurrentState(value, configRevision) {
   if (!isRecord(value)) return null;
   if (value.version !== PROGRESS_VERSION) return null;
@@ -90,7 +109,20 @@ function normalizeCurrentState(value, configRevision) {
     configRevision,
     actions: sanitizeActions(value.actions),
     activeChoices: sanitizeActiveChoices(value.activeChoices),
+    workflowRuns: sanitizeWorkflowRuns(value.workflowRuns),
     updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : 0,
+  };
+}
+
+function migrateV3(value, configRevision) {
+  if (!isRecord(value) || value.version !== 3 || value.configRevision !== configRevision) return null;
+  return {
+    version: PROGRESS_VERSION,
+    configRevision,
+    actions: sanitizeActions(value.actions),
+    activeChoices: sanitizeActiveChoices(value.activeChoices),
+    workflowRuns: {},
+    updatedAt: Number.isFinite(value.updatedAt) ? value.updatedAt : Date.now(),
   };
 }
 
@@ -100,6 +132,7 @@ function emptyState(configRevision) {
     configRevision,
     actions: {},
     activeChoices: {},
+    workflowRuns: {},
     updatedAt: 0,
   };
 }
@@ -124,8 +157,9 @@ function getLegacyKeys(storage) {
 }
 
 function clearLegacyProgress(storage) {
-  safeRemoveItem(storage, LEGACY_PROGRESS_STORAGE_KEY);
+  safeRemoveItem(storage, LEGACY_PROGRESS_V3_STORAGE_KEY);
   safeRemoveItem(storage, LEGACY_PROGRESS_V2_STORAGE_KEY);
+  safeRemoveItem(storage, LEGACY_PROGRESS_STORAGE_KEY);
   for (const key of getLegacyKeys(storage)) safeRemoveItem(storage, key);
 }
 
@@ -134,16 +168,22 @@ export function readProgressState(storage) {
   if (!configRevision) return emptyState('');
 
   const current = normalizeCurrentState(parseJson(safeGetItem(storage, PROGRESS_STORAGE_KEY)), configRevision);
-  const hasLegacy =
-    safeGetItem(storage, LEGACY_PROGRESS_STORAGE_KEY) !== null ||
-    safeGetItem(storage, LEGACY_PROGRESS_V2_STORAGE_KEY) !== null ||
-    getLegacyKeys(storage).length > 0;
+  if (current) {
+    clearLegacyProgress(storage);
+    return current;
+  }
 
-  if (current && !hasLegacy) return current;
+  const migrated = migrateV3(
+    parseJson(safeGetItem(storage, LEGACY_PROGRESS_V3_STORAGE_KEY)),
+    configRevision
+  );
+  if (migrated) {
+    safeSetItem(storage, PROGRESS_STORAGE_KEY, JSON.stringify(migrated));
+    clearLegacyProgress(storage);
+    return migrated;
+  }
 
   clearLegacyProgress(storage);
-  if (current) return current;
-
   const fresh = { ...emptyState(configRevision), updatedAt: Date.now() };
   safeSetItem(storage, PROGRESS_STORAGE_KEY, JSON.stringify(fresh));
   return fresh;
@@ -177,6 +217,52 @@ export function withoutActions(state, actionIds) {
   const actions = { ...state.actions };
   for (const actionId of actionIds) delete actions[actionId];
   return { ...state, actions };
+}
+
+export function withWorkflowActionStatus(state, runId, workflowId, actionId, status) {
+  if (!runId || !workflowId || !actionId) return state;
+  const now = Date.now();
+  const previous = state.workflowRuns?.[runId] ?? {
+    workflowId,
+    actions: {},
+    startedAt: now,
+    completedAt: null,
+    updatedAt: now,
+  };
+  const actions = { ...previous.actions };
+  if (status === 'pending') delete actions[actionId];
+  else if (VALID_STATUSES.has(status)) actions[actionId] = status;
+  const workflowRuns = sanitizeWorkflowRuns({
+    ...state.workflowRuns,
+    [runId]: {
+      ...previous,
+      workflowId,
+      actions,
+      updatedAt: now,
+    },
+  });
+  return { ...state, workflowRuns };
+}
+
+export function completeWorkflowRun(state, runId) {
+  const previous = state.workflowRuns?.[runId];
+  if (!previous) return state;
+  const now = Date.now();
+  return {
+    ...state,
+    workflowRuns: sanitizeWorkflowRuns({
+      ...state.workflowRuns,
+      [runId]: { ...previous, completedAt: now, updatedAt: now },
+    }),
+  };
+}
+
+export function getWorkflowRun(state, runId) {
+  return state.workflowRuns?.[runId] ?? null;
+}
+
+export function getWorkflowActionStatus(state, runId, actionId) {
+  return state.workflowRuns?.[runId]?.actions?.[actionId] ?? 'pending';
 }
 
 export function getActionStatus(state, actionId) {
