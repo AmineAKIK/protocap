@@ -39,10 +39,11 @@ test('shared ShiftGuide revision persistence never throws when browser storage i
 test('shared ShiftGuide progress returns a safe empty state when storage reads fail', () => {
   const storage = new FaultyStorage();
   assert.deepEqual(readProgressState(storage), {
-    version: 3,
+    version: 4,
     configRevision: '',
     actions: {},
     activeChoices: {},
+    workflowRuns: {},
     updatedAt: 0,
   });
 });
@@ -59,18 +60,14 @@ test('shared ShiftGuide progress writes degrade without throwing when persistenc
     removeItem() { throw new Error('blocked'); },
   };
 
-  assert.doesNotThrow(() => writeProgressState(storage, {
-    version: 3,
+  const state = {
+    version: 4,
     configRevision: 'sha256:config',
     actions: { a1: 'validated' },
     activeChoices: {},
+    workflowRuns: {},
     updatedAt: 0,
-  }));
-  assert.equal(writeProgressState(storage, {
-    version: 3,
-    configRevision: 'sha256:config',
-    actions: { a1: 'validated' },
-    activeChoices: {},
-    updatedAt: 0,
-  }).actions.a1, 'validated');
+  };
+  assert.doesNotThrow(() => writeProgressState(storage, state));
+  assert.equal(writeProgressState(storage, state).actions.a1, 'validated');
 });
