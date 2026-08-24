@@ -5,7 +5,7 @@ import {
   createDeepSeekProvider,
 } from '../server/providers/deepSeekProvider.mjs';
 
-test('DeepSeek adapter owns provider request shape and returns only assistant content', async () => {
+test('DeepSeek adapter owns provider request shape and returns content plus usage telemetry', async () => {
   let captured;
   const provider = createDeepSeekProvider({
     apiKey: 'secret',
@@ -15,28 +15,61 @@ test('DeepSeek adapter owns provider request shape and returns only assistant co
         ok: true,
         status: 200,
         async json() {
-          return { choices: [{ message: { content: '{"message":"ok","checklist":[],"followUp":null}' } }] };
+          return {
+            choices: [{ message: { content: '{"kind":"route","id":"production"}' }, finish_reason: 'stop' }],
+            usage: {
+              prompt_tokens: 120,
+              completion_tokens: 18,
+              total_tokens: 138,
+              prompt_cache_hit_tokens: 80,
+              prompt_cache_miss_tokens: 40,
+            },
+          };
         },
       };
     },
   });
 
-  const content = await provider.complete({
+  const result = await provider.complete({
     systemPrompt: 'system',
     history: [{ role: 'user', content: 'bonjour' }],
   });
 
-  assert.equal(content, '{"message":"ok","checklist":[],"followUp":null}');
+  assert.equal(result.content, '{"kind":"route","id":"production"}');
+  assert.equal(result.model, 'deepseek-v4-flash');
+  assert.equal(result.finishReason, 'stop');
+  assert.deepEqual(result.usage, {
+    promptTokens: 120,
+    completionTokens: 18,
+    totalTokens: 138,
+    promptCacheHitTokens: 80,
+    promptCacheMissTokens: 40,
+  });
   assert.equal(captured.url, 'https://api.deepseek.com/chat/completions');
   assert.equal(captured.options.headers.Authorization, 'Bearer secret');
   const body = JSON.parse(captured.options.body);
   assert.equal(body.model, 'deepseek-v4-flash');
   assert.deepEqual(body.thinking, { type: 'disabled' });
-  assert.equal(body.max_tokens, 4_000);
+  assert.equal(body.max_tokens, 160);
   assert.deepEqual(body.messages, [
     { role: 'system', content: 'system' },
     { role: 'user', content: 'bonjour' },
   ]);
+});
+
+test('DeepSeek adapter tolerates missing usage telemetry', async () => {
+  const provider = createDeepSeekProvider({
+    apiKey: 'secret',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return { choices: [{ message: { content: '{"kind":"unknown"}' } }] };
+      },
+    }),
+  });
+  const result = await provider.complete({ systemPrompt: 'x', history: [] });
+  assert.equal(result.usage, null);
 });
 
 test('DeepSeek adapter maps upstream HTTP failures with safe status metadata', async () => {
