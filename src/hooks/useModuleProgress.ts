@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  completeWorkflowRun,
   getActionProgress,
   getActionStatus,
+  getWorkflowActionStatus,
+  getWorkflowRun,
   PROGRESS_STORAGE_KEY,
   readProgressState,
   resolveActiveChoice,
@@ -10,9 +13,10 @@ import {
   withActionStatus,
   withActiveChoice,
   withoutActions,
+  withWorkflowActionStatus,
   writeProgressState,
 } from '../../shared/shiftGuideProgress.js';
-import type { SharedProgressSummary } from '../../shared/shiftGuideProgress.js';
+import type { SharedProgressSummary, SharedWorkflowRun } from '../../shared/shiftGuideProgress.js';
 import { getSgModules } from '../data/shiftguideModules';
 import type { SGChoiceModule, SGSubModule } from '../data/shiftguideModules';
 import { runShiftGuideProgressTransaction } from '../features/shiftguide/shiftGuideConcurrency';
@@ -101,6 +105,27 @@ export function setSharedActionStatus(
     const next = withActionStatus(state, actionId, status);
     return applyChoiceScope(next, moduleId);
   });
+}
+
+export function getSharedWorkflowRun(runId: string): SharedWorkflowRun | null {
+  return getWorkflowRun(readState(), runId);
+}
+
+export function getSharedWorkflowActionStatus(runId: string, actionId: string): ActionStatus {
+  return getWorkflowActionStatus(readState(), runId, actionId) as ActionStatus;
+}
+
+export function setSharedWorkflowActionStatus(
+  runId: string,
+  workflowId: string,
+  actionId: string,
+  status: ActionStatus
+) {
+  return mutateState((state) => withWorkflowActionStatus(state, runId, workflowId, actionId, status));
+}
+
+export function markSharedWorkflowComplete(runId: string) {
+  return mutateState((state) => completeWorkflowRun(state, runId));
 }
 
 export function setActiveChoiceModule(moduleId: string, subModuleId: string) {

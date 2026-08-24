@@ -23,16 +23,32 @@ function getAbortProviderError(signal, timeoutSignal, cause) {
   return null;
 }
 
+function integerOrZero(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function normalizeUsage(usage) {
+  if (!usage || typeof usage !== 'object') return null;
+  return {
+    promptTokens: integerOrZero(usage.prompt_tokens),
+    completionTokens: integerOrZero(usage.completion_tokens),
+    totalTokens: integerOrZero(usage.total_tokens),
+    promptCacheHitTokens: integerOrZero(usage.prompt_cache_hit_tokens),
+    promptCacheMissTokens: integerOrZero(usage.prompt_cache_miss_tokens),
+  };
+}
+
 export function createDeepSeekProvider({
   apiKey,
   fetchImpl = fetch,
   timeoutMs = 45_000,
   model = 'deepseek-v4-flash',
-  maxTokens = 4_000,
+  maxTokens = 160,
 } = {}) {
   if (!apiKey) return null;
 
   return {
+    model,
     async complete({ systemPrompt, history, signal = null }) {
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
       const requestSignal = signal
@@ -102,7 +118,14 @@ export function createDeepSeekProvider({
         );
       }
 
-      return content;
+      return {
+        content,
+        model,
+        usage: normalizeUsage(payload?.usage),
+        finishReason: typeof payload?.choices?.[0]?.finish_reason === 'string'
+          ? payload.choices[0].finish_reason
+          : null,
+      };
     },
   };
 }

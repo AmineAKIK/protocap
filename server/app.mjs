@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
 import { parseShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
+import { createCelineDomainEngine } from './celineDomainEngine.mjs';
 import {
   createCelineAuthorityRevision,
   parseCelineRoutingSpec,
@@ -15,6 +16,7 @@ import {
   buildCelineProviderHistory,
   extractLatestCelineUserMessage,
 } from './celineProviderContext.mjs';
+import { createCelineSemanticIndex } from './celineSemanticIndex.mjs';
 import { DIRECT_INGRESS_TRUST } from './ingressTrust.mjs';
 import {
   attachRequestObservability,
@@ -42,6 +44,15 @@ const MAX_UNLOCK_CODE_LENGTH = 256;
 const CHAT_WINDOW_MS = 60 * 1000;
 const CHAT_MAX_REQUESTS = 30;
 const CHAT_IP_MAX_REQUESTS = 60;
+const CELINE_CONTEXT_HINTS = new Set([
+  'debut_equipe',
+  'debut_oc',
+  'production',
+  'evenement',
+  'cloture',
+  'tri',
+  'reprise',
+]);
 
 export function createServerRuntimeState() {
   return {
@@ -49,6 +60,7 @@ export function createServerRuntimeState() {
     unlockAttempts: new Map(),
     chatRequests: new Map(),
     celineContexts: new Map(),
+    celineOperationalStates: new Map(),
   };
 }
 
@@ -72,6 +84,26 @@ function mapProviderError(error) {
     return { status: 504, error: 'Service IA trop lent.' };
   }
   return { status: 502, error: 'Service IA indisponible.' };
+}
+
+function normalizeProviderResult(result, provider) {
+  if (typeof result === 'string') {
+    return { content: result, usage: null, model: provider?.model ?? null, finishReason: null };
+  }
+  if (!result || typeof result !== 'object' || typeof result.content !== 'string') {
+    return { content: '', usage: null, model: provider?.model ?? null, finishReason: null };
+  }
+  return {
+    content: result.content,
+    usage: result.usage && typeof result.usage === 'object' ? result.usage : null,
+    model: typeof result.model === 'string' ? result.model : provider?.model ?? null,
+    finishReason: typeof result.finishReason === 'string' ? result.finishReason : null,
+  };
+}
+
+function withContextHint(state, contextHint) {
+  if (typeof contextHint !== 'string' || !CELINE_CONTEXT_HINTS.has(contextHint)) return state;
+  return { ...state, context: contextHint };
 }
 
 export function createServerApp({
@@ -107,6 +139,10 @@ export function createServerApp({
   const celineAuthority = canonicalConfig && canonicalRouting
     ? createCelineAuthority(canonicalConfig, canonicalRouting)
     : null;
+  const celineSemanticIndex = canonicalConfig ? createCelineSemanticIndex(canonicalConfig) : null;
+  const celineDomainEngine = celineAuthority && celineSemanticIndex
+    ? createCelineDomainEngine({ authority: celineAuthority, semanticIndex: celineSemanticIndex })
+    : null;
   const celineAuthorityRevision = canonicalRouting
     ? createCelineAuthorityRevision(canonicalRouting)
     : null;
@@ -122,7 +158,14 @@ export function createServerApp({
     celineAuthority,
     celineProvider,
   });
-  const { sessions, unlockAttempts, chatRequests, celineContexts } = runtimeState;
+  const {
+    sessions,
+    unlockAttempts,
+    chatRequests,
+    celineContexts,
+    celineOperationalStates = new Map(),
+  } = runtimeState;
+  runtimeState.celineOperationalStates = celineOperationalStates;
 
   const app = express();
   app.disable('x-powered-by');
@@ -152,6 +195,7 @@ export function createServerApp({
     const token = issueToken();
     const expiresAt = now() + SESSION_TTL_MS;
     sessions.set(token, expiresAt);
+    if (celineDomainEngine) celineOperationalStates.set(token, celineDomainEngine.initialState());
     return { token, expiresAt };
   }
 
@@ -207,7 +251,14 @@ export function createServerApp({
 
   app.get('/api/shiftguide/session', (req, res) => {
     const token = getSessionToken(req);
-    if (!hasValidSession(sessions, chatRequests, token, now(), celineContexts)) {
+    if (!hasValidSession(
+      sessions,
+      chatRequests,
+      token,
+      now(),
+      celineContexts,
+      celineOperationalStates
+    )) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
     return res.json({
@@ -219,13 +270,26 @@ export function createServerApp({
   });
 
   app.delete('/api/shiftguide/session', (req, res) => {
-    revokeSession(sessions, chatRequests, getSessionToken(req), celineContexts);
+    revokeSession(
+      sessions,
+      chatRequests,
+      getSessionToken(req),
+      celineContexts,
+      celineOperationalStates
+    );
     return res.status(204).end();
   });
 
   app.post('/api/celine/chat', async (req, res) => {
     const token = getSessionToken(req);
-    if (!hasValidSession(sessions, chatRequests, token, now(), celineContexts)) {
+    if (!hasValidSession(
+      sessions,
+      chatRequests,
+      token,
+      now(),
+      celineContexts,
+      celineOperationalStates
+    )) {
       return res.status(401).json({ error: 'Session ShiftGuide invalide ou expirée.' });
     }
 
@@ -248,13 +312,39 @@ export function createServerApp({
       return res.status(429).json({ error: 'Trop de requêtes. Réessaie dans un moment.' });
     }
 
-    if (!celineProvider || !celineSystemPrompt || !celineAuthority) {
-      return res.status(503).json({ error: 'Service IA non configuré.' });
+    if (!celineSystemPrompt || !celineAuthority || !celineDomainEngine) {
+      return res.status(503).json({ error: 'Service Céline non configuré.' });
     }
 
     const userMessage = extractLatestCelineUserMessage(req.body?.messages);
     if (!userMessage) {
       return res.status(400).json({ error: 'Requête IA invalide.' });
+    }
+
+    const storedOperationalState = celineOperationalStates.get(token) ?? celineDomainEngine.initialState();
+    const currentOperationalState = withContextHint(storedOperationalState, req.body?.contextHint);
+    const direct = celineDomainEngine.handleBeforeProvider(currentOperationalState, userMessage);
+    if (direct?.handled && direct.response) {
+      celineOperationalStates.set(token, direct.state);
+      celineContexts.set(
+        token,
+        appendCelineProviderDecision(
+          celineContexts.get(token),
+          userMessage,
+          direct.decision ?? { kind: 'unknown' }
+        )
+      );
+      log.info('celine_domain', {
+        requestId: req.requestId,
+        outcome: 'deterministic',
+        decisionKind: direct.decision?.kind ?? 'unknown',
+        providerCalled: false,
+      });
+      return res.json(direct.response);
+    }
+
+    if (!celineProvider) {
+      return res.status(503).json({ error: 'Service IA non configuré.' });
     }
 
     const providerHistory = buildCelineProviderHistory(
@@ -265,32 +355,56 @@ export function createServerApp({
     const providerStartedAt = telemetryNow();
 
     try {
-      const providerContent = await celineProvider.complete({
+      const rawProviderResult = await celineProvider.complete({
         systemPrompt: celineSystemPrompt,
         history: providerHistory,
         signal: clientDisconnect.signal,
       });
+      const providerResult = normalizeProviderResult(rawProviderResult, celineProvider);
       const providerDurationMs = Math.max(0, telemetryNow() - providerStartedAt);
-      const decision = parseCelineDecision(providerContent);
-      const response = decision ? resolveCelineDecision(celineAuthority, decision) : null;
+      const decision = parseCelineDecision(providerResult.content);
+      const resolved = decision
+        ? celineDomainEngine.handleProviderDecision(
+            direct?.state ?? currentOperationalState,
+            decision,
+            (candidate) => resolveCelineDecision(celineAuthority, candidate)
+          )
+        : null;
+      const response = resolved?.handled ? resolved.response : null;
       const storedDecision = response && decision ? decision : { kind: 'unknown' };
+
+      if (resolved?.state) celineOperationalStates.set(token, resolved.state);
       celineContexts.set(
         token,
         appendCelineProviderDecision(celineContexts.get(token), userMessage, storedDecision)
       );
+
       if (!response) {
         log.warn('celine_provider', {
           requestId: req.requestId,
           outcome: 'fallback',
           code: 'invalid_decision',
           durationMs: providerDurationMs,
+          model: providerResult.model,
+          providerCalled: true,
         });
         return res.json(createCelineSafeFallbackResponse());
       }
+
+      const usage = providerResult.usage;
       log.info('celine_provider', {
         requestId: req.requestId,
         outcome: 'success',
+        decisionKind: decision?.kind ?? 'unknown',
         durationMs: providerDurationMs,
+        model: providerResult.model,
+        finishReason: providerResult.finishReason,
+        providerCalled: true,
+        promptTokens: usage?.promptTokens ?? null,
+        completionTokens: usage?.completionTokens ?? null,
+        totalTokens: usage?.totalTokens ?? null,
+        promptCacheHitTokens: usage?.promptCacheHitTokens ?? null,
+        promptCacheMissTokens: usage?.promptCacheMissTokens ?? null,
       });
       return res.json(response);
     } catch (error) {
@@ -300,6 +414,7 @@ export function createServerApp({
           requestId: req.requestId,
           outcome: 'cancelled',
           durationMs,
+          providerCalled: true,
         });
         return;
       }
@@ -310,6 +425,7 @@ export function createServerApp({
         code: error instanceof CelineProviderError ? error.code : 'unknown',
         upstreamStatus: error instanceof CelineProviderError ? error.upstreamStatus : null,
         durationMs,
+        providerCalled: true,
       });
       return res.status(mapped.status).json({ error: mapped.error });
     } finally {

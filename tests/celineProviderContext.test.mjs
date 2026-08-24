@@ -17,7 +17,7 @@ test('provider context extracts only the latest valid operator message', () => {
   assert.equal(extractLatestCelineUserMessage([{ role: 'user', content: 'x'.repeat(4_001) }]), null);
 });
 
-test('provider context stores only operator turns and closed server decisions', () => {
+test('provider context stores only operator turns and provider-compatible closed decisions', () => {
   let context = [];
   context = appendCelineProviderDecision(context, 'Je commence mon poste', {
     kind: 'route',
@@ -29,6 +29,22 @@ test('provider context stores only operator turns and closed server decisions', 
     { role: 'assistant', content: '{"kind":"route","id":"debut_poste_production"}' },
   ]);
   assert.doesNotMatch(JSON.stringify(context), /checklist|Faire le contrôle|module/i);
+});
+
+test('deterministic domain-only decisions do not pollute provider examples', () => {
+  const context = [
+    { role: 'user', content: 'ancien' },
+    { role: 'assistant', content: '{"kind":"route","id":"production"}' },
+  ];
+
+  assert.deepEqual(
+    appendCelineProviderDecision(context, 'bonjour', { kind: 'conversation', id: 'greeting' }),
+    context
+  );
+  assert.deepEqual(
+    appendCelineProviderDecision(context, 'et après ?', { kind: 'navigate', id: 'next' }),
+    context
+  );
 });
 
 test('provider context is bounded to eight semantic turns', () => {

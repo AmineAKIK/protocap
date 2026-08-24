@@ -83,7 +83,11 @@ test('client disconnect aborts in-flight Celine work and records cancellation wi
     const unlocked = await unlock(baseUrl);
     assert.equal(unlocked.token, 'cancel-test-token');
 
-    const body = JSON.stringify({ messages: [{ role: 'user', content: 'bonjour' }] });
+    // Keep this request deliberately outside deterministic fast paths. The purpose of
+    // this test is to exercise cancellation of a real in-flight provider request.
+    const body = JSON.stringify({
+      messages: [{ role: 'user', content: 'une situation complètement ambiguë' }],
+    });
     const request = http.request({
       host: '127.0.0.1',
       port,

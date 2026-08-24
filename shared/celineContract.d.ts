@@ -5,10 +5,28 @@ export interface SharedCelineChecklistItem {
   module: string | null;
 }
 
+export type SharedCelinePresentation = 'focus' | 'all' | 'answer' | 'question' | 'completion';
+
+export interface SharedCelineWorkflow {
+  runId: string;
+  routeId: string;
+  label: string;
+  currentIndex: number;
+  totalActions: number;
+}
+
+export interface SharedCompletedCelineWorkflow {
+  routeId: string;
+  label: string;
+}
+
 export interface SharedCelineResponse {
   message: string;
   checklist: SharedCelineChecklistItem[];
   followUp: string | null;
+  presentation?: SharedCelinePresentation;
+  workflow?: SharedCelineWorkflow;
+  completedWorkflow?: SharedCompletedCelineWorkflow;
 }
 
 export type SharedCelineDecision =

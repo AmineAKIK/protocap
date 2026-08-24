@@ -2,13 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { requestCelineResponse } from './celineClient';
 
 afterEach(() => {
+  localStorage.clear();
   sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
 describe('requestCelineResponse', () => {
-  it('sends exactly one current operator turn and consumes the Protocap DTO', async () => {
+  it('sends exactly one current operator turn plus a bounded ShiftGuide context hint', async () => {
     sessionStorage.setItem('shiftguide_auth_token', 'token');
+    localStorage.setItem('shiftguide_context', 'production');
     const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       message: 'Action suivante.',
@@ -31,7 +33,23 @@ describe('requestCelineResponse', () => {
     expect(options.signal).toBe(controller.signal);
     expect(JSON.parse(options.body)).toEqual({
       messages: [{ role: 'user', content: 'bonjour' }],
+      contextHint: 'production',
     });
+  });
+
+  it('drops an unknown browser context rather than forwarding arbitrary state', async () => {
+    sessionStorage.setItem('shiftguide_auth_token', 'token');
+    localStorage.setItem('shiftguide_context', 'invented_context');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      message: 'OK',
+      checklist: [],
+      followUp: null,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await requestCelineResponse('bonjour', new AbortController().signal);
+    const [, options] = fetchMock.mock.calls[0];
+    expect(JSON.parse(options.body).contextHint).toBeNull();
   });
 
   it('propagates an AbortError when the caller cancels the in-flight browser request', async () => {

@@ -49,9 +49,9 @@ test.describe('ShiftGuide critical journeys', () => {
     await expect(page.getByText('Terminé')).toBeVisible();
 
     const storedBeforeReload = await page.evaluate(() => JSON.parse(
-      localStorage.getItem('shiftguide_progress_v3') ?? '{}'
+      localStorage.getItem('shiftguide_progress_v4') ?? '{}'
     ));
-    expect(storedBeforeReload.version).toBe(3);
+    expect(storedBeforeReload.version).toBe(4);
     expect(storedBeforeReload.configRevision).toBe(
       await page.evaluate(() => localStorage.getItem('shiftguide_config_revision'))
     );
@@ -87,7 +87,7 @@ test.describe('ShiftGuide critical journeys', () => {
     await secondPage.waitForTimeout(150);
 
     expect(await secondPage.evaluate(() => {
-      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}');
+      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v4') ?? '{}');
       return state.actions?.action_standard_1;
     })).toBeUndefined();
 
@@ -100,7 +100,7 @@ test.describe('ShiftGuide critical journeys', () => {
     });
 
     await expect.poll(() => secondPage.evaluate(() => {
-      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}');
+      const state = JSON.parse(localStorage.getItem('shiftguide_progress_v4') ?? '{}');
       return state.actions?.action_standard_1;
     })).toBe('validated');
     await expect(secondPage.getByText('1 / 1 actions traitées')).toBeVisible();
@@ -133,7 +133,7 @@ test.describe('ShiftGuide critical journeys', () => {
     await page.getByRole('button', { name: 'Valider' }).click();
     await expect(page.getByText('Terminé')).toBeVisible();
 
-    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('shiftguide_progress_v3') ?? '{}'));
+    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('shiftguide_progress_v4') ?? '{}'));
     expect(state.activeChoices?.module_choice).toBe('scenario_a');
     expect(state.actions?.choice_action_a).toBe('validated');
     expect(state.actions?.choice_action_b).toBeUndefined();
@@ -156,7 +156,7 @@ test.describe('ShiftGuide critical journeys', () => {
       response.url().endsWith('/api/celine/chat') && response.request().method() === 'POST'
     );
 
-    await input.fill('Je commence mon poste');
+    await input.fill('une situation complètement ambiguë');
     await input.press('Enter');
 
     const response = await responsePromise;

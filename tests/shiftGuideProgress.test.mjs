@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  completeWorkflowRun,
   CONFIG_REVISION_STORAGE_KEY,
+  getWorkflowActionStatus,
+  getWorkflowRun,
   LEGACY_MODULE_PREFIX,
   LEGACY_PROGRESS_STORAGE_KEY,
   LEGACY_PROGRESS_V2_STORAGE_KEY,
+  LEGACY_PROGRESS_V3_STORAGE_KEY,
   PROGRESS_STORAGE_KEY,
   readProgressState,
   resolveActiveChoice,
@@ -13,6 +17,7 @@ import {
   withActionStatus,
   withActiveChoice,
   withoutActions,
+  withWorkflowActionStatus,
   writeProgressState,
 } from '../shared/shiftGuideProgress.js';
 
@@ -45,10 +50,11 @@ function revisionStorage(entries = {}) {
 
 function progressState(overrides = {}) {
   return {
-    version: 3,
+    version: 4,
     configRevision: CONFIG_REVISION,
     actions: {},
     activeChoices: {},
+    workflowRuns: {},
     updatedAt: 0,
     ...overrides,
   };
@@ -77,21 +83,43 @@ test('pre-revision progress is discarded instead of being attributed to the curr
 
   const state = readProgressState(storage);
 
-  assert.equal(state.version, 3);
+  assert.equal(state.version, 4);
   assert.equal(state.configRevision, CONFIG_REVISION);
   assert.deepEqual(state.actions, {});
+  assert.deepEqual(state.workflowRuns, {});
   assert.equal(storage.getItem(LEGACY_PROGRESS_STORAGE_KEY), null);
   assert.equal(storage.getItem(LEGACY_PROGRESS_V2_STORAGE_KEY), null);
   assert.equal(storage.getItem(`${LEGACY_MODULE_PREFIX}module-a`), null);
 });
 
-test('a v3 state from another config revision is reset even when action ids still match', () => {
+test('same-revision v3 progress migrates to v4 without inventing workflow occurrence history', () => {
+  const storage = revisionStorage({
+    [LEGACY_PROGRESS_V3_STORAGE_KEY]: JSON.stringify({
+      version: 3,
+      configRevision: CONFIG_REVISION,
+      actions: { a1: 'validated' },
+      activeChoices: { changement_oc: 'ch_lot' },
+      updatedAt: 30,
+    }),
+  });
+
+  const state = readProgressState(storage);
+  assert.equal(state.version, 4);
+  assert.deepEqual(state.actions, { a1: 'validated' });
+  assert.deepEqual(state.activeChoices, { changement_oc: 'ch_lot' });
+  assert.deepEqual(state.workflowRuns, {});
+  assert.equal(storage.getItem(LEGACY_PROGRESS_V3_STORAGE_KEY), null);
+  assert.equal(JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY)).version, 4);
+});
+
+test('a v4 state from another config revision is reset even when action ids still match', () => {
   const storage = revisionStorage({
     [PROGRESS_STORAGE_KEY]: JSON.stringify({
-      version: 3,
+      version: 4,
       configRevision: 'sha256:old-config',
       actions: { a1: 'validated' },
       activeChoices: {},
+      workflowRuns: { old_run: { workflowId: 'x', actions: { a1: 'validated' }, updatedAt: 30 } },
       updatedAt: 30,
     }),
   });
@@ -99,6 +127,7 @@ test('a v3 state from another config revision is reset even when action ids stil
   const state = readProgressState(storage);
   assert.equal(state.configRevision, CONFIG_REVISION);
   assert.deepEqual(state.actions, {});
+  assert.deepEqual(state.workflowRuns, {});
 
   const persisted = JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY));
   assert.equal(persisted.configRevision, CONFIG_REVISION);
@@ -116,6 +145,26 @@ test('current revision-bound progress remains stable across reads', () => {
   const state = readProgressState(storage);
   assert.deepEqual(state.actions, { a1: 'na' });
   assert.deepEqual(readProgressState(storage), state);
+});
+
+test('two workflow occurrences keep the same template action independent', () => {
+  let state = progressState();
+  state = withWorkflowActionStatus(state, 'oc_run_1', 'debut_oc', 'doc_01', 'validated');
+  state = withWorkflowActionStatus(state, 'oc_run_2', 'debut_oc', 'doc_01', 'na');
+
+  assert.equal(getWorkflowActionStatus(state, 'oc_run_1', 'doc_01'), 'validated');
+  assert.equal(getWorkflowActionStatus(state, 'oc_run_2', 'doc_01'), 'na');
+  assert.equal(getWorkflowActionStatus(state, 'missing', 'doc_01'), 'pending');
+});
+
+test('workflow completion is scoped to the run occurrence', () => {
+  let state = progressState();
+  state = withWorkflowActionStatus(state, 'run_1', 'fin_cuve', 'fc_01', 'validated');
+  state = withWorkflowActionStatus(state, 'run_2', 'fin_cuve', 'fc_01', 'validated');
+  state = completeWorkflowRun(state, 'run_1');
+
+  assert.equal(typeof getWorkflowRun(state, 'run_1').completedAt, 'number');
+  assert.equal(getWorkflowRun(state, 'run_2').completedAt, null);
 });
 
 test('choice summary follows only the explicitly selected scenario', () => {
@@ -159,7 +208,7 @@ test('switching active choice preserves historical actions but changes the paren
   assert.equal(summary.isComplete, false);
 });
 
-test('action updates and scoped reset keep unrelated progress intact within one revision', () => {
+test('action updates and scoped reset keep unrelated aggregate progress intact within one revision', () => {
   const storage = revisionStorage();
   let state = readProgressState(storage);
   state = withActionStatus(state, 'a1', 'validated');

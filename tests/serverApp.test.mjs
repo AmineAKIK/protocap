@@ -52,7 +52,7 @@ async function unlock(baseUrl) {
   return response.json();
 }
 
-async function chat(baseUrl, token, messages = [{ role: 'user', content: 'bonjour' }]) {
+async function chat(baseUrl, token, messages = [{ role: 'user', content: 'guide moi sur le module standard' }]) {
   return fetch(`${baseUrl}/api/celine/chat`, {
     method: 'POST',
     headers: {
@@ -116,7 +116,7 @@ test('Express factory supports unlock, session and logout with stable routing id
   });
 });
 
-test('Celine HTTP route renders operator content from declared server routing, not provider prose', async () => {
+test('Celine HTTP route turns provider routing into one focused canonical workflow step', async () => {
   let providerRequest;
   const celineProvider = {
     async complete(input) {
@@ -130,17 +130,37 @@ test('Celine HTTP route renders operator content from declared server routing, n
     const response = await chat(baseUrl, unlocked.token);
 
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
-      message: 'Suis la séquence « Module standard » dans l’ordre indiqué.',
-      checklist: [
-        { actionId: 'action_1', text: 'Faire le contrôle', note: null, module: 'Module standard' },
-      ],
-      followUp: 'Dis-moi quand la checklist est traitée.',
-    });
-    assert.equal(providerRequest.history[0].content, 'bonjour');
+    const body = await response.json();
+    assert.equal(body.message, 'Module standard — étape 1/1.');
+    assert.deepEqual(body.checklist, [
+      { actionId: 'action_1', text: 'Faire le contrôle', note: null, module: 'Module standard' },
+    ]);
+    assert.equal(body.followUp, null);
+    assert.equal(body.presentation, 'focus');
+    assert.equal(body.workflow.routeId, 'module_standard');
+    assert.equal(body.workflow.currentIndex, 0);
+    assert.equal(body.workflow.totalActions, 1);
+    assert.equal(providerRequest.history[0].content, 'guide moi sur le module standard');
     assert.match(providerRequest.systemPrompt, /module_standard/);
     assert.match(providerRequest.systemPrompt, /Utiliser pour le module standard de test/);
     assert.doesNotMatch(providerRequest.systemPrompt, /Faire le contrôle/);
+  });
+});
+
+test('Celine HTTP route handles greetings without calling the provider', async () => {
+  let calls = 0;
+  const celineProvider = {
+    async complete() {
+      calls += 1;
+      return JSON.stringify({ kind: 'unknown' });
+    },
+  };
+  await withServer({ celineProvider }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const response = await chat(baseUrl, unlocked.token, [{ role: 'user', content: 'bonjour' }]);
+    assert.equal(response.status, 200);
+    assert.match((await response.json()).message, /Bonjour/);
+    assert.equal(calls, 0);
   });
 });
 
@@ -176,7 +196,7 @@ test('Celine HTTP route discards provider prose and degrades safely on unauthori
     const response = await chat(baseUrl, unlocked.token);
     assert.equal(response.status, 200);
     const body = await response.json();
-    assert.equal(body.message, 'Suis la séquence « Module standard » dans l’ordre indiqué.');
+    assert.equal(body.message, 'Module standard — étape 1/1.');
     assert.doesNotMatch(JSON.stringify(body), /Instruction libre/);
   });
 
