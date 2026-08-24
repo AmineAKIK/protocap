@@ -29,11 +29,18 @@ export function takeRateLimit(store, key, maxRequests, windowMs, now = Date.now(
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
-export function revokeSession(sessions, chatRequests, token, celineContexts = null) {
+export function revokeSession(
+  sessions,
+  chatRequests,
+  token,
+  celineContexts = null,
+  celineOperationalStates = null
+) {
   if (!token) return false;
   const existed = sessions.delete(token);
   chatRequests.delete(token);
   celineContexts?.delete(token);
+  celineOperationalStates?.delete(token);
   return existed;
 }
 
@@ -42,14 +49,21 @@ export function hasValidSession(
   chatRequests,
   token,
   now = Date.now(),
-  celineContexts = null
+  celineContexts = null,
+  celineOperationalStates = null
 ) {
   if (!token) return false;
 
   const expiresAt = sessions.get(token);
   if (!expiresAt) return false;
   if (expiresAt <= now) {
-    revokeSession(sessions, chatRequests, token, celineContexts);
+    revokeSession(
+      sessions,
+      chatRequests,
+      token,
+      celineContexts,
+      celineOperationalStates
+    );
     return false;
   }
 
@@ -57,12 +71,18 @@ export function hasValidSession(
 }
 
 export function cleanupExpiredState(
-  { sessions, unlockAttempts, chatRequests, celineContexts },
+  { sessions, unlockAttempts, chatRequests, celineContexts, celineOperationalStates },
   now = Date.now()
 ) {
   for (const [token, expiresAt] of sessions) {
     if (expiresAt <= now) {
-      revokeSession(sessions, chatRequests, token, celineContexts);
+      revokeSession(
+        sessions,
+        chatRequests,
+        token,
+        celineContexts,
+        celineOperationalStates
+      );
     }
   }
 
