@@ -34,6 +34,51 @@ function inferContext(routeId) {
   return 'unknown';
 }
 
+function applyWorkflowCompletionEffects(state, workflow) {
+  if (!workflow) return state;
+  const routeId = workflow.routeId;
+  const patch = {};
+
+  if (routeId === 'debut_oc' || routeId === 'debut_oc_precedent_ouvert' || routeId.includes('changement_oc_')) {
+    patch.ocStatus = 'open';
+    patch.context = 'debut_oc';
+  }
+  if (routeId === 'fin_oc') {
+    patch.ocStatus = 'closed';
+    patch.tankStatus = state.tankStatus === 'open' ? 'open' : 'closed';
+    patch.context = 'cloture';
+  }
+  if (routeId === 'debut_cuve' || routeId === 'debut_cuve_sans_oc' || routeId === 'changement_cuve') {
+    patch.ocStatus = 'open';
+    patch.tankStatus = 'open';
+    patch.context = 'production';
+  }
+  if (routeId === 'fin_cuve') {
+    patch.tankStatus = 'closed';
+    patch.context = 'evenement';
+  }
+  if (routeId === 'production') {
+    patch.lineMode = 'production';
+    patch.context = 'production';
+  }
+  if (routeId.startsWith('fin_poste')) {
+    patch.lineMode = 'stopped';
+    patch.ocStatus = 'closed';
+    patch.tankStatus = 'closed';
+    patch.context = 'cloture';
+  }
+  if (routeId === 'debut_poste_production') {
+    patch.lineMode = 'production';
+    patch.context = 'production';
+  }
+  if (routeId.startsWith('debut_poste_arretee')) {
+    patch.lineMode = 'stopped';
+    patch.context = 'debut_equipe';
+  }
+
+  return withCelineState(state, patch);
+}
+
 function renderWorkflowStep(authority, state) {
   const workflow = state.activeWorkflow;
   if (!workflow) return null;
@@ -109,7 +154,12 @@ function startIntent(authority, state, id) {
     }
     return startRoute(authority, normalized, 'fin_cuve');
   }
-  if (id === 'changement_cuve') return startRoute(authority, normalized, 'changement_cuve');
+  if (id === 'changement_cuve') {
+    const prepared = normalized.tankStatus === 'unknown'
+      ? withCelineState(normalized, { tankStatus: 'open' })
+      : normalized;
+    return startRoute(authority, prepared, 'changement_cuve');
+  }
   if (id === 'production') return startRoute(authority, normalized, 'production');
   if (id === 'tri') return startRoute(authority, normalized, 'tri');
   if (id === 'debut_poste' || id === 'fin_poste') return { handled: false, state: normalized };
@@ -158,7 +208,8 @@ function preferredScopes(state) {
 
 function maybeProcedureQuery(authority, semanticIndex, state, text) {
   const normalized = normalizeCelineSearchText(text);
-  const looksLikeQuestion = /\b(quoi|comment|quel|quelle|quels|quelles|dois|faut|controle|contrôle|verif|vérif|prelev|prélèv|etape|étape)\b/.test(normalized);
+  const looksLikeQuestion = /\b(quoi|comment|quel|quelle|quels|quelles|dois|faut|controle|verif|etape)\b/.test(normalized)
+    || normalized.includes('prelev');
   if (!looksLikeQuestion) return null;
   const matches = searchCelineActions(semanticIndex, text, { preferredScopes: preferredScopes(state), limit: 3 });
   if (matches.length === 0) return null;
@@ -178,6 +229,28 @@ function maybeProcedureQuery(authority, semanticIndex, state, text) {
       presentation: 'answer',
     },
     decision: { kind: 'query', ids: checklist.map((item) => item.actionId) },
+  };
+}
+
+function advanceWorkflow(authority, state) {
+  const advanced = advanceCelineWorkflow(state);
+  if (!advanced.completed) {
+    return {
+      handled: true,
+      state: advanced.state,
+      response: renderWorkflowStep(authority, advanced.state),
+      decision: { kind: 'navigate', id: 'next' },
+    };
+  }
+  const completedState = applyWorkflowCompletionEffects(advanced.state, advanced.workflow);
+  return {
+    handled: true,
+    state: completedState,
+    response: emptyResponse(`${advanced.workflow.label} terminée.`, {
+      presentation: 'completion',
+      completedWorkflow: { routeId: advanced.workflow.routeId, label: advanced.workflow.label },
+    }),
+    decision: { kind: 'navigate', id: 'complete' },
   };
 }
 
@@ -204,21 +277,13 @@ export function createCelineDomainEngine({ authority, semanticIndex }) {
       }
 
       if (state.activeWorkflow) {
-        if (/^(c est fait|fait|valide|validé|ok c est fait)$/.test(normalized)) {
-          const advanced = advanceCelineWorkflow(state);
-          if (advanced.completed) {
-            return { handled: true, state: advanced.state, response: emptyResponse(`${advanced.workflow.label} terminée.`), decision: { kind: 'navigate', id: 'complete' } };
-          }
-          return { handled: true, state: advanced.state, response: renderWorkflowStep(authority, advanced.state), decision: { kind: 'navigate', id: 'next' } };
+        if (/^(c est fait|fait|valide|ok c est fait)$/.test(normalized)) {
+          return advanceWorkflow(authority, state);
         }
         if (/^(et apres|apres|suivant|et ensuite|ensuite|prochaine etape)$/.test(normalized)) {
-          const advanced = advanceCelineWorkflow(state);
-          if (advanced.completed) {
-            return { handled: true, state: advanced.state, response: emptyResponse(`${advanced.workflow.label} terminée.`), decision: { kind: 'navigate', id: 'complete' } };
-          }
-          return { handled: true, state: advanced.state, response: renderWorkflowStep(authority, advanced.state), decision: { kind: 'navigate', id: 'next' } };
+          return advanceWorkflow(authority, state);
         }
-        if (/\b(toute|toutes|complet|complete|complète)\b/.test(normalized) && /\b(procedure|procédure|etapes|étapes|checklist)\b/.test(normalized)) {
+        if (/\b(toute|toutes|complet|complete)\b/.test(normalized) && /\b(procedure|etapes|checklist)\b/.test(normalized)) {
           const route = routeFor(authority, state.activeWorkflow.routeId);
           if (route) {
             return {
@@ -236,11 +301,11 @@ export function createCelineDomainEngine({ authority, semanticIndex }) {
         }
       }
 
-      if (/\b(lance|lancer|commence|commencer|demarre|démarre|nouveau|nouvel)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'debut_oc');
-      if (/\b(fin|fini|finir|cloture|clôture|cloturer|clôturer)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'fin_oc');
+      if (/\b(lance|lancer|commence|commencer|demarre|nouveau|nouvel)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'debut_oc');
+      if (/\b(fin|fini|finir|cloture|cloturer)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'fin_oc');
       if (/\b(changement|changer|nouvelle|nouveau)\b.*\bcuve\b/.test(normalized)) return startIntent(authority, state, normalized.includes('changement') ? 'changement_cuve' : 'debut_cuve');
       if (/\b(fin|finir|termine|terminer)\b.*\bcuve\b/.test(normalized)) return startIntent(authority, state, 'fin_cuve');
-      if (/\b(production|produire)\b/.test(normalized) && /\b(controle|contrôle|sequence|séquence|procedure|procédure)\b/.test(normalized)) return startIntent(authority, state, 'production');
+      if (/\b(production|produire)\b/.test(normalized) && /\b(controle|sequence|procedure)\b/.test(normalized)) return startIntent(authority, state, 'production');
       if (/\btri\b/.test(normalized) && /\b(commence|mission|faire|lance)\b/.test(normalized)) return startIntent(authority, state, 'tri');
 
       for (const key of authority.lexicon.keys()) {
