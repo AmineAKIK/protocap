@@ -16,17 +16,23 @@ import {
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type {
   SharedCelinePresentation,
   SharedCelineWorkflow,
+  SharedCompletedCelineWorkflow,
 } from '../../../shared/celineContract.js';
 import { AccessibleDialog } from '../../components/AccessibleDialog';
 import { getSgModules } from '../../data/shiftguideModules';
 import { requestCelineResponse } from '../../features/shiftguide/celineClient';
 import { getShiftGuidePersistentStorage } from '../../features/shiftguide/shiftGuideStorage';
-import { setSharedActionStatus } from '../../hooks/useModuleProgress';
+import {
+  getSharedWorkflowActionStatus,
+  markSharedWorkflowComplete,
+  setSharedActionStatus,
+  setSharedWorkflowActionStatus,
+} from '../../hooks/useModuleProgress';
 
 interface ISpeechRecognitionEvent {
   results: { [i: number]: { [j: number]: { transcript: string } } };
@@ -109,6 +115,7 @@ interface CelineMessage {
   followUp: string | null;
   presentation?: SharedCelinePresentation;
   workflow?: SharedCelineWorkflow;
+  completedWorkflow?: SharedCompletedCelineWorkflow;
   loading?: boolean;
 }
 
@@ -132,15 +139,21 @@ async function requestCelineGuidance(userMessage: string, signal: AbortSignal) {
   const createdAt = Date.now();
   return {
     message: response.message,
-    checklist: response.checklist.map((item, index): ChecklistItem => ({
-      ...item,
-      id: `${item.actionId}_${createdAt}_${index}`,
-      done: false,
-      na: false,
-    })),
+    checklist: response.checklist.map((item, index): ChecklistItem => {
+      const occurrenceStatus = response.workflow
+        ? getSharedWorkflowActionStatus(response.workflow.runId, item.actionId)
+        : 'pending';
+      return {
+        ...item,
+        id: `${item.actionId}_${createdAt}_${index}`,
+        done: occurrenceStatus === 'validated',
+        na: occurrenceStatus === 'na',
+      };
+    }),
     followUp: response.followUp,
     presentation: response.presentation,
     workflow: response.workflow,
+    completedWorkflow: response.completedWorkflow,
   };
 }
 
@@ -331,13 +344,14 @@ export function CelinePage() {
 
   const activeWorkflow = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const workflow = messages[index].workflow;
-      if (workflow) return workflow;
+      const message = messages[index];
+      if (message.presentation === 'completion') return undefined;
+      if (message.workflow) return message.workflow;
     }
     return undefined;
   }, [messages]);
 
-  const appendAssistant = (result: Awaited<ReturnType<typeof requestCelineGuidance>>) => {
+  const appendAssistant = useCallback((result: Awaited<ReturnType<typeof requestCelineGuidance>>) => {
     setMessages((current) => [
       ...current.filter((message) => !message.loading),
       {
@@ -348,19 +362,23 @@ export function CelinePage() {
         followUp: result.followUp,
         presentation: result.presentation,
         workflow: result.workflow,
+        completedWorkflow: result.completedWorkflow,
       },
     ]);
-  };
+  }, []);
 
-  const requestSilentAdvance = async (sourceMessageId: string) => {
-    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessageId)) return;
-    autoAdvanceRef.current.add(sourceMessageId);
+  const requestSilentAdvance = useCallback(async (sourceMessage: CelineMessage) => {
+    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessage.id)) return;
+    autoAdvanceRef.current.add(sourceMessage.id);
     pendingRef.current = true;
     setLoading(true);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
       const result = await requestCelineGuidance("C'est fait.", controller.signal);
+      if (result.presentation === 'completion' && sourceMessage.workflow) {
+        markSharedWorkflowComplete(sourceMessage.workflow.runId);
+      }
       appendAssistant(result);
     } catch (err: unknown) {
       if (!(err instanceof Error && err.name === 'AbortError')) {
@@ -370,7 +388,7 @@ export function CelinePage() {
       pendingRef.current = false;
       setLoading(false);
     }
-  };
+  }, [appendAssistant]);
 
   useEffect(() => {
     if (loading || pendingRef.current) return;
@@ -382,12 +400,13 @@ export function CelinePage() {
     );
     if (!last || autoAdvanceRef.current.has(last.id)) return;
     if (!last.checklist.every((item) => item.done || item.na)) return;
-    const timer = window.setTimeout(() => void requestSilentAdvance(last.id), 350);
+    const timer = window.setTimeout(() => void requestSilentAdvance(last), 350);
     return () => window.clearTimeout(timer);
-  }, [messages, loading]);
+  }, [messages, loading, requestSilentAdvance]);
 
-  const handleItemAction = (messageId: string, itemId: string, action: 'done' | 'na') => {
-    const item = messages.find((message) => message.id === messageId)?.checklist.find((candidate) => candidate.id === itemId);
+  const handleItemAction = useCallback((messageId: string, itemId: string, action: 'done' | 'na') => {
+    const sourceMessage = messages.find((message) => message.id === messageId);
+    const item = sourceMessage?.checklist.find((candidate) => candidate.id === itemId);
     if (!item) return;
     const nextDone = action === 'done' ? !item.done : false;
     const nextNa = action === 'na' ? !item.na : false;
@@ -404,9 +423,17 @@ export function CelinePage() {
 
     const status = nextDone ? 'validated' : nextNa ? 'na' : 'pending';
     setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
-  };
+    if (sourceMessage?.workflow) {
+      setSharedWorkflowActionStatus(
+        sourceMessage.workflow.runId,
+        sourceMessage.workflow.routeId,
+        item.actionId,
+        status
+      );
+    }
+  }, [messages]);
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
 
@@ -446,11 +473,11 @@ export function CelinePage() {
       setLoading(false);
       inputRef.current?.focus();
     }
-  };
+  }, [appendAssistant]);
 
   useEffect(() => {
     sendMessageRef.current = sendMessage;
-  });
+  }, [sendMessage]);
 
   const clearConversation = () => {
     abortRef.current?.abort();
