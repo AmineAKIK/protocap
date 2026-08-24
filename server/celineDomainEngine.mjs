@@ -11,6 +11,7 @@ import { normalizeCelineSearchText, searchCelineActions } from './celineSemantic
 
 const YES = new Set(['oui', 'ouais', 'yes', 'ok', 'd accord', 'exact', 'exactement']);
 const NO = new Set(['non', 'nan', 'no', 'pas encore', 'non pas encore']);
+const CHANGE_TYPES = ['lot', 'pays', 'formule', 'format'];
 
 function emptyResponse(message, extra = {}) {
   return { message, checklist: [], followUp: null, ...extra };
@@ -32,6 +33,10 @@ function inferContext(routeId) {
   if (routeId === 'production') return 'production';
   if (routeId === 'tri') return 'tri';
   return 'unknown';
+}
+
+function inferChangeType(text) {
+  return CHANGE_TYPES.find((type) => text.includes(type)) ?? null;
 }
 
 function applyWorkflowCompletionEffects(state, workflow) {
@@ -122,8 +127,45 @@ function ask(state, id, question, resume = null) {
   };
 }
 
+function finishPoste(authority, state) {
+  if (state.ocStatus === 'unknown') {
+    return ask(state, 'fin_poste_oc', 'Y a-t-il encore un OC ouvert ?', { kind: 'start', id: 'fin_poste' });
+  }
+  if (state.ocStatus !== 'open') {
+    return startRoute(authority, withCelineState(state, { tankStatus: 'closed' }), 'fin_poste_cloture');
+  }
+  if (state.tankStatus === 'unknown') {
+    return ask(state, 'fin_poste_cuve', 'Une cuve est-elle encore ouverte ?', { kind: 'start', id: 'fin_poste' });
+  }
+  return startRoute(authority, state, state.tankStatus === 'open' ? 'fin_poste_avec_cuve_oc' : 'fin_poste_avec_oc');
+}
+
+function startPoste(authority, state) {
+  if (state.lineMode === 'unknown') {
+    return ask(state, 'debut_poste_etat', 'La ligne est arrêtée ou déjà en production ?', { kind: 'start', id: 'debut_poste' });
+  }
+  if (state.lineMode === 'production') return startRoute(authority, state, 'debut_poste_production');
+  return ask(state, 'debut_poste_oc', 'As-tu un OC à lancer dans la foulée ?', { kind: 'start', id: 'debut_poste' });
+}
+
+function changeOc(authority, state, type = null) {
+  const changeType = type ?? state.changeType;
+  if (!changeType) {
+    return ask(state, 'changement_oc_type', 'Quel est le type de changement : Lot, Pays, Formule ou Format ?', { kind: 'start', id: 'changement_oc' });
+  }
+  const typedState = withCelineState(state, { changeType });
+  if (typedState.ocStatus === 'unknown') {
+    return ask(typedState, 'changement_oc_precedent', 'L’OC précédent est-il déjà clôturé ?', { kind: 'start', id: 'changement_oc' });
+  }
+  const suffix = typedState.ocStatus === 'open' ? 'ouvert' : 'cloture';
+  return startRoute(authority, typedState, `changement_oc_${changeType}_${suffix}`);
+}
+
 function startIntent(authority, state, id) {
   const normalized = normalizeCelineOperationalState(state);
+  if (id === 'debut_poste') return startPoste(authority, normalized);
+  if (id === 'fin_poste') return finishPoste(authority, normalized);
+  if (id === 'changement_oc') return changeOc(authority, normalized);
   if (id === 'debut_oc') {
     if (normalized.ocStatus === 'unknown') {
       return ask(normalized, 'debut_oc_precedent', 'L’OC précédent est-il déjà clôturé ?', { kind: 'start', id });
@@ -162,17 +204,33 @@ function startIntent(authority, state, id) {
   }
   if (id === 'production') return startRoute(authority, normalized, 'production');
   if (id === 'tri') return startRoute(authority, normalized, 'tri');
-  if (id === 'debut_poste' || id === 'fin_poste') return { handled: false, state: normalized };
   if (routeFor(authority, id)) return startRoute(authority, normalized, id);
   return { handled: false, state: normalized };
 }
 
-function resolvePendingAnswer(authority, state, answer) {
+function resolvePendingYesNo(authority, state, answer) {
   const pending = state.pendingQuestion;
   if (!pending) return null;
   const yes = answer === 'yes';
   let next = clearPendingCelineQuestion(state);
 
+  if (pending.id === 'debut_poste_oc') {
+    return startRoute(authority, next, yes ? 'debut_poste_arretee_oc' : 'debut_poste_arretee_sans_oc');
+  }
+  if (pending.id === 'fin_poste_oc') {
+    next = withCelineState(next, { ocStatus: yes ? 'open' : 'closed' });
+    return yes
+      ? finishPoste(authority, next)
+      : startRoute(authority, withCelineState(next, { tankStatus: 'closed' }), 'fin_poste_cloture');
+  }
+  if (pending.id === 'fin_poste_cuve') {
+    next = withCelineState(next, { tankStatus: yes ? 'open' : 'closed' });
+    return startRoute(authority, next, yes ? 'fin_poste_avec_cuve_oc' : 'fin_poste_avec_oc');
+  }
+  if (pending.id === 'changement_oc_precedent') {
+    next = withCelineState(next, { ocStatus: yes ? 'closed' : 'open' });
+    return changeOc(authority, next);
+  }
   if (pending.id === 'debut_oc_precedent') {
     next = withCelineState(next, { ocStatus: yes ? 'closed' : 'open' });
     return startRoute(authority, next, yes ? 'debut_oc' : 'debut_oc_precedent_ouvert');
@@ -193,6 +251,27 @@ function resolvePendingAnswer(authority, state, answer) {
       ? startRoute(authority, next, 'fin_cuve')
       : { handled: true, state: next, response: emptyResponse('D’accord. Je ne lance pas de fin de cuve.'), decision: { kind: 'answer', id: 'no' } };
   }
+  return null;
+}
+
+function resolvePendingFreeText(authority, state, normalized) {
+  const pending = state.pendingQuestion;
+  if (!pending) return null;
+
+  if (pending.id === 'debut_poste_etat') {
+    if (/\b(production|tourne|marche)\b/.test(normalized)) {
+      return startPoste(authority, withCelineState(clearPendingCelineQuestion(state), { lineMode: 'production' }));
+    }
+    if (/\b(arret|arretee|stoppee|stop)\b/.test(normalized)) {
+      return startPoste(authority, withCelineState(clearPendingCelineQuestion(state), { lineMode: 'stopped' }));
+    }
+  }
+
+  if (pending.id === 'changement_oc_type') {
+    const type = inferChangeType(normalized);
+    if (type) return changeOc(authority, withCelineState(clearPendingCelineQuestion(state), { changeType: type }), type);
+  }
+
   return null;
 }
 
@@ -272,17 +351,21 @@ export function createCelineDomainEngine({ authority, semanticIndex }) {
       }
 
       if (state.pendingQuestion) {
-        if (YES.has(normalized)) return resolvePendingAnswer(authority, state, 'yes');
-        if (NO.has(normalized)) return resolvePendingAnswer(authority, state, 'no');
+        if (YES.has(normalized)) {
+          const result = resolvePendingYesNo(authority, state, 'yes');
+          if (result) return result;
+        }
+        if (NO.has(normalized)) {
+          const result = resolvePendingYesNo(authority, state, 'no');
+          if (result) return result;
+        }
+        const freeText = resolvePendingFreeText(authority, state, normalized);
+        if (freeText) return freeText;
       }
 
       if (state.activeWorkflow) {
-        if (/^(c est fait|fait|valide|ok c est fait)$/.test(normalized)) {
-          return advanceWorkflow(authority, state);
-        }
-        if (/^(et apres|apres|suivant|et ensuite|ensuite|prochaine etape)$/.test(normalized)) {
-          return advanceWorkflow(authority, state);
-        }
+        if (/^(c est fait|fait|valide|ok c est fait)$/.test(normalized)) return advanceWorkflow(authority, state);
+        if (/^(et apres|apres|suivant|et ensuite|ensuite|prochaine etape)$/.test(normalized)) return advanceWorkflow(authority, state);
         if (/\b(toute|toutes|complet|complete)\b/.test(normalized) && /\b(procedure|etapes|checklist)\b/.test(normalized)) {
           const route = routeFor(authority, state.activeWorkflow.routeId);
           if (route) {
@@ -301,6 +384,11 @@ export function createCelineDomainEngine({ authority, semanticIndex }) {
         }
       }
 
+      if (/\b(commence|commencer|debut|prise)\b.*\b(poste|equipe)\b/.test(normalized)) return startIntent(authority, state, 'debut_poste');
+      if (/\b(fin|fini|finir|termine|terminer)\b.*\b(poste|equipe)\b/.test(normalized)) return startIntent(authority, state, 'fin_poste');
+      if (/\b(changement|changer)\b.*\boc\b/.test(normalized)) {
+        return changeOc(authority, state, inferChangeType(normalized));
+      }
       if (/\b(lance|lancer|commence|commencer|demarre|nouveau|nouvel)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'debut_oc');
       if (/\b(fin|fini|finir|cloture|cloturer)\b.*\boc\b/.test(normalized)) return startIntent(authority, state, 'fin_oc');
       if (/\b(changement|changer|nouvelle|nouveau)\b.*\bcuve\b/.test(normalized)) return startIntent(authority, state, normalized.includes('changement') ? 'changement_cuve' : 'debut_cuve');
