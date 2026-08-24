@@ -8,7 +8,10 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('fr-FR')
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+    .trim()
+    .replace(/\bfinis\b/g, 'fin')
+    .replace(/\bterminees?\b/g, 'termine')
+    .replace(/\bcloturees?\b/g, 'cloture');
 }
 
 function tokensFor(value) {
@@ -48,14 +51,20 @@ function collectEntries(modules) {
 }
 
 function scoreEntry(entry, queryTokens, preferredScopes) {
-  const actionTokens = new Set(tokensFor(`${entry.text} ${entry.note ?? ''} ${entry.moduleTitle}`));
-  let score = 0;
+  const actionTokens = new Set(entry.tokens ?? tokensFor(`${entry.text} ${entry.note ?? ''} ${entry.moduleTitle}`));
+  let semanticScore = 0;
   for (const token of queryTokens) {
-    if (actionTokens.has(token)) score += token.length >= 8 ? 4 : 3;
-    else if ([...actionTokens].some((candidate) => candidate.startsWith(token) || token.startsWith(candidate))) score += 1;
+    if (actionTokens.has(token)) semanticScore += token.length >= 8 ? 4 : 3;
+    else if ([...actionTokens].some((candidate) => candidate.startsWith(token) || token.startsWith(candidate))) semanticScore += 1;
   }
-  if (preferredScopes.has(entry.scopeId) || preferredScopes.has(entry.moduleId)) score += 4;
-  return score;
+
+  // Context is only a ranking signal. It must never make an unrelated action
+  // eligible on its own, otherwise every action in the current module can leak
+  // into a precise answer such as “quel prélèvement ?”.
+  if (semanticScore === 0) return 0;
+
+  const scopeBoost = preferredScopes.has(entry.scopeId) || preferredScopes.has(entry.moduleId) ? 4 : 0;
+  return semanticScore + scopeBoost;
 }
 
 export function createCelineSemanticIndex(config) {
