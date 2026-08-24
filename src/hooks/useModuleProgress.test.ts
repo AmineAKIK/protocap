@@ -37,7 +37,7 @@ describe('useModuleProgress', () => {
       configRevision?: string;
       actions?: Record<string, string>;
     };
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(4);
     expect(stored.configRevision).toBe(CONFIG_REVISION);
     expect(stored.actions).toEqual({ action_1: 'validated' });
   });
