@@ -39,6 +39,26 @@ function inferChangeType(text) {
   return CHANGE_TYPES.find((type) => text.includes(type)) ?? null;
 }
 
+function providerRouteIntent(routeId) {
+  if (routeId === 'debut_oc' || routeId === 'debut_oc_precedent_ouvert') {
+    return { id: 'debut_oc', changeType: null };
+  }
+  if (routeId === 'fin_oc') return { id: 'fin_oc', changeType: null };
+  if (routeId === 'debut_cuve' || routeId === 'debut_cuve_sans_oc') {
+    return { id: 'debut_cuve', changeType: null };
+  }
+  if (routeId === 'fin_cuve') return { id: 'fin_cuve', changeType: null };
+  if (routeId === 'changement_cuve') return { id: 'changement_cuve', changeType: null };
+  if (routeId === 'production') return { id: 'production', changeType: null };
+  if (routeId === 'tri') return { id: 'tri', changeType: null };
+  if (routeId.startsWith('debut_poste_')) return { id: 'debut_poste', changeType: null };
+  if (routeId.startsWith('fin_poste_')) return { id: 'fin_poste', changeType: null };
+
+  const change = /^changement_oc_(lot|pays|formule|format)_(cloture|ouvert)$/.exec(routeId);
+  if (change) return { id: 'changement_oc', changeType: change[1] };
+  return null;
+}
+
 function applyWorkflowCompletionEffects(state, workflow) {
   if (!workflow) return state;
   const routeId = workflow.routeId;
@@ -197,10 +217,16 @@ function startIntent(authority, state, id) {
     return startRoute(authority, normalized, 'fin_cuve');
   }
   if (id === 'changement_cuve') {
-    const prepared = normalized.tankStatus === 'unknown'
-      ? withCelineState(normalized, { tankStatus: 'open' })
-      : normalized;
-    return startRoute(authority, prepared, 'changement_cuve');
+    if (normalized.tankStatus === 'unknown') {
+      return ask(
+        normalized,
+        'changement_cuve_ouverte',
+        'Une cuve est-elle actuellement ouverte à clôturer avant de démarrer la suivante ?',
+        { kind: 'start', id }
+      );
+    }
+    if (normalized.tankStatus !== 'open') return startIntent(authority, normalized, 'debut_cuve');
+    return startRoute(authority, normalized, 'changement_cuve');
   }
   if (id === 'production') return startRoute(authority, normalized, 'production');
   if (id === 'tri') return startRoute(authority, normalized, 'tri');
@@ -230,6 +256,12 @@ function resolvePendingYesNo(authority, state, answer) {
   if (pending.id === 'changement_oc_precedent') {
     next = withCelineState(next, { ocStatus: yes ? 'closed' : 'open' });
     return changeOc(authority, next);
+  }
+  if (pending.id === 'changement_cuve_ouverte') {
+    next = withCelineState(next, { tankStatus: yes ? 'open' : 'closed' });
+    return yes
+      ? startRoute(authority, next, 'changement_cuve')
+      : startIntent(authority, next, 'debut_cuve');
   }
   if (pending.id === 'debut_oc_precedent') {
     next = withCelineState(next, { ocStatus: yes ? 'closed' : 'open' });
@@ -333,6 +365,16 @@ function advanceWorkflow(authority, state) {
   };
 }
 
+function handleProviderClarification(authority, state, clarificationId) {
+  if (clarificationId === 'fin_poste_etat') return finishPoste(authority, state);
+  if (clarificationId === 'changement_oc_contexte') return changeOc(authority, state);
+  if (clarificationId === 'debut_poste_etat') return startPoste(authority, state);
+
+  const clarification = authority.clarifications.get(clarificationId);
+  if (!clarification) return { handled: false, state };
+  return ask(state, clarificationId, clarification.question, null);
+}
+
 export function createCelineDomainEngine({ authority, semanticIndex }) {
   return {
     initialState() {
@@ -411,11 +453,20 @@ export function createCelineDomainEngine({ authority, semanticIndex }) {
     handleProviderDecision(stateValue, decision, fallbackResolver) {
       const state = normalizeCelineOperationalState(stateValue);
       if (!decision || typeof decision !== 'object') return { handled: false, state };
-      if (decision.kind === 'route') return startRoute(authority, state, decision.id);
+      if (decision.kind === 'route') {
+        const intent = providerRouteIntent(decision.id);
+        if (intent) {
+          const intentState = intent.changeType
+            ? withCelineState(state, { changeType: intent.changeType })
+            : state;
+          return intent.id === 'changement_oc'
+            ? changeOc(authority, intentState, intent.changeType)
+            : startIntent(authority, intentState, intent.id);
+        }
+        return startRoute(authority, state, decision.id);
+      }
       if (decision.kind === 'clarify') {
-        const clarification = authority.clarifications.get(decision.id);
-        if (!clarification) return { handled: false, state };
-        return ask(state, decision.id, clarification.question, null);
+        return handleProviderClarification(authority, state, decision.id);
       }
       const response = fallbackResolver(decision);
       return response ? { handled: true, state, response, decision } : { handled: false, state };
