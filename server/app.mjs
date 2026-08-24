@@ -44,6 +44,15 @@ const MAX_UNLOCK_CODE_LENGTH = 256;
 const CHAT_WINDOW_MS = 60 * 1000;
 const CHAT_MAX_REQUESTS = 30;
 const CHAT_IP_MAX_REQUESTS = 60;
+const CELINE_CONTEXT_HINTS = new Set([
+  'debut_equipe',
+  'debut_oc',
+  'production',
+  'evenement',
+  'cloture',
+  'tri',
+  'reprise',
+]);
 
 export function createServerRuntimeState() {
   return {
@@ -90,6 +99,11 @@ function normalizeProviderResult(result, provider) {
     model: typeof result.model === 'string' ? result.model : provider?.model ?? null,
     finishReason: typeof result.finishReason === 'string' ? result.finishReason : null,
   };
+}
+
+function withContextHint(state, contextHint) {
+  if (typeof contextHint !== 'string' || !CELINE_CONTEXT_HINTS.has(contextHint)) return state;
+  return { ...state, context: contextHint };
 }
 
 export function createServerApp({
@@ -307,7 +321,8 @@ export function createServerApp({
       return res.status(400).json({ error: 'Requête IA invalide.' });
     }
 
-    const currentOperationalState = celineOperationalStates.get(token) ?? celineDomainEngine.initialState();
+    const storedOperationalState = celineOperationalStates.get(token) ?? celineDomainEngine.initialState();
+    const currentOperationalState = withContextHint(storedOperationalState, req.body?.contextHint);
     const direct = celineDomainEngine.handleBeforeProvider(currentOperationalState, userMessage);
     if (direct?.handled && direct.response) {
       celineOperationalStates.set(token, direct.state);
