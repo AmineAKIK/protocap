@@ -3,28 +3,25 @@ import {
   Bot,
   Check,
   ChevronLeft,
-  ClipboardCheck,
-  Clock3,
   Factory,
-  FileSearch,
   Flag,
   GitBranch,
-  Grid2x2,
   HelpCircle,
-  ListChecks,
   Mic,
   MicOff,
   PlayCircle,
-  RadioTower,
   RotateCcw,
   Send,
   Sparkles,
-  Trash2,
   Waves,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type {
+  SharedCelinePresentation,
+  SharedCelineWorkflow,
+} from '../../../shared/celineContract.js';
 import { AccessibleDialog } from '../../components/AccessibleDialog';
 import { getSgModules } from '../../data/shiftguideModules';
 import { requestCelineResponse } from '../../features/shiftguide/celineClient';
@@ -48,9 +45,12 @@ interface ISpeechRecognition extends EventTarget {
 
 type SpeechRecognitionCtor = new () => ISpeechRecognition;
 
-const w = window as unknown as Record<string, unknown>;
-const SpeechRecognitionAPI = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SpeechRecognitionCtor | undefined;
-const localStorage = getShiftGuidePersistentStorage();
+const browser = window as unknown as Record<string, unknown>;
+const SpeechRecognitionAPI = (
+  browser.SpeechRecognition ?? browser.webkitSpeechRecognition
+) as SpeechRecognitionCtor | undefined;
+const storage = getShiftGuidePersistentStorage();
+const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
 
 function useSpeechInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
@@ -68,7 +68,6 @@ function useSpeechInput(onResult: (text: string) => void) {
 
   const toggle = () => {
     if (!SpeechRecognitionAPI) return;
-
     if (listening) {
       recRef.current?.stop();
       return;
@@ -78,20 +77,12 @@ function useSpeechInput(onResult: (text: string) => void) {
     rec.lang = 'fr-FR';
     rec.interimResults = false;
     rec.maxAlternatives = 1;
-
-    rec.onresult = (e: ISpeechRecognitionEvent) => {
-      const transcript = e.results[0][0].transcript;
-      onResult(transcript);
-    };
+    rec.onresult = (event) => onResult(event.results[0][0].transcript);
     rec.onend = () => {
       if (recRef.current === rec) recRef.current = null;
       setListening(false);
     };
-    rec.onerror = () => {
-      if (recRef.current === rec) recRef.current = null;
-      setListening(false);
-    };
-
+    rec.onerror = rec.onend;
     recRef.current = rec;
     rec.start();
     setListening(true);
@@ -102,7 +93,7 @@ function useSpeechInput(onResult: (text: string) => void) {
 
 interface ChecklistItem {
   id: string;
-  actionId: string | null;
+  actionId: string;
   text: string;
   note: string | null;
   module: string | null;
@@ -116,6 +107,8 @@ interface CelineMessage {
   content: string;
   checklist: ChecklistItem[];
   followUp: string | null;
+  presentation?: SharedCelinePresentation;
+  workflow?: SharedCelineWorkflow;
   loading?: boolean;
 }
 
@@ -134,148 +127,61 @@ function findProgressScope(actionId: string): string | undefined {
   return undefined;
 }
 
-async function requestCelineGuidance(
-  userMessage: string,
-  signal: AbortSignal
-): Promise<{ message: string; checklist: ChecklistItem[]; followUp: string | null }> {
+async function requestCelineGuidance(userMessage: string, signal: AbortSignal) {
   const response = await requestCelineResponse(userMessage, signal);
   const createdAt = Date.now();
   return {
     message: response.message,
-    checklist: response.checklist.map((item, index) => ({
+    checklist: response.checklist.map((item, index): ChecklistItem => ({
       ...item,
       id: `${item.actionId}_${createdAt}_${index}`,
       done: false,
       na: false,
     })),
     followUp: response.followUp,
+    presentation: response.presentation,
+    workflow: response.workflow,
   };
 }
 
-const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
-
-function isValidMessage(m: unknown): m is CelineMessage {
-  if (!m || typeof m !== 'object') return false;
-  const msg = m as Record<string, unknown>;
+function isValidMessage(value: unknown): value is CelineMessage {
+  if (!value || typeof value !== 'object') return false;
+  const message = value as Record<string, unknown>;
   return (
-    typeof msg.id === 'string' &&
-    (msg.role === 'user' || msg.role === 'assistant') &&
-    typeof msg.content === 'string' &&
-    Array.isArray(msg.checklist) &&
-    (msg.followUp === null || typeof msg.followUp === 'string')
+    typeof message.id === 'string' &&
+    (message.role === 'user' || message.role === 'assistant') &&
+    typeof message.content === 'string' &&
+    Array.isArray(message.checklist) &&
+    (message.followUp === null || typeof message.followUp === 'string')
   );
-}
-
-function normalizeMessage(m: CelineMessage): CelineMessage {
-  return {
-    ...m,
-    checklist: m.checklist.map((item) => ({
-      ...item,
-      actionId: typeof item.actionId === 'string' ? item.actionId : null,
-      done: item.done ?? false,
-      na: item.na ?? false,
-    })),
-  };
 }
 
 function loadHistory(): CelineMessage[] {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_HISTORY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidMessage).map(normalizeMessage);
+    const raw = storage.getItem(STORAGE_KEY_HISTORY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isValidMessage) : [];
   } catch {
     return [];
   }
 }
 
-const SUGGESTIONS: Array<{ icon: LucideIcon; text: string; tone: string }> = [
-  { icon: Clock3, text: 'Je commence mon poste', tone: 'bg-teal-50 text-teal-700 ring-teal-100' },
-  { icon: PlayCircle, text: 'Je lance un OC', tone: 'bg-blue-50 text-blue-700 ring-blue-100' },
-  { icon: GitBranch, text: "J'ai un changement d'OC de formule", tone: 'bg-violet-50 text-violet-700 ring-violet-100' },
-  { icon: Waves, text: 'Il y a une nouvelle cuve', tone: 'bg-cyan-50 text-cyan-700 ring-cyan-100' },
-  { icon: Flag, text: 'Je finis mon poste', tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
-  { icon: HelpCircle, text: "C'est quoi SPCB ?", tone: 'bg-amber-50 text-amber-700 ring-amber-100' },
+const SUGGESTIONS: Array<{ icon: LucideIcon; text: string }> = [
+  { icon: PlayCircle, text: 'Je lance un OC' },
+  { icon: Factory, text: 'Je suis en production' },
+  { icon: Waves, text: 'Il y a une nouvelle cuve' },
+  { icon: GitBranch, text: "J'ai un changement d'OC de formule" },
+  { icon: Flag, text: 'Je finis mon poste' },
+  { icon: HelpCircle, text: "C'est quoi SPCB ?" },
 ];
 
-function WelcomeScreen({ onSuggest }: { onSuggest: (text: string) => void }) {
-  return (
-    <div className="space-y-5">
-      <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/10">
-        <div className="border-b border-white/10 px-5 py-5">
-          <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-teal-500 text-zinc-950">
-              <Bot size={22} />
-            </span>
-            <div>
-              <p className="text-xl font-black">Céline</p>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-300">
-                Assistant command
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300">
-            Décris le moment terrain. Céline répond en actions, modules associés et relance
-            automatiquement quand la checklist est traitée.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-white/10 bg-white/[0.03] px-5 py-4">
-          {[
-            ['Guidage', 'temps réel'],
-            ['Actions', 'cochables'],
-            ['Mémoire', 'locale'],
-          ].map(([label, value]) => (
-            <div key={label} className="px-3 first:pl-0 last:pr-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">{label}</p>
-              <p className="mt-1 text-sm font-black text-white">{value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Situations fréquentes
-          </p>
-          <p className="mt-1 text-sm font-bold text-zinc-500">
-            Démarrer plus vite sans taper.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {SUGGESTIONS.map((suggestion) => {
-          const Icon = suggestion.icon;
-
-          return (
-          <button
-            key={suggestion.text}
-            onClick={() => onSuggest(suggestion.text)}
-            className="group flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md active:scale-[0.99]"
-          >
-            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 ${suggestion.tone}`}>
-              <Icon size={17} />
-            </span>
-            <span className="min-w-0 text-sm font-black text-zinc-800 transition group-hover:text-teal-700">
-              {suggestion.text}
-            </span>
-          </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+function ConfirmExit({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-
   return (
     <AccessibleDialog
       title="Quitter Céline ?"
-      description="Tu veux vraiment quitter ? L'historique reste sauvegardé, tu pourras reprendre."
+      description="La conversation reste disponible pendant la session ShiftGuide."
       onClose={onCancel}
       hideCloseButton
       initialFocusRef={cancelRef}
@@ -283,20 +189,10 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
       contentClassName="p-0"
     >
       <div className="flex border-t border-slate-100 bg-slate-50">
-        <button
-          ref={cancelRef}
-          type="button"
-          onClick={onCancel}
-          className="flex-1 py-3.5 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
-        >
-          Annuler
+        <button ref={cancelRef} type="button" onClick={onCancel} className="flex-1 py-3.5 text-sm font-semibold text-slate-600 hover:bg-white">
+          Rester
         </button>
-        <div className="w-px bg-slate-100" />
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="flex-1 py-3.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-700/20"
-        >
+        <button type="button" onClick={onConfirm} className="flex-1 py-3.5 text-sm font-semibold text-teal-800 hover:bg-teal-50">
           Quitter
         </button>
       </div>
@@ -306,87 +202,66 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 
 function Checklist({
   items,
-  msgId,
+  workflow,
   onAction,
 }: {
   items: ChecklistItem[];
-  msgId: string;
-  onAction: (msgId: string, itemId: string, action: 'done' | 'na') => void;
+  workflow?: SharedCelineWorkflow;
+  onAction: (itemId: string, action: 'done' | 'na') => void;
 }) {
-  const treated = items.filter((i) => i.done || i.na).length;
-  const total = items.length;
-  const pct = total > 0 ? (treated / total) * 100 : 0;
-  const complete = treated === total && total > 0;
+  const treated = items.filter((item) => item.done || item.na).length;
+  const complete = items.length > 0 && treated === items.length;
 
   return (
-    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-        <span className="text-xs font-bold text-slate-500">{treated} / {total} actions</span>
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-200">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${complete ? 'bg-emerald-500' : 'bg-teal-700'}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="divide-y divide-slate-100">
-        {items.map((item) => {
-          const treated = item.done || item.na;
-          return (
+    <div className="mt-2 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      {workflow && (
+        <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-4 py-2.5">
+          <div>
+            <p className="text-xs font-black text-zinc-800">{workflow.label}</p>
+            <p className="text-[11px] font-semibold text-zinc-500">
+              Étape {workflow.currentIndex + 1} sur {workflow.totalActions}
+            </p>
+          </div>
+          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-200">
             <div
-              key={item.id}
-              className={`flex w-full items-start gap-3 px-4 py-3 transition ${treated ? 'opacity-60' : ''}`}
+              className="h-full rounded-full bg-teal-600 transition-all"
+              style={{ width: `${((workflow.currentIndex + 1) / workflow.totalActions) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="divide-y divide-zinc-100">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-start gap-3 px-4 py-4 ${item.done || item.na ? 'bg-zinc-50 opacity-70' : ''}`}>
+            <button
+              type="button"
+              onClick={() => onAction(item.id, 'done')}
+              aria-label={item.done ? `Annuler la validation : ${item.text}` : `Valider : ${item.text}`}
+              className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border transition ${item.done ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-zinc-300 text-transparent hover:border-emerald-600'}`}
             >
-              <button
-                type="button"
-                onClick={() => onAction(msgId, item.id, 'done')}
-                aria-label={item.done ? `Annuler la validation : ${item.text}` : `Valider : ${item.text}`}
-                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95 ${
-                  item.done
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-slate-300 text-transparent hover:border-emerald-600'
-                }`}
-              >
-                <Check size={13} aria-hidden="true" />
-              </button>
-
-              <div className="min-w-0 flex-1">
-                <p className={`break-words text-sm leading-6 transition-colors ${item.done ? 'text-slate-400 line-through' : item.na ? 'text-slate-400' : 'text-slate-800'}`}>
-                  {item.text}
-                </p>
-                {item.note && (
-                  <p className="mt-0.5 break-words text-xs leading-5 text-slate-500">{item.note}</p>
-                )}
-                {item.module && (
-                  <span className="mt-1.5 inline-block rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 ring-1 ring-teal-100">
-                    {item.module}
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onAction(msgId, item.id, 'na')}
-                aria-label={item.na ? `Annuler non applicable : ${item.text}` : `Marquer non applicable : ${item.text}`}
-                className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold transition-all active:scale-95 ${
-                  item.na
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-                }`}
-              >
-                N/A
-              </button>
+              <Check size={14} />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium leading-6 ${item.done ? 'text-zinc-400 line-through' : 'text-zinc-900'}`}>{item.text}</p>
+              {item.note && <p className="mt-1 text-xs leading-5 text-zinc-500">{item.note}</p>}
+              {item.module && <p className="mt-2 text-[10px] font-black uppercase tracking-wide text-teal-700">{item.module}</p>}
             </div>
-          );
-        })}
+            <button
+              type="button"
+              onClick={() => onAction(item.id, 'na')}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-black ${item.na ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-100'}`}
+            >
+              N/A
+            </button>
+          </div>
+        ))}
       </div>
 
-      {complete && (
-        <div className="flex items-center justify-center gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-700">
-          <span>Tout est traité</span>
+      {complete && workflow && (
+        <div className="flex items-center justify-center gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-800">
           <Sparkles size={13} />
-          <span>Céline prépare la suite…</span>
+          Étape traitée — Céline prépare la suivante…
         </div>
       )}
     </div>
@@ -394,59 +269,35 @@ function Checklist({
 }
 
 function MessageBubble({
-  msg,
+  message,
   onAction,
 }: {
-  msg: CelineMessage;
-  onAction: (msgId: string, itemId: string, action: 'done' | 'na') => void;
+  message: CelineMessage;
+  onAction: (messageId: string, itemId: string, action: 'done' | 'na') => void;
 }) {
-  const isUser = msg.role === 'user';
-
+  const isUser = message.role === 'user';
   return (
     <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
       {!isUser && (
-        <span className="inline-flex items-center gap-1.5 px-1 text-xs font-bold uppercase tracking-widest text-teal-700">
-          <Bot size={12} />
-          Céline
+        <span className="inline-flex items-center gap-1.5 px-1 text-[11px] font-black uppercase tracking-[0.16em] text-teal-700">
+          <Bot size={12} /> Céline
         </span>
       )}
-
-      <div
-        className={`max-w-[88%] overflow-hidden rounded-xl ${
-          isUser
-            ? 'rounded-tr-sm bg-teal-700 text-white shadow-sm'
-            : 'rounded-tl-sm border border-slate-200 bg-white text-slate-800 shadow-sm'
-        }`}
-      >
-        <div className="px-4 py-3">
-          {msg.loading ? (
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm text-slate-500">Céline réfléchit</span>
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-teal-600"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="break-words text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
-          )}
-        </div>
+      <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${isUser ? 'rounded-tr-md bg-teal-700 text-white' : 'rounded-tl-md border border-zinc-200 bg-white text-zinc-800'}`}>
+        {message.loading ? 'Céline analyse…' : message.content}
       </div>
-
-      {!msg.loading && msg.checklist.length > 0 && (
-        <div className="w-full max-w-[92%]">
-          <Checklist items={msg.checklist} msgId={msg.id} onAction={onAction} />
+      {!message.loading && message.checklist.length > 0 && (
+        <div className="w-full max-w-[94%]">
+          <Checklist
+            items={message.checklist}
+            workflow={message.workflow}
+            onAction={(itemId, action) => onAction(message.id, itemId, action)}
+          />
         </div>
       )}
-
-      {!msg.loading && msg.followUp && msg.checklist.length === 0 && (
-        <div className="max-w-[88%] rounded-xl border border-teal-100 bg-teal-50 px-3 py-2">
-          <p className="break-words text-xs font-semibold text-teal-800">{msg.followUp}</p>
+      {!message.loading && message.followUp && (
+        <div className="max-w-[88%] rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 ring-1 ring-teal-100">
+          {message.followUp}
         </div>
       )}
     </div>
@@ -460,13 +311,12 @@ export function CelinePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
-
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pendingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
-  const autoSentRef = useRef<Set<string>>(new Set());
-  const sendMessageRef = useRef<(text: string) => void>(() => {});
+  const pendingRef = useRef(false);
+  const autoAdvanceRef = useRef<Set<string>>(new Set());
+  const sendMessageRef = useRef<(text: string) => void>(() => undefined);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -474,101 +324,100 @@ export function CelinePage() {
     sendMessageRef.current(transcript);
   });
 
-  const messageCount = messages.length;
   useEffect(() => {
+    storage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((message) => !message.loading)));
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messageCount]);
-
-  const hasMessages = messages.length > 0;
-  useEffect(() => {
-    if (!hasMessages) return;
-    window.history.pushState(null, '', window.location.href);
-    const onPop = () => {
-      window.history.pushState(null, '', window.location.href);
-      setConfirmExit(true);
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [hasMessages]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((m) => !m.loading)));
   }, [messages]);
+
+  const activeWorkflow = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const workflow = messages[index].workflow;
+      if (workflow) return workflow;
+    }
+    return undefined;
+  }, [messages]);
+
+  const appendAssistant = (result: Awaited<ReturnType<typeof requestCelineGuidance>>) => {
+    setMessages((current) => [
+      ...current.filter((message) => !message.loading),
+      {
+        id: `celine_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        role: 'assistant',
+        content: result.message,
+        checklist: result.checklist,
+        followUp: result.followUp,
+        presentation: result.presentation,
+        workflow: result.workflow,
+      },
+    ]);
+  };
+
+  const requestSilentAdvance = async (sourceMessageId: string) => {
+    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessageId)) return;
+    autoAdvanceRef.current.add(sourceMessageId);
+    pendingRef.current = true;
+    setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const result = await requestCelineGuidance("C'est fait.", controller.signal);
+      appendAssistant(result);
+    } catch (err: unknown) {
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        setError(err instanceof Error ? err.message : 'Impossible de préparer l’étape suivante.');
+      }
+    } finally {
+      pendingRef.current = false;
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (loading || pendingRef.current) return;
-
-    const lastAssistant = [...messages]
-      .reverse()
-      .find((m) => m.role === 'assistant' && !m.loading && m.checklist.length > 0);
-
-    if (!lastAssistant) return;
-    if (autoSentRef.current.has(lastAssistant.id)) return;
-
-    const allTreated = lastAssistant.checklist.every((item) => item.done || item.na);
-    if (!allTreated) return;
-
-    autoSentRef.current.add(lastAssistant.id);
-    const text = 'C\'est fait.';
-
-    const timer = setTimeout(() => {
-      sendMessageRef.current(text);
-    }, 700);
-
-    return () => clearTimeout(timer);
+    const last = [...messages].reverse().find((message) =>
+      message.role === 'assistant' &&
+      message.presentation === 'focus' &&
+      message.workflow &&
+      message.checklist.length > 0
+    );
+    if (!last || autoAdvanceRef.current.has(last.id)) return;
+    if (!last.checklist.every((item) => item.done || item.na)) return;
+    const timer = window.setTimeout(() => void requestSilentAdvance(last.id), 350);
+    return () => window.clearTimeout(timer);
   }, [messages, loading]);
 
-  const clearSession = () => {
-    abortRef.current?.abort();
-    pendingRef.current = false;
-    autoSentRef.current.clear();
-    setMessages([]);
-    setLoading(false);
-    setError(null);
-    localStorage.removeItem(STORAGE_KEY_HISTORY);
-  };
-
-  const handleItemAction = (msgId: string, itemId: string, action: 'done' | 'na') => {
-    const item = messages
-      .find((message) => message.id === msgId)
-      ?.checklist.find((checklistItem) => checklistItem.id === itemId);
+  const handleItemAction = (messageId: string, itemId: string, action: 'done' | 'na') => {
+    const item = messages.find((message) => message.id === messageId)?.checklist.find((candidate) => candidate.id === itemId);
     if (!item) return;
-
     const nextDone = action === 'done' ? !item.done : false;
     const nextNa = action === 'na' ? !item.na : false;
 
-    setMessages((prev) =>
-      prev.map((message) => {
-        if (message.id !== msgId) return message;
-        return {
-          ...message,
-          checklist: message.checklist.map((checklistItem) =>
-            checklistItem.id === itemId
-              ? { ...checklistItem, done: nextDone, na: nextNa }
-              : checklistItem
-          ),
-        };
-      })
-    );
+    setMessages((current) => current.map((message) => {
+      if (message.id !== messageId) return message;
+      return {
+        ...message,
+        checklist: message.checklist.map((candidate) =>
+          candidate.id === itemId ? { ...candidate, done: nextDone, na: nextNa } : candidate
+        ),
+      };
+    }));
 
-    if (item.actionId) {
-      const status = nextDone ? 'validated' : nextNa ? 'na' : 'pending';
-      setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
-    }
+    const status = nextDone ? 'validated' : nextNa ? 'na' : 'pending';
+    setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
   };
 
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || pendingRef.current) return;
 
-    const userMsg: CelineMessage = {
+    const userMessage: CelineMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
       content: trimmed,
       checklist: [],
       followUp: null,
     };
-    const placeholder: CelineMessage = {
+    const loadingMessage: CelineMessage = {
       id: `loading_${Date.now()}`,
       role: 'assistant',
       content: '',
@@ -578,30 +427,20 @@ export function CelinePage() {
     };
 
     pendingRef.current = true;
-    abortRef.current = new AbortController();
-
-    setMessages((prev) => [...prev, userMsg, placeholder]);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setMessages((current) => [...current, userMessage, loadingMessage]);
     setInput('');
     setError(null);
     setLoading(true);
-    inputRef.current?.focus();
 
     try {
-      const result = await requestCelineGuidance(trimmed, abortRef.current.signal);
-      setMessages((prev) => [
-        ...prev.filter((m) => !m.loading),
-        {
-          id: `celine_${Date.now()}`,
-          role: 'assistant',
-          content: result.message,
-          checklist: result.checklist,
-          followUp: result.followUp,
-        },
-      ]);
+      appendAssistant(await requestCelineGuidance(trimmed, controller.signal));
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') return;
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
-      setMessages((prev) => prev.filter((m) => !m.loading));
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+        setMessages((current) => current.filter((message) => !message.loading));
+      }
     } finally {
       pendingRef.current = false;
       setLoading(false);
@@ -613,226 +452,116 @@ export function CelinePage() {
     sendMessageRef.current = sendMessage;
   });
 
+  const clearConversation = () => {
+    abortRef.current?.abort();
+    pendingRef.current = false;
+    autoAdvanceRef.current.clear();
+    setMessages([]);
+    setError(null);
+    setLoading(false);
+    storage.removeItem(STORAGE_KEY_HISTORY);
+  };
+
   return (
     <div className="flex h-[100dvh] flex-col bg-[#f3f5f7] text-zinc-950">
       {confirmExit && (
-        <ConfirmModal
+        <ConfirmExit
           onConfirm={() => { setConfirmExit(false); navigate('/shiftguide'); }}
           onCancel={() => setConfirmExit(false)}
         />
       )}
 
-      <header className="sticky top-0 z-30 flex-none border-b border-zinc-200 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto grid h-14 w-full max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:h-16 sm:px-6 lg:px-8">
+      <header className="flex-none border-b border-zinc-200 bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between gap-3 px-4 sm:px-6">
           <button
             type="button"
             onClick={() => messages.length === 0 ? navigate('/shiftguide') : setConfirmExit(true)}
-            className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950 sm:gap-2 sm:px-3"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full px-2 text-sm font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950"
           >
-            <ChevronLeft size={18} />
-            <span className="hidden min-[380px]:inline">Accueil</span>
+            <ChevronLeft size={18} /> Accueil
           </button>
-
-          <div className="flex min-w-0 items-center justify-center gap-2">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-950 text-teal-300 shadow-lg shadow-zinc-950/10 sm:h-10 sm:w-10">
-              <Bot size={17} />
-            </span>
-            <span className="truncate text-sm font-black text-zinc-950">Céline</span>
-            <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-black text-teal-700 ring-1 ring-teal-100">
-              IA
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-zinc-950 text-teal-300"><Bot size={17} /></span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black">Céline</p>
+              <p className="truncate text-[11px] font-semibold text-zinc-500">
+                {activeWorkflow ? `${activeWorkflow.label} · ${activeWorkflow.currentIndex + 1}/${activeWorkflow.totalActions}` : 'Assistant opérationnel ShiftGuide'}
+              </p>
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to="/shiftguide/analyse-ligne"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-xs font-black text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-100 sm:w-auto sm:gap-2 sm:px-3"
-              aria-label="Analyse de ligne"
-            >
-              <FileSearch size={13} />
-              <span className="hidden lg:inline">Analyse</span>
-            </Link>
-            <Link
-              to="/shiftguide/linepulse"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-950 text-xs font-black text-teal-300 transition hover:bg-zinc-800 sm:w-auto sm:gap-2 sm:px-3"
-              aria-label="LinePulse"
-            >
-              <RadioTower size={13} />
-              <span className="hidden sm:inline">Pulse</span>
-            </Link>
-            <Link
-              to="/shiftguide"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-xs font-black text-zinc-700 transition hover:bg-zinc-200 sm:w-auto sm:gap-2 sm:px-3"
-              aria-label="Accueil ShiftGuide"
-            >
-              <Grid2x2 size={13} />
-              <span className="hidden sm:inline">Accueil</span>
-            </Link>
-            <Link
-              to="/shiftguide/urgences"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-xs font-black text-red-700 ring-1 ring-red-100 transition hover:bg-red-100 sm:w-auto sm:gap-2 sm:px-3"
-              aria-label="Urgences"
-            >
-              <AlertTriangle size={13} />
-              <span className="hidden sm:inline">Urgences</span>
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={clearConversation}
+            disabled={messages.length === 0}
+            title="Nouvelle conversation"
+            aria-label="Nouvelle conversation"
+            className="grid h-10 w-10 place-items-center rounded-full text-zinc-500 hover:bg-zinc-100 disabled:opacity-30"
+          >
+            <RotateCcw size={17} />
+          </button>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto grid min-h-full w-full max-w-[1500px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[18rem_minmax(0,1fr)_18rem] lg:px-8">
-          <aside className="hidden lg:block">
-            <div className="sticky top-20 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-white shadow-2xl shadow-zinc-950/10">
-              <div className="border-b border-white/10 px-4 py-4">
-                <p className="flex items-center gap-2 text-sm font-black">
-                  <ListChecks size={16} className="text-teal-300" />
-                  LineOps cockpit
-                </p>
-                <p className="mt-2 text-xs leading-5 text-zinc-400">
-                  L’assistant est le point d’entrée, les modules restent le référentiel.
-                </p>
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+          {messages.length === 0 ? (
+            <div className="mx-auto max-w-2xl py-8 sm:py-14">
+              <div className="rounded-3xl bg-zinc-950 px-6 py-7 text-white shadow-xl">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-400 text-zinc-950"><Bot size={22} /></span>
+                  <div><h1 className="text-xl font-black">Que se passe-t-il sur la ligne ?</h1><p className="mt-1 text-sm text-zinc-400">Décris la situation naturellement. Céline te guide à partir du référentiel.</p></div>
+                </div>
               </div>
-              <div className="divide-y divide-white/10">
-                {[
-                  { to: '/shiftguide/linepulse', icon: RadioTower, label: 'LinePulse temps reel' },
-                  { to: '/shiftguide/analyse-ligne', icon: FileSearch, label: 'Analyse de ligne 101' },
-                  { to: '/shiftguide', icon: ClipboardCheck, label: 'Modules terrain' },
-                  { to: '/shiftguide', icon: Factory, label: 'Contexte ligne' },
-                  { to: '/shiftguide/urgences', icon: AlertTriangle, label: 'Urgences' },
-                ].map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <Link
-                      key={item.label}
-                      to={item.to}
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-black text-zinc-300 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-teal-200 ring-1 ring-white/10">
-                        <Icon size={16} />
-                      </span>
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
-          <section className="min-w-0 space-y-4">
-            {messages.length === 0 ? (
-              <WelcomeScreen onSuggest={sendMessage} />
-            ) : (
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <MessageBubble key={msg.id} msg={msg} onAction={handleItemAction} />
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                {SUGGESTIONS.map(({ icon: Icon, text }) => (
+                  <button key={text} type="button" onClick={() => void sendMessage(text)} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-bold text-zinc-800 shadow-sm hover:border-teal-300 hover:shadow-md">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-50 text-teal-700"><Icon size={17} /></span>
+                    {text}
+                  </button>
                 ))}
               </div>
-            )}
-
-            {error && (
-              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-700" />
-                <p className="break-words text-sm font-semibold text-red-700">{error}</p>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </section>
-
-          <aside className="hidden space-y-4 lg:block">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
-                État session
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-zinc-100 px-3 py-3">
-                  <p className="text-2xl font-black">{messages.length}</p>
-                  <p className="text-[11px] font-black uppercase text-zinc-500">messages</p>
-                </div>
-                <div className="rounded-xl bg-teal-50 px-3 py-3 text-teal-800 ring-1 ring-teal-100">
-                  <p className="text-2xl font-black">{loading ? 'ON' : 'OK'}</p>
-                  <p className="text-[11px] font-black uppercase">moteur</p>
-                </div>
-              </div>
             </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">
-                Règle produit
-              </p>
-              <p className="mt-2 text-sm font-bold leading-6 text-amber-950">
-                Céline guide, l’opérateur décide. Les actions validées restent explicites.
-              </p>
+          ) : (
+            <div className="space-y-5">
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} onAction={handleItemAction} />
+              ))}
             </div>
-          </aside>
-        </div>
-      </div>
+          )}
 
-      {messages.length > 0 && (
-        <div className="flex-none border-t border-zinc-200 bg-white/95 px-4 py-2">
-          <div className="mx-auto flex max-w-[1500px] items-center gap-2">
-          <button
-            type="button"
-            onClick={clearSession}
-            aria-label="Effacer l'historique Céline"
-            className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-black text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
-            title="Effacer"
-          >
-            <Trash2 size={11} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={clearSession}
-            className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-black text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
-          >
-            <RotateCcw size={11} />
-            <span>Nouveau poste</span>
-          </button>
-          </div>
+          {error && (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" /> {error}
+            </div>
+          )}
+          <div ref={bottomRef} />
         </div>
-      )}
+      </main>
 
-      <div className="flex-none border-t border-zinc-200 bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-[1500px] items-center gap-2">
-          <div className="flex-1 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10">
+      <footer className="flex-none border-t border-zinc-200 bg-white px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-4xl items-center gap-2">
+          <div className="flex-1 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-600/10">
             <input
               ref={inputRef}
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) sendMessage(input); }}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) void sendMessage(input); }}
               placeholder={listening ? 'Écoute en cours…' : 'Décris ta situation…'}
-              className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
               autoComplete="off"
+              className="w-full bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none"
             />
           </div>
           {micSupported && (
-            <button
-              type="button"
-              onClick={toggleMic}
-              aria-label={listening ? "Arrêter l'écoute vocale" : 'Démarrer la saisie vocale'}
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition active:scale-95 ${
-                listening
-                  ? 'animate-pulse bg-red-600 text-white'
-                  : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800'
-              }`}
-            >
-              {listening ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
+            <button type="button" onClick={toggleMic} aria-label={listening ? "Arrêter l'écoute" : 'Dicter'} className={`grid h-12 w-12 place-items-center rounded-xl ${listening ? 'bg-red-600 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}>
+              {listening ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim() || loading}
-            aria-label="Envoyer le message"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-zinc-950 transition hover:bg-teal-500 active:scale-95 disabled:opacity-40"
-          >
-            <Send size={18} aria-hidden="true" />
+          <button type="button" onClick={() => void sendMessage(input)} disabled={!input.trim() || loading} aria-label="Envoyer" className="grid h-12 w-12 place-items-center rounded-xl bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-40">
+            <Send size={18} />
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
