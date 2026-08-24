@@ -1,10 +1,19 @@
 export type SharedActionStatus = 'pending' | 'validated' | 'na';
 
+export interface SharedWorkflowRun {
+  workflowId: string;
+  actions: Record<string, Exclude<SharedActionStatus, 'pending'>>;
+  startedAt: number;
+  completedAt: number | null;
+  updatedAt: number;
+}
+
 export interface SharedProgressState {
-  version: 3;
+  version: 4;
   configRevision: string;
   actions: Record<string, Exclude<SharedActionStatus, 'pending'>>;
   activeChoices: Record<string, string>;
+  workflowRuns: Record<string, SharedWorkflowRun>;
   updatedAt: number;
 }
 
@@ -42,11 +51,12 @@ interface ChoiceModule {
 }
 
 export const CONFIG_REVISION_STORAGE_KEY: 'shiftguide_config_revision';
-export const PROGRESS_STORAGE_KEY: 'shiftguide_progress_v3';
+export const PROGRESS_STORAGE_KEY: 'shiftguide_progress_v4';
+export const LEGACY_PROGRESS_V3_STORAGE_KEY: 'shiftguide_progress_v3';
 export const LEGACY_PROGRESS_V2_STORAGE_KEY: 'shiftguide_progress_v2';
 export const LEGACY_PROGRESS_STORAGE_KEY: 'shiftguide_progress_v1';
 export const LEGACY_MODULE_PREFIX: 'shiftguide_module_';
-export const PROGRESS_VERSION: 3;
+export const PROGRESS_VERSION: 4;
 
 export function readProgressState(storage: StorageLike): SharedProgressState;
 export function writeProgressState(storage: StorageLike, state: SharedProgressState): SharedProgressState;
@@ -61,6 +71,20 @@ export function withActiveChoice(
   subModuleId: string
 ): SharedProgressState;
 export function withoutActions(state: SharedProgressState, actionIds: string[]): SharedProgressState;
+export function withWorkflowActionStatus(
+  state: SharedProgressState,
+  runId: string,
+  workflowId: string,
+  actionId: string,
+  status: SharedActionStatus
+): SharedProgressState;
+export function completeWorkflowRun(state: SharedProgressState, runId: string): SharedProgressState;
+export function getWorkflowRun(state: SharedProgressState, runId: string): SharedWorkflowRun | null;
+export function getWorkflowActionStatus(
+  state: SharedProgressState,
+  runId: string,
+  actionId: string
+): SharedActionStatus;
 export function getActionStatus(state: SharedProgressState, actionId: string): SharedActionStatus;
 export function getActionProgress(
   state: SharedProgressState,
