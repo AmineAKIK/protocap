@@ -15,9 +15,21 @@ const distDir = existsSync(join(__dirname, 'dist'))
   ? join(__dirname, 'dist')
   : resolve(process.cwd(), 'dist');
 
+function readBoundedInteger(name, raw, fallback, min, max) {
+  if (raw == null || raw === '') return fallback;
+  if (!/^\d+$/.test(raw)) throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  }
+  return value;
+}
+
 const port = process.env.PORT || 3000;
 const shiftGuideCode = resolveServerSecret(process.env, 'SHIFTGUIDE_CODE', 'VITE_SHIFTGUIDE_CODE');
 const deepSeekApiKey = resolveServerSecret(process.env, 'DEEPSEEK_API_KEY', 'VITE_DEEPSEEK_API_KEY');
+const celineModel = process.env.CELINE_MODEL?.trim() || 'deepseek-v4-flash';
+const celineMaxTokens = readBoundedInteger('CELINE_MAX_TOKENS', process.env.CELINE_MAX_TOKENS, 160, 32, 512);
 const shiftGuideConfig = {
   modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
   lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
@@ -35,7 +47,11 @@ const celineRoutingSpec = parseJsonEnvValue(
 );
 
 const runtimeState = createServerRuntimeState();
-const celineProvider = createDeepSeekProvider({ apiKey: deepSeekApiKey });
+const celineProvider = createDeepSeekProvider({
+  apiKey: deepSeekApiKey,
+  model: celineModel,
+  maxTokens: celineMaxTokens,
+});
 const { app } = createServerApp({
   shiftGuideCode,
   shiftGuideConfig,
@@ -54,5 +70,9 @@ cleanupTimer.unref();
 
 const log = createStructuredLogger(console);
 app.listen(port, () => {
-  log.info('server_started', { port: Number(port) });
+  log.info('server_started', {
+    port: Number(port),
+    celineModel,
+    celineMaxTokens,
+  });
 });
