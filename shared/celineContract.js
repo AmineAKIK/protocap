@@ -7,6 +7,7 @@ function optionalText(value) {
 }
 
 const DECISION_KINDS = new Set(['route', 'clarify', 'lexicon', 'emergency', 'unknown']);
+const PRESENTATIONS = new Set(['focus', 'all', 'answer', 'question', 'completion']);
 
 export function parseCelineDecision(rawContent) {
   if (typeof rawContent !== 'string' || rawContent.length === 0 || rawContent.length > 20_000) {
@@ -27,11 +28,34 @@ export function parseCelineDecision(rawContent) {
   return { kind: parsed.kind, id: parsed.id };
 }
 
+function isWorkflow(value) {
+  if (value === undefined) return true;
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.runId === 'string' && value.runId.length > 0 && value.runId.length <= 300 &&
+    typeof value.routeId === 'string' && value.routeId.length > 0 && value.routeId.length <= 200 &&
+    typeof value.label === 'string' && value.label.length > 0 && value.label.length <= 400 &&
+    Number.isInteger(value.currentIndex) && value.currentIndex >= 0 &&
+    Number.isInteger(value.totalActions) && value.totalActions > 0 &&
+    value.currentIndex < value.totalActions
+  );
+}
+
+function isCompletedWorkflow(value) {
+  if (value === undefined) return true;
+  return isRecord(value) &&
+    typeof value.routeId === 'string' && value.routeId.length > 0 && value.routeId.length <= 200 &&
+    typeof value.label === 'string' && value.label.length > 0 && value.label.length <= 400;
+}
+
 export function isCelineResponse(value) {
   if (!isRecord(value)) return false;
   if (typeof value.message !== 'string' || value.message.length === 0 || value.message.length > 20_000) return false;
   if (!Array.isArray(value.checklist) || value.checklist.length > 100) return false;
   if (!optionalText(value.followUp)) return false;
+  if (value.presentation !== undefined && !PRESENTATIONS.has(value.presentation)) return false;
+  if (!isWorkflow(value.workflow)) return false;
+  if (!isCompletedWorkflow(value.completedWorkflow)) return false;
 
   const seenActionIds = new Set();
   return value.checklist.every((item) => {
