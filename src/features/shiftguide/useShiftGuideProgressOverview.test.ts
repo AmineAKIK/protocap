@@ -40,9 +40,10 @@ const modules: SGModule[] = [
 
 function storeProgress(state: Record<string, unknown>) {
   localStorage.setItem('shiftguide_config_revision', CONFIG_REVISION);
-  localStorage.setItem('shiftguide_progress_v3', JSON.stringify({
-    version: 3,
+  localStorage.setItem('shiftguide_progress_v4', JSON.stringify({
+    version: 4,
     configRevision: CONFIG_REVISION,
+    workflowRuns: {},
     updatedAt: 1,
     ...state,
   }));
