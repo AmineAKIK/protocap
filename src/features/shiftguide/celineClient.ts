@@ -1,6 +1,26 @@
 import { isCelineResponse } from '../../../shared/celineContract.js';
 import type { SharedCelineResponse } from '../../../shared/celineContract.js';
 import { getShiftGuideToken, lockShiftGuide } from '../../hooks/useShiftGuideAuth';
+import { getShiftGuidePersistentStorage } from './shiftGuideStorage';
+
+const VALID_CONTEXT_HINTS = new Set([
+  'debut_equipe',
+  'debut_oc',
+  'production',
+  'evenement',
+  'cloture',
+  'tri',
+  'reprise',
+]);
+
+function getContextHint(): string | null {
+  try {
+    const value = getShiftGuidePersistentStorage().getItem('shiftguide_context');
+    return value && VALID_CONTEXT_HINTS.has(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function requestCelineResponse(
   userMessage: string,
@@ -21,7 +41,10 @@ export async function requestCelineResponse(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ messages: [{ role: 'user', content: userMessage }] }),
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: userMessage }],
+      contextHint: getContextHint(),
+    }),
     signal,
   });
 
