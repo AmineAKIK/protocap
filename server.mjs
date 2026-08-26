@@ -5,6 +5,7 @@ import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_COST_LIMITS } from './server/celineCostGuard.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
 import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
+import { installGracefulShutdown } from './server/lifecycle.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
@@ -87,7 +88,7 @@ const cleanupTimer = setInterval(
 cleanupTimer.unref();
 
 const log = createStructuredLogger(console);
-app.listen(port, () => {
+const server = app.listen(port, () => {
   log.info('server_started', {
     port: Number(port),
     celineModel,
@@ -95,4 +96,10 @@ app.listen(port, () => {
     celineProviderCallsPerMinute: celineCostLimits.providerCallsPerMinute,
     celineProviderTokensPerHour: celineCostLimits.providerTokensPerHour,
   });
+});
+
+installGracefulShutdown({
+  server,
+  cleanupTimer,
+  logger: log,
 });
