@@ -17,14 +17,15 @@ test('ProtoCap is the canonical product identity across primary surfaces', async
   const metadata = JSON.parse(packageJson);
   assert.equal(metadata.name, 'protocap');
 
-  for (const [surface, content] of Object.entries({
-    indexHtml,
-    viteConfig,
-    appShell,
-    homePage,
-    readme,
-  })) {
+  for (const [surface, content] of Object.entries({ indexHtml, viteConfig, appShell, readme })) {
     assert.match(content, /ProtoCap/, `${surface} must expose the canonical ProtoCap identity`);
     assert.doesNotMatch(content, /LineOps Toolkit/, `${surface} must not expose the retired product name`);
   }
+
+  assert.match(
+    homePage,
+    /Proto(?:Cap|<span[^>]*>Cap<\/span>)/,
+    'homePage must render the canonical ProtoCap identity',
+  );
+  assert.doesNotMatch(homePage, /LineOps Toolkit/, 'homePage must not expose the retired product name');
 });
