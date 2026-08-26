@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_COST_LIMITS } from './server/celineCostGuard.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
-import { resolveServerSecret } from './server/envCompat.mjs';
 import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
@@ -27,8 +26,8 @@ function readBoundedInteger(name, raw, fallback, min, max) {
 }
 
 const port = process.env.PORT || 3000;
-const shiftGuideCode = resolveServerSecret(process.env, 'SHIFTGUIDE_CODE', 'VITE_SHIFTGUIDE_CODE');
-const deepSeekApiKey = resolveServerSecret(process.env, 'DEEPSEEK_API_KEY', 'VITE_DEEPSEEK_API_KEY');
+const shiftGuideCode = process.env.SHIFTGUIDE_CODE ?? '';
+const deepSeekApiKey = process.env.DEEPSEEK_API_KEY ?? '';
 const celineModel = process.env.CELINE_MODEL?.trim() || 'deepseek-v4-flash';
 const celineMaxTokens = readBoundedInteger('CELINE_MAX_TOKENS', process.env.CELINE_MAX_TOKENS, 160, 32, 512);
 const celineCostLimits = {

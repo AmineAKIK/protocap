@@ -14,7 +14,9 @@ ShiftGuide reads protected runtime content from server-side environment variable
 | `SG_CELINE_ROUTING` | no | server-only declarative Céline routing; the repository default is used when omitted |
 | `DEEPSEEK_API_KEY` | required for Céline | server-side AI-provider credential |
 
-Secrets must remain server-side. Do not introduce `VITE_*` names for secrets or protected runtime configuration.
+Secrets must remain server-side. Do not introduce `VITE_*` names for secrets or protected runtime configuration. The runtime accepts only the canonical `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY` names; legacy `VITE_SHIFTGUIDE_CODE`, `VITE_DEEPSEEK_API_KEY` and `VITE_OPENAI_API_KEY` names are not supported by application code.
+
+For an existing Railway deployment that still has legacy names, migrate without copying secret plaintext: create the canonical variables as same-service Railway reference variables (`SHIFTGUIDE_CODE=${{ VITE_SHIFTGUIDE_CODE }}` and `DEEPSEEK_API_KEY=${{ VITE_DEEPSEEK_API_KEY }}`), deploy and verify readiness, then replace the references with canonical secret values or rotate the credentials before deleting the legacy variables. Never remove a legacy source variable while a canonical reference still depends on it.
 
 ## Contract invariants
 
