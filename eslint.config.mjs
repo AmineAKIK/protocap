@@ -34,7 +34,7 @@ export default tseslint.config(
   },
   reactHooks.configs.flat.recommended,
   {
-    files: ['server/**/*.mjs', 'server.mjs', 'tests/**/*.mjs', '*.config.{js,mjs,ts}'],
+    files: ['server/**/*.mjs', 'server.mjs', 'scripts/**/*.mjs', 'tests/**/*.mjs', '*.config.{js,mjs,ts}'],
     languageOptions: {
       globals: {
         ...globals.node,

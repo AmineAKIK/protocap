@@ -7,7 +7,11 @@ async function read(path) {
 }
 
 test('GitHub Actions dependencies are pinned to immutable commit SHAs', async () => {
-  for (const workflow of ['.github/workflows/ci.yml', '.github/workflows/codeql.yml']) {
+  for (const workflow of [
+    '.github/workflows/ci.yml',
+    '.github/workflows/codeql.yml',
+    '.github/workflows/live-smoke.yml',
+  ]) {
     const content = await read(workflow);
     const usesLines = content.split('\n').filter((line) => line.trim().startsWith('uses:'));
     assert.ok(usesLines.length > 0, `${workflow} must use at least one action`);
@@ -56,4 +60,26 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   assert.match(workflow, /run:\s+npm run test:e2e:a11y/);
   assert.match(accessibility, /new AxeBuilder/);
   assert.match(accessibility, /violation\.impact === 'critical' \|\| violation\.impact === 'serious'/);
+});
+
+test('scheduled live smoke remains read-only, secret-free and outside AI/auth routes', async () => {
+  const packageJson = JSON.parse(await read('package.json'));
+  const workflow = await read('.github/workflows/live-smoke.yml');
+  const smoke = await read('scripts/live-smoke.mjs');
+
+  assert.equal(packageJson.scripts['smoke:live'], 'node scripts/live-smoke.mjs');
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /cron:\s*'17 6 \* \* \*'/);
+  assert.match(workflow, /permissions:\n\s+contents:\s+read/);
+  assert.match(workflow, /PROTOCAP_BASE_URL:\s+https:\/\/protocap-production\.up\.railway\.app/);
+  assert.match(workflow, /run:\s+npm run smoke:live/);
+  assert.doesNotMatch(workflow, /secrets\./);
+  assert.doesNotMatch(workflow, /permissions:\s+write-all/);
+
+  for (const safePath of ['/', '/api/health', '/api/ready', '/robots.txt']) {
+    assert.ok(smoke.includes(`'${safePath}'`), `live smoke must include ${safePath}`);
+  }
+  assert.doesNotMatch(smoke, /\/api\/shiftguide\/unlock/);
+  assert.doesNotMatch(smoke, /\/api\/shiftguide\/session/);
+  assert.doesNotMatch(smoke, /\/api\/celine\/chat/);
 });
