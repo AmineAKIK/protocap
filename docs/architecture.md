@@ -26,7 +26,7 @@ flowchart TB
   end
 
   Env[Railway environment\nsecrets + ShiftGuide config + optional routing]
-  ProviderAdapter[DeepSeek adapter]
+  ProviderAdapter[DeepSeek adapter\n+ cost guard]
   Provider[DeepSeek API]
 
   Public --> LocalStore
@@ -101,14 +101,16 @@ Céline is server-mediated and the model is not an operational-content authority
 
 1. the browser network client sends only the latest operator turn with the ShiftGuide bearer token; local assistant/checklist history is not retransmitted for provider context;
 2. the server verifies the session, request shape and rate limits, then combines the latest turn with a bounded server-owned semantic context for that session;
-3. that provider context contains at most eight previous operator turns plus the corresponding closed Protocap-authorized decisions, never rendered checklist/action state;
-4. the server owns the classification prompt, provider credential and validated routing contract;
-5. `server/providers/deepSeekProvider.mjs` owns the DeepSeek-specific request/response envelope and timeout;
-6. the provider selects a compact decision such as a route ID, clarification ID, lexicon key, emergency topic or `unknown`;
-7. `shared/celineContract.js` normalizes only trusted decision fields (`kind` and, when required, `id`) and discards any additional provider prose instead of allowing it to cross the authority boundary;
-8. `server/celineAuthority.mjs` resolves the decision against the current validated configuration and routing contract, then renders all operator-facing wording, checklist content and follow-up text;
-9. malformed or unauthorized model decisions degrade to a deterministic server-owned safe response, while genuine provider/network/rate-limit/timeout failures retain their transport error semantics;
-10. `/api/celine/chat` returns the Protocap-owned `{ message, checklist, followUp }` DTO to the browser.
+3. that provider context contains at most four previous operator turns plus the corresponding closed Protocap-authorized decisions, never rendered checklist/action state;
+4. the server-owned domain engine resolves routine operational intents before the provider path, so deterministic interactions do not consume model calls;
+5. the server owns the classification prompt, provider credential and validated routing contract;
+6. `server/providers/deepSeekProvider.mjs` owns the DeepSeek-specific request/response envelope, timeout and process-local provider cost guard;
+7. before external network work starts, the provider guard checks prompt/history size, rolling provider-call frequency and rolling provider-reported token consumption;
+8. the provider selects a compact decision such as a route ID, clarification ID, lexicon key, emergency topic or `unknown`;
+9. `shared/celineContract.js` normalizes only trusted decision fields (`kind` and, when required, `id`) and discards any additional provider prose instead of allowing it to cross the authority boundary;
+10. `server/celineAuthority.mjs` resolves the decision against the current validated configuration and routing contract, then renders all operator-facing wording, checklist content and follow-up text;
+11. malformed or unauthorized model decisions degrade to a deterministic server-owned safe response, while genuine provider/network/rate-limit/timeout failures retain their transport error semantics;
+12. `/api/celine/chat` returns the Protocap-owned `{ message, checklist, followUp }` DTO to the browser.
 
 The provider-context store is process memory keyed by the ShiftGuide session token. It is deleted with the session on logout/revocation/expiry and is naturally lost on process restart. The browser cannot inject assistant messages into this context: only the server records the closed decision it actually accepted.
 
@@ -118,7 +120,7 @@ Procedure text, lexicon definitions and emergency wording do not need to be copi
 
 `SG_SYSTEM_PROMPT` remains non-authoritative site context. It may influence classification but cannot introduce new routes, instructions or operator-facing responses.
 
-The separate data-governance record in `docs/ai-data-governance.md` documents exactly what Protocap sends to DeepSeek, what is not sent, and the independent browser speech-recognition boundary. It deliberately distinguishes controls Protocap can enforce from provider/browser retention and processing terms that require deployment-specific review.
+The separate data-governance record in `docs/ai-data-governance.md` documents exactly what Protocap sends to DeepSeek, what is not sent, and the independent browser speech-recognition boundary. The provider cost envelope is documented separately in `docs/celine-cost-guard.md`. These documents deliberately distinguish controls Protocap can enforce from provider/browser retention and processing terms that require deployment-specific review.
 
 ## Security controls implemented today
 
@@ -136,21 +138,24 @@ The separate data-governance record in `docs/ai-data-governance.md` documents ex
 - provider decision normalization that discards free-form operator content;
 - server-owned rendering of procedure actions, clarification wording, lexicon facts and emergency guidance;
 - safe deterministic fallback for malformed or unauthorized model decisions;
+- deterministic domain routing before the external provider path;
+- independent provider-call and rolling provider-token cost guards;
+- 32 KiB aggregate classifier-prompt ceiling and bounded provider-history input;
 - per-IP unlock throttling, per-IP chat throttling and per-session chat throttling;
-- 128 KB JSON body limit plus a 4,000-character provider-turn limit;
+- 128 KB JSON body limit plus a 2,000-character provider-turn limit;
 - generic client-facing provider/server errors;
 - CSP, frame denial, MIME sniffing protection, restrictive permissions policy and referrer policy;
 - `Cache-Control: no-store` for API routes;
 - HSTS when the request is secure;
-- DeepSeek request timeout.
+- DeepSeek request timeout and 160-token default completion cap.
 
 ## Deliberate current trade-offs
 
 ### Process-local session state
 
-Sessions, rate-limit buckets and compact Céline provider context are JavaScript `Map` instances in the Express process. A restart invalidates active sessions and provider context. Multiple replicas would not share state. The current hosted demonstrator does not pretend otherwise.
+Sessions, rate-limit buckets, compact Céline provider context and provider cost guard are process-local to the Express runtime. A restart invalidates active sessions/provider context and resets the cost guard. Multiple replicas would not share state. The current hosted demonstrator does not pretend otherwise.
 
-A distributed store such as Redis would become justified if horizontal scaling, durable sessions or cross-instance throttling became real requirements.
+A distributed store or provider-side shared quota would become justified if horizontal scaling, durable sessions or cross-instance throttling became real requirements.
 
 ### Provider availability and governance
 

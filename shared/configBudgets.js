@@ -15,5 +15,5 @@ export const CONFIG_BUDGETS = Object.freeze({
   clarifications: 500,
   classifierRules: 100,
   routeActions: 200,
-  celineSystemPromptBytes: 256 * 1024,
+  celineSystemPromptBytes: 32 * 1024,
 });

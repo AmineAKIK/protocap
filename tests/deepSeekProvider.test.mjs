@@ -9,6 +9,7 @@ test('DeepSeek adapter owns provider request shape and returns content plus usag
   let captured;
   const provider = createDeepSeekProvider({
     apiKey: 'secret',
+    costNow: () => 1_000,
     fetchImpl: async (url, options) => {
       captured = { url, options };
       return {
@@ -44,6 +45,10 @@ test('DeepSeek adapter owns provider request shape and returns content plus usag
     totalTokens: 138,
     promptCacheHitTokens: 80,
     promptCacheMissTokens: 40,
+    systemPromptBytes: 6,
+    historyMessages: 1,
+    historyChars: 7,
+    tokensLastHour: 138,
   });
   assert.equal(captured.url, 'https://api.deepseek.com/chat/completions');
   assert.equal(captured.options.headers.Authorization, 'Bearer secret');
@@ -70,6 +75,60 @@ test('DeepSeek adapter tolerates missing usage telemetry', async () => {
   });
   const result = await provider.complete({ systemPrompt: 'x', history: [] });
   assert.equal(result.usage, null);
+});
+
+test('DeepSeek adapter blocks oversized input before any network call', async () => {
+  let calls = 0;
+  const provider = createDeepSeekProvider({
+    apiKey: 'secret',
+    costLimits: {
+      providerCallsPerMinute: 10,
+      providerTokensPerHour: 1_000,
+      systemPromptMaxBytes: 5,
+      historyMaxChars: 100,
+    },
+    fetchImpl: async () => {
+      calls += 1;
+      throw new Error('must not be called');
+    },
+  });
+
+  await assert.rejects(
+    () => provider.complete({ systemPrompt: 'too-long', history: [] }),
+    (error) => error instanceof CelineProviderError && error.code === 'budget_exceeded'
+  );
+  assert.equal(calls, 0);
+});
+
+test('DeepSeek adapter rate-limits provider bursts before network work', async () => {
+  let calls = 0;
+  const provider = createDeepSeekProvider({
+    apiKey: 'secret',
+    costNow: () => 1_000,
+    costLimits: {
+      providerCallsPerMinute: 1,
+      providerTokensPerHour: 1_000,
+      systemPromptMaxBytes: 1_000,
+      historyMaxChars: 1_000,
+    },
+    fetchImpl: async () => {
+      calls += 1;
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { choices: [{ message: { content: '{"kind":"unknown"}' } }] };
+        },
+      };
+    },
+  });
+
+  await provider.complete({ systemPrompt: 'x', history: [] });
+  await assert.rejects(
+    () => provider.complete({ systemPrompt: 'x', history: [] }),
+    (error) => error instanceof CelineProviderError && error.code === 'rate_limited'
+  );
+  assert.equal(calls, 1);
 });
 
 test('DeepSeek adapter maps upstream HTTP failures with safe status metadata', async () => {
