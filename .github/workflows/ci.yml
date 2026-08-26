@@ -17,7 +17,7 @@ jobs:
   quality:
     name: Quality gate
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -46,11 +46,17 @@ jobs:
       - name: Build production container
         run: docker build --tag protocap-ci .
 
-      - name: Install Chromium for E2E
-        run: npx playwright install --with-deps chromium
+      - name: Install browser engines for E2E
+        run: npx playwright install --with-deps chromium webkit
 
-      - name: Run critical E2E journeys
+      - name: Run critical Chromium journeys
         run: npm run test:e2e
+
+      - name: Run mobile Chromium and WebKit smoke tests
+        run: npm run test:e2e:browser-smoke
+
+      - name: Run accessibility smoke tests
+        run: npm run test:e2e:a11y
 
       - name: Audit production dependencies
         run: npm run audit:prod
