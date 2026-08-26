@@ -5,6 +5,6 @@
 /server.mjs @AmineAKIK
 /server/ @AmineAKIK
 /.github/ @AmineAKIK
-/railway.toml @AmineAKIK
-/nixpacks.toml @AmineAKIK
+/Dockerfile @AmineAKIK
+/.dockerignore @AmineAKIK
 /.env.example @AmineAKIK

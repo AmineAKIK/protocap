@@ -55,7 +55,7 @@ Session-level Céline rate limiting remains keyed by the authenticated session t
 
 This policy introduces no new environment variable and requires no Railway variable migration.
 
-`railway.toml`, the public routes, health/readiness endpoints, provider configuration, session contract, procedures, and browser DTOs are unchanged.
+The public routes, health/readiness endpoints, provider configuration, session contract, procedures, browser DTOs and Docker runtime contract are unchanged by the ingress policy itself.
 
 ## Operational rule
 

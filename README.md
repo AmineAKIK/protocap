@@ -75,9 +75,9 @@ The Vite PWA service worker pre-caches built static assets and supports standalo
 npm run check
 ```
 
-It runs server syntax checks, the Node test suite, the frontend Vitest suite, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally checks that generated directories are not tracked, installs Chromium, runs critical Playwright E2E journeys and audits production dependencies.
+It runs server syntax checks, the Node test suite, the frontend Vitest suite, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally checks that generated directories are not tracked, builds the production Docker image, installs Chromium, runs critical Playwright E2E journeys and audits production dependencies.
 
-The automated suite covers server/runtime security helpers, ShiftGuide validation and progress semantics, session/rate-limit behavior, Céline prompt/provider/domain contracts, browser authentication boundaries, shared UI primitives and critical ShiftGuide browser journeys.
+The automated suite covers server/runtime security helpers, ShiftGuide validation and progress semantics, session/rate-limit behavior, Céline prompt/provider/domain contracts, browser authentication boundaries, shared UI primitives, production packaging invariants and critical ShiftGuide browser journeys.
 
 ## Local development
 
@@ -110,7 +110,9 @@ Secrets must remain server-side. Do not use `VITE_*` names for secrets: Vite-pre
 
 ## Deployment
 
-The public demonstrator is hosted on Railway. Nixpacks installs dependencies with Node 24, builds the Vite bundle and starts the Express server. Railway gates new deployments on `/api/ready` before switching traffic; `/api/health` remains the lightweight process-liveness endpoint. The readiness probe validates local ShiftGuide/Céline bootstrap capabilities without pinging DeepSeek. Deployment configuration and secrets live in Railway; successful CI validates the repository but is not presented as proof that an external deployment completed successfully. See [docs/runtime-readiness.md](docs/runtime-readiness.md).
+The public demonstrator is hosted on Railway. The repository root `Dockerfile` is the production build/runtime source of truth: a Node 24 build stage installs the locked dependency graph and compiles the Vite bundle, then a separate Node 24 runtime stage installs production dependencies only and runs `node server.mjs` as the non-root `node` user. `.dockerignore` keeps generated, test and documentation material out of the Docker build context.
+
+Railway automatically detects the root `Dockerfile`. Deployment health and restart policy are configured on the Railway service itself: `/api/ready` is the readiness gate, while `/api/health` remains the lightweight process-liveness endpoint. The readiness probe validates local ShiftGuide/Céline bootstrap capabilities without pinging DeepSeek. The deprecated `railway.toml`/Nixpacks configuration path is intentionally not used. Successful CI validates the repository and container build but is not presented as proof that an external Railway deployment completed successfully. See [docs/runtime-readiness.md](docs/runtime-readiness.md).
 
 ## Repository map
 
@@ -129,6 +131,7 @@ src/utils/        pure helpers and domain calculations
 tests/            Node server/runtime test suite
 e2e/              critical Playwright browser journeys
 docs/             architecture, product boundaries and archived source documents
+Dockerfile        production container build/runtime contract
 server.mjs        production process bootstrap
 ```
 
