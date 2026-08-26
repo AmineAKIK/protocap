@@ -1,12 +1,12 @@
-# Protocap · LineOps Toolkit
+# ProtoCap
 
 [![Quality gate](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml/badge.svg)](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml)
 
-**Industrial operations toolkit for manufacturing teams — shop-floor guidance, traceability, logistics workflows and AI-assisted decision support.**
+**Interactive industrial-operations engineering demonstrator for manufacturing teams — shop-floor guidance, traceability, logistics workflows and AI-assisted decision support.**
 
 [Live demo](https://protocap-production.up.railway.app/) · [Architecture](docs/architecture.md) · [Runtime readiness](docs/runtime-readiness.md) · [Product boundaries](docs/product-boundaries.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
 
-Protocap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines independent prototypes with the protected **ShiftGuide** workspace and its AI-assisted operator guide, **Céline**.
+ProtoCap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines independent prototypes with the protected **ShiftGuide** workspace and its AI-assisted operator guide, **Céline**.
 
 The repository deliberately distinguishes **implemented behavior**, **local demonstrations**, **mock data** and **future operational integrations**. It should be read as an engineering portfolio and product exploration, not as a claim that every demonstrated workflow is already connected to a production information system.
 
@@ -41,7 +41,7 @@ The application is a React SPA served by Express. Public prototypes primarily ru
 
 Céline never receives the provider key in the browser. The Express boundary owns authentication checks, IP/session rate limiting, payload limits, timeout handling, the system prompt and the upstream AI request. Provider checklist output is validated server-side and hydrated from canonical ShiftGuide action data before it is returned to the browser, so the model does not author operational action text.
 
-For a more detailed view, including trust boundaries and current trade-offs, see [docs/architecture.md](docs/architecture.md).
+For a more detailed view, including trust boundaries and current trade-offs, see [docs/architecture.md](docs/architecture.md). Historical implementation plans such as `docs/celine-v3-plan.md` are retained as engineering records; they are not the current architecture source of truth.
 
 ## Security decisions
 
@@ -150,7 +150,7 @@ See [docs/product-boundaries.md](docs/product-boundaries.md) for the detailed pr
 
 ## Licensing
 
-Protocap is **source-available software with non-commercial rights**. Original software code is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+ProtoCap is **source-available software with non-commercial rights**. Original software code is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
 The software license does not automatically cover reports, operational documentation, procedures, business proposals, prompts, workflow content, co-authored materials, trademarks or other non-software materials. Commercial use that is not permitted by an applicable license requires a separate written agreement.
 
