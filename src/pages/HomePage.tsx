@@ -73,7 +73,7 @@ export function HomePage() {
             <div className="w-full shrink-0 lg:w-72 xl:w-80">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Périmètre</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Périmètre</p>
                 </div>
                 <ul className="divide-y divide-slate-100">
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
@@ -93,13 +93,13 @@ export function HomePage() {
                   <button
                     type="button"
                     onClick={() => setPresenting(true)}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-600/20"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-600 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
                   >
                     <Maximize2 size={15} aria-hidden="true" />
                     Lancer la présentation
                   </button>
                 </div>
-                <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-center text-xs text-slate-400">
+                <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-3 text-center text-xs text-slate-600">
                   <Wifi size={13} className="shrink-0" aria-hidden="true" />
                   PWA — assets statiques mis en cache ; fonctions serveur en ligne uniquement
                 </div>
@@ -110,13 +110,13 @@ export function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
-        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">Rapport</p>
+        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-600">Rapport</p>
         <article className="panel group mb-10 grid gap-5 p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
           <div className="min-w-0">
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
               <FileText size={22} aria-hidden="true" />
             </div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Synthèse opérationnelle</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">Synthèse opérationnelle</p>
             <h3 className="text-xl font-bold text-slate-950 transition group-hover:text-teal-700">Du terrain au prototype</h3>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
               Une lecture terrain de la charge invisible autour du conducteur : informations dispersées, décisions à reconstruire et flux critiques à rendre plus lisibles.
@@ -130,7 +130,7 @@ export function HomePage() {
           </ButtonLink>
         </article>
 
-        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-400">Modules</p>
+        <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-600">Modules</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((module) => (
             <article
@@ -140,7 +140,7 @@ export function HomePage() {
               <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
                 <module.icon size={22} aria-hidden="true" />
               </div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">{module.tag}</p>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">{module.tag}</p>
               <h3 className="text-xl font-bold text-slate-950 transition group-hover:text-teal-700">{module.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-6 text-slate-500">{module.description}</p>
               <div className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
@@ -160,7 +160,7 @@ export function HomePage() {
       </section>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>Données publiques de démonstration fictives.</p>
           <a
             className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
