@@ -57,11 +57,10 @@ export function HomePage() {
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-16">
             <div className="min-w-0 flex-1">
               <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
-                LineOps<br />
-                <span className="text-teal-700">Toolkit</span>
+                Proto<span className="text-teal-700">Cap</span>
               </h1>
-              <p className="mt-4 text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
-                Cinq outils terrain pour explorer des flux de ligne de conditionnement.
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
+                Démonstrateur interactif d’ingénierie des opérations industrielles, conçu pour rendre visibles des flux, décisions et contraintes terrain.
               </p>
               <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
                 <p className="text-sm leading-6 text-slate-700">
