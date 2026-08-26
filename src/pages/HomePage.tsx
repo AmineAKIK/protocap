@@ -10,7 +10,8 @@ const modules = [
     to: '/shiftguide',
     icon: ListChecks,
     tag: 'IA · Guidage terrain',
-    highlight: "Céline guide, l'opérateur décide"
+    highlight: "Céline guide, l'opérateur décide",
+    aiDisclosure: "Céline combine des règles déterministes et, selon la demande, un service IA distant. L’historique est conservé localement dans ce navigateur : ne pas saisir de donnée sensible."
   },
   {
     title: 'Expiry Check',
@@ -145,6 +146,11 @@ export function HomePage() {
               <div className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
                 {module.highlight}
               </div>
+              {'aiDisclosure' in module && module.aiDisclosure && (
+                <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
+                  {module.aiDisclosure}
+                </p>
+              )}
               <ButtonLink to={module.to} className="mt-4 w-full" icon={<ArrowRight size={16} />}>
                 Ouvrir le module
               </ButtonLink>

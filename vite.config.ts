@@ -12,14 +12,17 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-icon.svg'],
       manifest: {
+        id: base,
         name: 'ProtoCap',
         short_name: 'ProtoCap',
         description:
           'Démonstrateur interactif d’ingénierie des opérations industrielles pour les équipes de production.',
+        lang: 'fr',
         theme_color: '#0f766e',
         background_color: '#f8fafc',
         display: 'standalone',
         start_url: base,
+        scope: base,
         icons: [
           {
             src: 'pwa-icon.svg',

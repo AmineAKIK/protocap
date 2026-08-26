@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import express from 'express';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
 import { parseShiftGuideConfig } from '../shared/shiftGuideContract.js';
 import { createCelineAuthority, resolveCelineDecision } from './celineAuthority.mjs';
@@ -439,8 +439,11 @@ export function createServerApp({
 
   if (distDir) {
     app.use(express.static(distDir));
-    app.get('/{*path}', (_req, res) => {
-      res.sendFile(join(distDir, 'index.html'));
+    app.get('/{*path}', (req, res) => {
+      if (extname(req.path)) {
+        return res.status(404).type('text/plain').send('Asset introuvable.');
+      }
+      return res.sendFile(join(distDir, 'index.html'));
     });
   }
 

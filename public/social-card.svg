@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">ProtoCap</title>
+  <desc id="desc">Démonstrateur interactif d’ingénierie des opérations industrielles</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <rect x="64" y="64" width="1072" height="502" rx="36" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <rect x="96" y="96" width="104" height="12" rx="6" fill="#0f766e"/>
+  <text x="96" y="245" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" fill="#0f172a">Proto<tspan fill="#0f766e">Cap</tspan></text>
+  <text x="96" y="320" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="600" fill="#334155">Ingénierie des opérations industrielles</text>
+  <text x="96" y="382" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#64748b">Guidage terrain · Traçabilité · Logistique · Calculs · Assistance IA</text>
+  <line x1="96" y1="438" x2="1104" y2="438" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="96" y="493" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" fill="#0f766e">Démonstrateur interactif — données fictives</text>
+</svg>
