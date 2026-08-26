@@ -12,10 +12,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-icon.svg'],
       manifest: {
-        name: 'LineOps Toolkit',
-        short_name: 'LineOps',
+        name: 'ProtoCap',
+        short_name: 'ProtoCap',
         description:
-          'Prototypes génériques pour fluidifier certains usages terrain en environnement de production.',
+          'Démonstrateur interactif d’ingénierie des opérations industrielles pour les équipes de production.',
         theme_color: '#0f766e',
         background_color: '#f8fafc',
         display: 'standalone',

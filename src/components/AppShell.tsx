@@ -31,7 +31,7 @@ export function AppShell({ children }: AppShellProps) {
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
               <Boxes size={18} />
             </span>
-            <span className="hidden text-sm font-bold text-slate-950 sm:block">LineOps Toolkit</span>
+            <span className="hidden text-sm font-bold text-slate-950 sm:block">ProtoCap</span>
           </Link>
 
           {/* Desktop nav */}
