@@ -27,6 +27,8 @@ It does **not** call `/api/shiftguide/unlock`, `/api/shiftguide/session` or `/ap
 
 The smoke also checks HTTPS-only targeting, expected security headers, API `no-store` behavior, API request IDs and the production sitemap declaration.
 
+GitHub schedules run from the latest default-branch commit and may be delayed under Actions load. For a public repository, GitHub also disables scheduled workflows after 60 days without repository activity; a manual run or re-enable may therefore be needed after a long dormant period.
+
 Run the same probe manually from a Node 24 environment with:
 
 ```bash
