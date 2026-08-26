@@ -6,8 +6,6 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
-const PINNED_ACTION = /^\s*uses:\s+[^@\s]+@[0-9a-f]{40}(?:\s+#.*)?$/gm;
-
 test('GitHub Actions dependencies are pinned to immutable commit SHAs', async () => {
   for (const workflow of ['.github/workflows/ci.yml', '.github/workflows/codeql.yml']) {
     const content = await read(workflow);
