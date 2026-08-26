@@ -1,7 +1,8 @@
 {
-  "name": "lineops-toolkit",
+  "name": "protocap",
   "private": true,
   "version": "0.1.0",
+  "description": "Interactive industrial-operations engineering demonstrator for manufacturing teams.",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
