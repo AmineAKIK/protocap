@@ -43,6 +43,9 @@ jobs:
       - name: Run repository checks
         run: npm run check
 
+      - name: Build production container
+        run: docker build --tag protocap-ci .
+
       - name: Install Chromium for E2E
         run: npx playwright install --with-deps chromium
 

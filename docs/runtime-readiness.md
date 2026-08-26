@@ -48,6 +48,8 @@ A configured but invalid/expired provider credential can therefore pass deployme
 
 ## Railway
 
-`railway.toml` points the Railway deployment healthcheck at `/api/ready`. Railway uses that check while bringing up a new deployment before switching traffic. `/api/health` remains available as the process-liveness endpoint.
+The Railway production service configures `/api/ready` as its deployment healthcheck with a 60-second timeout and an `ON_FAILURE` restart policy with three retries. These operational settings live on the Railway service rather than in the deprecated `railway.toml` config-as-code format.
+
+The repository root `Dockerfile` is the build/runtime source of truth. Railway automatically detects it and builds that image before applying the service-level healthcheck. `/api/health` remains available as the process-liveness endpoint.
 
 This distinction does not turn Protocap into a distributed or highly available system. Sessions and rate-limit/provider context remain process-local as documented in the architecture.
