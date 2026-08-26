@@ -10,7 +10,19 @@ ProtoCap uses `npm run check` as the repository-level local and CI quality gate.
 4. ESLint, including targeted type-aware async checks for TypeScript source under `src/`.
 5. A production frontend build through TypeScript and Vite.
 
-The GitHub Quality Gate then adds a production Docker build, critical Chromium E2E journeys, and a production-dependency audit.
+The GitHub Quality Gate then adds a production Docker build, browser-level checks, and a production-dependency audit.
+
+## Browser and accessibility policy
+
+Browser coverage is deliberately layered rather than multiplying every end-to-end journey across every engine:
+
+- the full critical ShiftGuide journey suite stays on desktop Chromium, where state, session, persistence, concurrency, keyboard-dialog and Céline boundary behavior are exercised in depth;
+- mobile Chromium and desktop WebKit run focused smoke tests for the public shell, PWA metadata, responsive overflow and a protected ShiftGuide deep link;
+- automated accessibility smoke scans use `@axe-core/playwright` on the public landing page, the ShiftGuide lock, and an authenticated module/confirmation-dialog flow.
+
+The axe gate blocks automated WCAG A/AA findings with `critical` or `serious` impact. It is a regression detector, not a claim of full accessibility conformance: keyboard behavior, semantics and visual review still need human judgment.
+
+Cross-browser smoke scripts do not call a live AI provider. They run against the same deterministic local E2E server fixture used by the Chromium journeys.
 
 ## Coverage policy
 
