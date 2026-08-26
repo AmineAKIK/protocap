@@ -184,7 +184,7 @@ export function LogisticsCallPage() {
         <p className="label">Module logistique</p>
         <h1 className="mt-1 text-xl font-bold text-slate-950 sm:mt-2 sm:text-3xl">Logistics Call</h1>
         <p className="mt-1 hidden max-w-3xl text-slate-600 sm:mt-2 sm:block">
-          Appels palettes côté ligne, priorités, statuts de traitement et board logistique synchronisé.
+          Appels palettes côté ligne, priorités, statuts de traitement et board logistique persisté localement dans ce navigateur.
         </p>
         <p className="mt-1 hidden max-w-3xl text-sm font-semibold text-teal-800 sm:mt-2 sm:block">
           Demandes visibles, suivies et priorisées sans perte d'information.
