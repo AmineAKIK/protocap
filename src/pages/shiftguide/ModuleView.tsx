@@ -134,7 +134,7 @@ function ChoiceScreen({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-4 py-8 sm:px-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Choisir le type</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Choisir le type</p>
         <h2 className="mt-2 text-2xl font-bold text-slate-950">Quel scénario veux-tu suivre ?</h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
           Le choix ouvre uniquement les actions adaptées au contexte terrain.
@@ -270,11 +270,11 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
               >
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-600">
                       Action {String(i + 1).padStart(2, '0')}
                     </p>
                     <p className="mt-3 text-xl font-bold leading-snug text-slate-950 sm:text-2xl">
-                      <span className={isNA ? 'text-slate-400 line-through' : ''}>{action.text}</span>
+                      <span className={isNA ? 'text-slate-600 line-through' : ''}>{action.text}</span>
                     </p>
                   </div>
                   {isValidated && (
@@ -359,7 +359,7 @@ function ActionCarousel({ moduleId, actions, footerNote }: ActionCarouselProps) 
           ref={resetTriggerRef}
           type="button"
           onClick={() => setShowReset(true)}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 underline-offset-2 transition hover:text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 underline-offset-2 transition hover:text-slate-800 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
         >
           <RotateCcw size={12} aria-hidden="true" />
           Réinitialiser la progression
