@@ -11,7 +11,7 @@ const modules = [
     icon: ListChecks,
     tag: 'IA · Guidage terrain',
     highlight: "Céline guide, l'opérateur décide",
-    aiDisclosure: "Céline combine des règles déterministes et, selon la demande, un service IA distant. L’historique est conservé localement dans ce navigateur : ne pas saisir de donnée sensible."
+    aiDisclosure: "Céline combine des règles déterministes et, selon la demande, un service IA distant. L’historique visible reste dans ce navigateur ; un contexte sémantique borné de la session peut être conservé côté serveur et transmis au fournisseur IA. Ne pas saisir de donnée sensible."
   },
   {
     title: 'Expiry Check',
