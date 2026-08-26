@@ -46,6 +46,18 @@ Type-aware ESLint analysis is restricted to `src/**/*.{ts,tsx}`, which is covere
 
 This keeps async mistakes visible without applying type-aware parser requirements to unrelated JavaScript, build configuration, or E2E files.
 
+## Known install-time warnings
+
+The locked development/build dependency graph currently emits three `npm ci` warnings in CI:
+
+- `source-map@0.8.0-beta.0` is deprecated by its maintainer;
+- `glob@11.1.0` emits npm's old-version/security-support deprecation notice;
+- npm `allow-scripts` reports the `esbuild@0.25.12` postinstall script as not yet covered by an `allowScripts` declaration.
+
+These warnings are not suppressed or presented as clean output. They are dependency-hygiene debt in the development/build graph and should be revisited during normal dependency upgrades. The repository's full install audit and the explicit `npm audit --omit=dev` production audit currently report zero vulnerabilities; that audit result is the security signal, while the warnings remain tracked maintenance work.
+
+The production Docker build also uses `npm cache clean --force`, for which npm prints its standard `using --force Recommended protections disabled` warning. The flag is limited to cache cleanup in the image build and does not disable runtime application protections.
+
 ## Maintenance rule
 
 A quality-gate change should explain what failure mode it prevents. New checks should stay deterministic, run without live external providers, and remain part of `npm run check` unless they are inherently environment-specific (for example the production-container and browser checks in GitHub Actions).
