@@ -1,5 +1,5 @@
-const MAX_PROVIDER_TURNS = 8;
-const MAX_USER_MESSAGE_LENGTH = 4_000;
+const MAX_PROVIDER_TURNS = 4;
+const MAX_USER_MESSAGE_LENGTH = 2_000;
 const PROVIDER_DECISION_KINDS = new Set(['route', 'clarify', 'lexicon', 'emergency', 'unknown']);
 
 export function extractLatestCelineUserMessage(messages) {
@@ -33,8 +33,6 @@ export function appendCelineProviderDecision(context, userMessage, decision) {
     typeof decision !== 'object' ||
     !PROVIDER_DECISION_KINDS.has(decision.kind)
   ) {
-    // Deterministic domain events are represented by operational state, not by
-    // provider conversation examples. Keeping them out preserves a clean prompt contract.
     return prior.slice(-MAX_PROVIDER_TURNS * 2);
   }
 

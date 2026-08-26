@@ -1,3 +1,8 @@
+import {
+  createCelineProviderCostGuard,
+  DEFAULT_CELINE_COST_LIMITS,
+} from '../celineCostGuard.mjs';
+
 export class CelineProviderError extends Error {
   constructor(code, message, options = {}) {
     super(message, options);
@@ -44,12 +49,24 @@ export function createDeepSeekProvider({
   timeoutMs = 45_000,
   model = 'deepseek-v4-flash',
   maxTokens = 160,
+  costLimits = DEFAULT_CELINE_COST_LIMITS,
+  costNow = () => Date.now(),
 } = {}) {
   if (!apiKey) return null;
+  const costGuard = createCelineProviderCostGuard({ limits: costLimits, now: costNow });
 
   return {
     model,
     async complete({ systemPrompt, history, signal = null }) {
+      const budget = costGuard.beforeRequest({ systemPrompt, history });
+      if (!budget.allowed) {
+        const isRateLimit = budget.reason === 'minute_calls' || budget.reason === 'hourly_tokens';
+        throw new CelineProviderError(
+          isRateLimit ? 'rate_limited' : 'budget_exceeded',
+          `Celine provider cost guard blocked request (${budget.reason}).`
+        );
+      }
+
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
       const requestSignal = signal
         ? AbortSignal.any([signal, timeoutSignal])
@@ -118,10 +135,20 @@ export function createDeepSeekProvider({
         );
       }
 
+      const usage = normalizeUsage(payload?.usage);
+      const tokensLastHour = costGuard.recordUsage(usage);
       return {
         content,
         model,
-        usage: normalizeUsage(payload?.usage),
+        usage: usage
+          ? {
+              ...usage,
+              systemPromptBytes: budget.input.systemPromptBytes,
+              historyMessages: budget.input.historyMessages,
+              historyChars: budget.input.historyChars,
+              tokensLastHour,
+            }
+          : null,
         finishReason: typeof payload?.choices?.[0]?.finish_reason === 'string'
           ? payload.choices[0].finish_reason
           : null,

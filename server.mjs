@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
+import { DEFAULT_CELINE_COST_LIMITS } from './server/celineCostGuard.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
 import { resolveServerSecret } from './server/envCompat.mjs';
 import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
@@ -30,6 +31,23 @@ const shiftGuideCode = resolveServerSecret(process.env, 'SHIFTGUIDE_CODE', 'VITE
 const deepSeekApiKey = resolveServerSecret(process.env, 'DEEPSEEK_API_KEY', 'VITE_DEEPSEEK_API_KEY');
 const celineModel = process.env.CELINE_MODEL?.trim() || 'deepseek-v4-flash';
 const celineMaxTokens = readBoundedInteger('CELINE_MAX_TOKENS', process.env.CELINE_MAX_TOKENS, 160, 32, 512);
+const celineCostLimits = {
+  ...DEFAULT_CELINE_COST_LIMITS,
+  providerCallsPerMinute: readBoundedInteger(
+    'CELINE_PROVIDER_CALLS_PER_MINUTE',
+    process.env.CELINE_PROVIDER_CALLS_PER_MINUTE,
+    DEFAULT_CELINE_COST_LIMITS.providerCallsPerMinute,
+    1,
+    60
+  ),
+  providerTokensPerHour: readBoundedInteger(
+    'CELINE_PROVIDER_TOKENS_PER_HOUR',
+    process.env.CELINE_PROVIDER_TOKENS_PER_HOUR,
+    DEFAULT_CELINE_COST_LIMITS.providerTokensPerHour,
+    1_000,
+    5_000_000
+  ),
+};
 const shiftGuideConfig = {
   modules: parseJsonEnvValue('SG_MODULES', process.env.SG_MODULES),
   lexique: parseJsonEnvValue('SG_LEXIQUE', process.env.SG_LEXIQUE),
@@ -51,6 +69,7 @@ const celineProvider = createDeepSeekProvider({
   apiKey: deepSeekApiKey,
   model: celineModel,
   maxTokens: celineMaxTokens,
+  costLimits: celineCostLimits,
 });
 const { app } = createServerApp({
   shiftGuideCode,
@@ -74,5 +93,7 @@ app.listen(port, () => {
     port: Number(port),
     celineModel,
     celineMaxTokens,
+    celineProviderCallsPerMinute: celineCostLimits.providerCallsPerMinute,
+    celineProviderTokensPerHour: celineCostLimits.providerTokensPerHour,
   });
 });

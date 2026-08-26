@@ -19,7 +19,7 @@ flowchart LR
 Céline has two different memories and they must not be confused:
 
 - **UI history** exists for the operator experience and can contain rendered server checklists and local completion state. It is scoped to the authenticated ShiftGuide session by the browser auth boundary.
-- **provider context** is an in-memory server structure used only to classify the next operator message. It contains at most eight semantic turns: operator text plus Protocap-authorized closed decisions such as `{ "kind": "route", "id": "..." }`. It never contains rendered checklists, procedure action text, checklist completion state, lexicon definitions or emergency wording.
+- **provider context** is an in-memory server structure used only to classify the next operator message. It contains at most four semantic turns: operator text plus Protocap-authorized closed decisions such as `{ "kind": "route", "id": "..." }`. It never contains rendered checklists, procedure action text, checklist completion state, lexicon definitions or emergency wording.
 
 The browser sends only the latest operator turn to `/api/celine/chat`. Older browser conversation content and assistant/checklist DTOs are not retransmitted to the server for provider context. The server owns the compact context sent upstream, so browser-authored assistant history cannot become provider context.
 
@@ -29,7 +29,7 @@ The DeepSeek request can contain:
 
 - the server-owned classification system prompt;
 - the current operator text message;
-- up to eight previous operator turns from the same active server session;
+- up to four previous operator turns from the same active server session;
 - the corresponding compact server-authorized decision IDs.
 
 The classification prompt contains route identifiers, route labels/selection guidance, clarification identifiers/questions, lexicon abbreviations and optional non-authoritative site context. It deliberately does **not** need to contain canonical procedure action text, lexicon definitions or emergency wording; those are rendered by Protocap after classification.
@@ -39,13 +39,16 @@ Protocap does not send its ShiftGuide bearer token, unlock code or DeepSeek API 
 ## Data minimization rules enforced in code
 
 - the browser network client sends only the latest user turn;
-- server input rejects an operator turn above 4,000 characters;
-- provider context is bounded to eight semantic turns;
+- server input rejects an operator turn above 2,000 characters;
+- provider context is bounded to four semantic turns;
+- provider input is additionally guarded by aggregate prompt/history size ceilings before any external request starts;
 - provider context is process memory only and is deleted when the associated ShiftGuide server session is revoked or expires;
 - provider responses are parsed into a closed decision protocol;
 - provider-authored extra prose is discarded and never shown to the operator;
 - rendered checklist/action content comes from validated server configuration, not from the provider;
-- application logs record provider error categories, not prompts, chat messages or API keys.
+- application logs record provider error categories and safe token metrics, not prompts, chat messages or API keys.
+
+Provider-call frequency and provider-reported token usage are also bounded by the process-local cost guard documented in `docs/celine-cost-guard.md`. These controls reduce both data exposure and the blast radius of an accidental routing regression.
 
 These controls reduce exposure; they do not make arbitrary operator text non-sensitive. Operators should not enter personal data, passwords, credentials, medical information, disciplinary information, confidential business information unrelated to the procedure, or any other data that is unnecessary for the operational classification task.
 
