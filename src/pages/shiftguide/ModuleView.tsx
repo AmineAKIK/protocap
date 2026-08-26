@@ -388,7 +388,7 @@ export function ModuleView() {
   const isActiveModuleComplete =
     actionIds.length === 0 || isModuleProgressComplete(activeModuleId, actionIds);
 
-  const leaveModule = () => navigate('/shiftguide', { replace: true });
+  const leaveModule = () => { void navigate('/shiftguide', { replace: true }); };
 
   const handleClose = () => {
     if ((!isChoice || selectedSub) && actionIds.length > 0 && !isActiveModuleComplete) {
@@ -402,7 +402,7 @@ export function ModuleView() {
 
   const handleSelectSubModule = (subModule: SGSubModule) => {
     if (module?.type !== 'choice') return;
-    setActiveChoiceModule(module.id, subModule.id);
+    void setActiveChoiceModule(module.id, subModule.id);
     setSelectedSub(subModule);
   };
 

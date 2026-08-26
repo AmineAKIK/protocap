@@ -27,7 +27,7 @@ export function ShiftGuideLayout() {
     if (loggingOut) return;
     setLoggingOut(true);
     await logout();
-    navigate('/', { replace: true });
+    void navigate('/', { replace: true });
   };
 
   const shellClass = isCelineRoute && isMobileViewport
