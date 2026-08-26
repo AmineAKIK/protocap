@@ -329,12 +329,12 @@ export function CelinePage() {
   const abortRef = useRef<AbortController | null>(null);
   const pendingRef = useRef(false);
   const autoAdvanceRef = useRef<Set<string>>(new Set());
-  const sendMessageRef = useRef<(text: string) => void>(() => undefined);
+  const sendMessageRef = useRef<(text: string) => Promise<void>>(async () => undefined);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const { listening, toggle: toggleMic, supported: micSupported } = useSpeechInput((transcript) => {
-    sendMessageRef.current(transcript);
+    void sendMessageRef.current(transcript);
   });
 
   useEffect(() => {
@@ -377,7 +377,7 @@ export function CelinePage() {
     try {
       const result = await requestCelineGuidance("C'est fait.", controller.signal);
       if (result.presentation === 'completion' && sourceMessage.workflow) {
-        markSharedWorkflowComplete(sourceMessage.workflow.runId);
+        void markSharedWorkflowComplete(sourceMessage.workflow.runId);
       }
       appendAssistant(result);
     } catch (err: unknown) {
@@ -422,9 +422,9 @@ export function CelinePage() {
     }));
 
     const status = nextDone ? 'validated' : nextNa ? 'na' : 'pending';
-    setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
+    void setSharedActionStatus(item.actionId, status, findProgressScope(item.actionId));
     if (sourceMessage?.workflow) {
-      setSharedWorkflowActionStatus(
+      void setSharedWorkflowActionStatus(
         sourceMessage.workflow.runId,
         sourceMessage.workflow.routeId,
         item.actionId,
@@ -493,7 +493,7 @@ export function CelinePage() {
     <div className="flex h-[100dvh] flex-col bg-[#f3f5f7] text-zinc-950">
       {confirmExit && (
         <ConfirmExit
-          onConfirm={() => { setConfirmExit(false); navigate('/shiftguide'); }}
+          onConfirm={() => { setConfirmExit(false); void navigate('/shiftguide'); }}
           onCancel={() => setConfirmExit(false)}
         />
       )}
@@ -502,7 +502,7 @@ export function CelinePage() {
         <div className="mx-auto flex h-16 w-full max-w-4xl items-center justify-between gap-3 px-4 sm:px-6">
           <button
             type="button"
-            onClick={() => messages.length === 0 ? navigate('/shiftguide') : setConfirmExit(true)}
+            onClick={() => { if (messages.length === 0) void navigate('/shiftguide'); else setConfirmExit(true); }}
             className="inline-flex h-10 items-center gap-1.5 rounded-full px-2 text-sm font-bold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950"
           >
             <ChevronLeft size={18} /> Accueil
