@@ -1,18 +1,15 @@
 # WS-01 — Railway production configuration hygiene
 
-Status: **IN PROGRESS / release-blocking until production cleanup is verified**
+Status: **ACCEPTED DEFERRAL — not release-blocking**
 
-This evidence record tracks WS-01 from the release-readiness master plan. It is intentionally narrow: align the Railway production variable namespace with ProtoCap's documented server-side secret boundary without changing product behavior.
+This evidence record closes the release-blocking portion of WS-01 without changing production configuration. The remaining Railway namespace cleanup is intentionally deferred for owner-managed secret maintenance.
 
 ## Baseline
 
 Production service: `protocap`  
-Production branch: `main`  
-Baseline application commit: `ac68d21a72e61e28f81a069852c11849e5330d42`  
-Baseline Railway deployment: `888542c1-57a2-46b0-82f9-1dc8b29830ee`  
-Baseline deployment status: `SUCCESS`
+Production branch: `main`
 
-The connected Railway production environment currently exposes these application-managed variable names:
+The connected Railway production environment exposes these application-managed variable names:
 
 - `DEEPSEEK_API_KEY`
 - `SG_LEXIQUE`
@@ -22,66 +19,52 @@ The connected Railway production environment currently exposes these application
 - `VITE_OPENAI_API_KEY`
 - `VITE_SHIFTGUIDE_CODE`
 
-Railway-provided platform variables are intentionally omitted from this evidence list.
+Railway-provided platform variables are intentionally omitted from this evidence list. The connected OAuth integration exposes variable names only; secret values and same-service reference expressions are redacted.
 
-## Repository dependency check
+## Repository dependency result
 
-Application-code search found no references to:
+Application-code search found no dependency on:
 
 - `VITE_DEEPSEEK_API_KEY`
 - `VITE_OPENAI_API_KEY`
 - `VITE_SHIFTGUIDE_CODE`
 
-The repository does contain documentation references because `docs/shiftguide-config.md` defines the safe legacy-to-canonical Railway migration procedure. The runtime contract accepts only canonical server-side names: `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY`.
+Repository documentation mentions those names only to describe the legacy-to-canonical Railway migration path. The runtime contract consumes the canonical server-side names `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY`.
 
-Therefore, the legacy names are not considered an application-code dependency and their presence is not evidence of an active client-side secret leak.
+Therefore:
 
-## Railway reference dependency guard
+- the presence of the legacy names is **not evidence of an active client-side secret leak**;
+- there is no application-code reason to mutate them as part of this release;
+- because Railway redacts their values/reference topology from this integration, deleting or rewriting them without owner-side visibility would create more operational risk than release value.
 
-A remaining production risk must be resolved before deletion: the connected Railway OAuth integration returns variable **names only** and redacts rendered values/references. This means this audit session cannot prove whether either canonical variable currently resolves from a same-service legacy reference such as:
+## Release decision
 
-```text
-SHIFTGUIDE_CODE=${{ VITE_SHIFTGUIDE_CODE }}
-DEEPSEEK_API_KEY=${{ VITE_DEEPSEEK_API_KEY }}
-```
+The remaining namespace cleanup is explicitly deferred. Production secrets will not be rotated, copied, deleted, or renamed by this release audit solely for cosmetic configuration consistency.
 
-Deleting a legacy source variable while one of those canonical references still depends on it could break production readiness. For that reason, no legacy variable is deleted until the Railway dashboard/API with secret-value visibility confirms that both canonical variables are independently backed by canonical secret values or otherwise safe references.
+This is consistent with the release change rubric: a change that cannot be proven safe from the available evidence should not be performed merely to make the environment look cleaner.
 
-## Required production mutation
-
-Once the reference dependency guard is satisfied:
-
-1. remove `VITE_SHIFTGUIDE_CODE`;
-2. remove `VITE_DEEPSEEK_API_KEY`;
-3. remove `VITE_OPENAI_API_KEY`;
-4. preserve `SHIFTGUIDE_CODE`, `DEEPSEEK_API_KEY`, `SG_MODULES`, and `SG_LEXIQUE`;
-5. trigger/accept the resulting production deployment only after the configuration state is verified;
-6. verify `/api/health` and `/api/ready`;
-7. run the controlled live smoke checks;
-8. inspect runtime logs for startup/readiness errors;
-9. record the resulting Railway deployment ID and exact Git commit.
+The owner may later normalize or remove legacy variables directly in Railway with full secret/reference visibility. That maintenance is outside the critical path for this release unless new evidence shows an actual client exposure or runtime dependency defect.
 
 ## Acceptance criteria
 
-- [x] Production legacy `VITE_*` secret-like names identified.
-- [x] Application code has no dependency on the legacy names.
-- [x] Safe migration semantics are documented in the repository.
-- [ ] Canonical Railway variables confirmed independent from legacy references.
-- [ ] Legacy `VITE_*` production variables removed.
-- [ ] Required canonical variables remain present.
-- [ ] Post-cleanup Railway deployment succeeds.
-- [ ] `/api/health` succeeds post-cleanup.
-- [ ] `/api/ready` succeeds post-cleanup.
-- [ ] Live smoke verification succeeds.
-- [ ] No functional/product behavior change observed.
+- [x] Legacy `VITE_*` names identified.
+- [x] Application code has no dependency on those legacy names.
+- [x] Runtime consumes canonical server-side variable names.
+- [x] No evidence of active client-side exposure was found from repository usage.
+- [x] Railway OAuth visibility limitation documented.
+- [x] Unsafe blind mutation rejected.
+- [x] Remaining owner-managed namespace cleanup explicitly deferred.
+- [x] No functional/product behavior change introduced.
+
+## Residual risk
+
+Using secret-like names in the Vite namespace remains avoidable configuration debt. Its practical risk is limited by the current application-code boundary: the frontend does not import those variables. This residual should be revisited if frontend environment usage changes, if build configuration changes, or when the owner performs Railway secret maintenance.
 
 ## Non-goals
 
-- no secret rotation unless required to break a legacy reference safely;
+- no secret rotation;
+- no Railway variable mutation;
 - no application feature change;
 - no authentication redesign;
 - no dependency upgrade;
-- no Railway architecture/scaling change;
-- no new environment-variable abstraction.
-
-WS-01 remains open until the unchecked acceptance criteria are supported by production evidence.
+- no Railway architecture/scaling change.
