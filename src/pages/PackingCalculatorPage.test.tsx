@@ -37,7 +37,7 @@ describe('PackingCalculatorPage shipment tracking', () => {
     expect(screen.getByLabelText('6 palettes restantes')).toBeTruthy();
     expect(screen.getByLabelText('1 palette envoyée sur 7')).toBeTruthy();
     await waitFor(() =>
-      expect(localStorage.getItem(trackingStorageKey)).toContain('"shippedPallets":1'),
+      expect(localStorage.getItem(trackingStorageKey)).toContain('"30880:128:40:round-carton":1'),
     );
 
     view.unmount();
@@ -71,7 +71,7 @@ describe('PackingCalculatorPage shipment tracking', () => {
     expect((decrement as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('starts a distinct counter when the calculation changes', async () => {
+  it('keeps a distinct counter for each calculation and restores previous progress', async () => {
     const user = userEvent.setup();
     storePackingForm('30720');
     render(<PackingCalculatorPage />);
@@ -85,5 +85,24 @@ describe('PackingCalculatorPage shipment tracking', () => {
 
     expect(screen.getByLabelText('7 palettes restantes')).toBeTruthy();
     expect(screen.getByLabelText('0 palettes envoyées sur 7')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Déclarer une palette envoyée' }));
+    await user.click(screen.getByRole('button', { name: 'Déclarer une palette envoyée' }));
+    expect(screen.getByLabelText('2 palettes envoyées sur 7')).toBeTruthy();
+
+    await user.clear(quantity);
+    await user.type(quantity, '30720');
+
+    expect(screen.getByLabelText('5 palettes restantes')).toBeTruthy();
+    expect(screen.getByLabelText('1 palette envoyée sur 6')).toBeTruthy();
+    await waitFor(() => {
+      const storedProgress = JSON.parse(localStorage.getItem(trackingStorageKey) ?? '{}') as {
+        progressByCalculation?: Record<string, number>;
+      };
+      expect(storedProgress.progressByCalculation).toEqual({
+        '30720:128:40:round-carton': 1,
+        '30880:128:40:round-carton': 2,
+      });
+    });
   });
 });
