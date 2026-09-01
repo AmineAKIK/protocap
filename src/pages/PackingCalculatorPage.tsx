@@ -1,10 +1,22 @@
-import { Calculator, CheckCircle2, PackageCheck, PackagePlus, Scale, TriangleAlert } from 'lucide-react';
+import {
+  Calculator,
+  CheckCircle2,
+  Minus,
+  PackageCheck,
+  PackagePlus,
+  Plus,
+  RotateCcw,
+  Scale,
+  TriangleAlert,
+  Truck
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
   calculateExactPacking,
   calculatePackingOptions,
   getPackingRecommendation,
+  getShipmentPalletCount,
   isValidPackingInput,
   parsePositiveIntegerInput,
   type PackingInput,
@@ -18,11 +30,21 @@ interface PackingFormState {
   policy: PackingPolicy;
 }
 
+interface PackingTrackingState {
+  calculationKey: string;
+  shippedPallets: number;
+}
+
 const defaultForm: PackingFormState = {
   quantity: '',
   unitsPerCarton: '',
   cartonsPerPalette: '',
   policy: 'no-overrun'
+};
+
+const defaultTracking: PackingTrackingState = {
+  calculationKey: '',
+  shippedPallets: 0
 };
 
 const policyLabels: Record<PackingPolicy, string> = {
@@ -57,8 +79,153 @@ function ResultMetric({ label, value, detail }: { label: string; value: number; 
   );
 }
 
+interface ShipmentTrackerProps {
+  hasRemainderLoad: boolean;
+  shippedPallets: number;
+  totalPallets: number;
+  onDecrement: () => void;
+  onIncrement: () => void;
+  onReset: () => void;
+}
+
+function ShipmentTracker({
+  hasRemainderLoad,
+  shippedPallets,
+  totalPallets,
+  onDecrement,
+  onIncrement,
+  onReset
+}: ShipmentTrackerProps) {
+  const remainingPallets = totalPallets - shippedPallets;
+  const isComplete = remainingPallets === 0;
+  const progress = Math.round((shippedPallets / totalPallets) * 100);
+
+  return (
+    <section
+      aria-labelledby="packing-shipment-title"
+      className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${isComplete ? 'border-emerald-300' : 'border-slate-200'}`}
+    >
+      <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5 ${isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
+        <div className="flex items-center gap-3">
+          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white ${isComplete ? 'bg-emerald-700' : 'bg-slate-900'}`}>
+            {isComplete ? <CheckCircle2 size={22} aria-hidden="true" /> : <Truck size={22} aria-hidden="true" />}
+          </div>
+          <div>
+            <p className="label">Suivi manuel</p>
+            <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-bold text-slate-950">
+              Palettes à expédier
+            </h2>
+          </div>
+        </div>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+          Enregistré sur cet appareil
+        </span>
+      </div>
+
+      <div className="p-4 sm:p-5">
+        <div className="grid items-center gap-5 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
+          <div>
+            <p className="sr-only" role="status" aria-live="polite">
+              {formatNumber(remainingPallets)} {remainingPallets === 1 ? 'palette restante' : 'palettes restantes'},{' '}
+              {formatNumber(shippedPallets)} {shippedPallets === 1 ? 'palette envoyée' : 'palettes envoyées'} sur{' '}
+              {formatNumber(totalPallets)}.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`rounded-xl border px-4 py-3 ${isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-teal-200 bg-teal-50'}`}>
+                <p className="label">Restantes</p>
+                <p
+                  aria-label={`${formatNumber(remainingPallets)} ${remainingPallets === 1 ? 'palette restante' : 'palettes restantes'}`}
+                  className={`mt-1 text-3xl font-black tabular-nums ${isComplete ? 'text-emerald-700' : 'text-teal-800'}`}
+                >
+                  {formatNumber(remainingPallets)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="label">Envoyées</p>
+                <p
+                  aria-label={`${formatNumber(shippedPallets)} ${shippedPallets === 1 ? 'palette envoyée' : 'palettes envoyées'} sur ${formatNumber(totalPallets)}`}
+                  className="mt-1 text-3xl font-black tabular-nums text-slate-950"
+                >
+                  {formatNumber(shippedPallets)}
+                  <span className="ml-1 text-base font-bold text-slate-400">/ {formatNumber(totalPallets)}</span>
+                </p>
+              </div>
+            </div>
+            <p className={`mt-3 text-sm font-medium ${isComplete ? 'text-emerald-800' : 'text-slate-600'}`} aria-live="polite">
+              {isComplete
+                ? 'Toutes les palettes prévues ont été déclarées comme envoyées.'
+                : hasRemainderLoad
+                  ? "Le total inclut la palette utilisée pour le reliquat du découpage sélectionné."
+                  : 'Le total correspond aux palettes complètes du découpage sélectionné.'}
+            </p>
+          </div>
+
+          <div className="flex items-stretch justify-center gap-2" role="group" aria-label="Modifier le nombre de palettes envoyées">
+            <button
+              type="button"
+              aria-label="Retirer une palette envoyée"
+              disabled={shippedPallets === 0}
+              onClick={onDecrement}
+              className="grid min-h-12 min-w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300"
+            >
+              <Minus size={22} aria-hidden="true" />
+            </button>
+            <div className="grid min-w-24 place-items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
+              <span className="label">Compteur</span>
+              <span className="text-2xl font-black tabular-nums text-slate-950">{formatNumber(shippedPallets)}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Déclarer une palette envoyée"
+              disabled={isComplete}
+              onClick={onIncrement}
+              className="grid min-h-12 min-w-12 place-items-center rounded-xl border border-teal-700 bg-teal-700 text-white shadow-sm transition hover:border-teal-800 hover:bg-teal-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300"
+            >
+              <Plus size={22} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+            <span>Avancement</span>
+            <span className="tabular-nums">{progress} %</span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Avancement des palettes envoyées"
+            aria-valuemin={0}
+            aria-valuemax={totalPallets}
+            aria-valuenow={shippedPallets}
+            className="h-2.5 overflow-hidden rounded-full bg-slate-100"
+          >
+            <div
+              className={`h-full rounded-full transition-[width] duration-300 ${isComplete ? 'bg-emerald-600' : 'bg-teal-600'}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {shippedPallets > 0 ? (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={onReset}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+              Réinitialiser le suivi
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export function PackingCalculatorPage() {
   const [form, setForm] = useLocalStorage<PackingFormState>('lineops.packing.form.inputs', defaultForm);
+  const [tracking, setTracking] = useLocalStorage<PackingTrackingState>('lineops.packing.shipment.progress', defaultTracking);
   const input = useMemo(() => parsePackingInput(form), [form]);
 
   const calculation = useMemo(() => {
@@ -69,6 +236,45 @@ export function PackingCalculatorPage() {
     const selected = options.find((option) => option.policy === form.policy) ?? options[0];
     return { exact, options, recommendation, selected };
   }, [form.policy, input]);
+
+  const shipment = useMemo(() => {
+    if (!calculation || !input) return null;
+
+    const calculationKey = `${input.quantity}:${input.unitsPerCarton}:${input.cartonsPerPalette}:${form.policy}`;
+    const totalPallets = getShipmentPalletCount(calculation.selected);
+    const storedCount =
+      tracking?.calculationKey === calculationKey && Number.isSafeInteger(tracking?.shippedPallets)
+        ? tracking.shippedPallets
+        : 0;
+    const shippedPallets = Math.min(totalPallets, Math.max(0, storedCount));
+
+    return {
+      calculationKey,
+      hasRemainderLoad: calculation.selected.cartons > 0 || calculation.selected.units > 0,
+      shippedPallets,
+      totalPallets
+    };
+  }, [calculation, form.policy, input, tracking.calculationKey, tracking.shippedPallets]);
+
+  function changeShippedPallets(delta: number) {
+    if (!shipment) return;
+
+    setTracking((current) => {
+      const currentCount =
+        current?.calculationKey === shipment.calculationKey && Number.isSafeInteger(current?.shippedPallets)
+          ? current.shippedPallets
+          : 0;
+      return {
+        calculationKey: shipment.calculationKey,
+        shippedPallets: Math.min(shipment.totalPallets, Math.max(0, currentCount + delta))
+      };
+    });
+  }
+
+  function resetShipmentTracking() {
+    if (!shipment) return;
+    setTracking({ calculationKey: shipment.calculationKey, shippedPallets: 0 });
+  }
 
   function updateField(field: keyof PackingFormState, value: string) {
     const nextValue = field === 'policy' ? value : value.replace(/\D/g, '');
@@ -263,6 +469,17 @@ export function PackingCalculatorPage() {
                   </div>
                 </div>
               </div>
+
+              {shipment ? (
+                <ShipmentTracker
+                  hasRemainderLoad={shipment.hasRemainderLoad}
+                  shippedPallets={shipment.shippedPallets}
+                  totalPallets={shipment.totalPallets}
+                  onDecrement={() => changeShippedPallets(-1)}
+                  onIncrement={() => changeShippedPallets(1)}
+                  onReset={resetShipmentTracking}
+                />
+              ) : null}
 
               <div className="panel p-4 sm:p-5">
                 <div className="mb-4 flex items-center gap-3">

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateExactPacking,
   calculatePackingOptions,
+  getShipmentPalletCount,
   isPositiveInteger,
   isValidPackingInput,
   parsePositiveIntegerInput,
@@ -20,6 +21,17 @@ describe('packing exact integer domain', () => {
     });
     const options = calculatePackingOptions(input);
     expect(options.map((option) => option.totalPrepared)).toEqual([30_880, 30_976, 35_840]);
+    expect(options.map(getShipmentPalletCount)).toEqual([7, 7, 7]);
+  });
+
+  it('does not add a remainder pallet when the selected result uses complete pallets only', () => {
+    const options = calculatePackingOptions({
+      quantity: 30_720,
+      unitsPerCarton: 128,
+      cartonsPerPalette: 40,
+    });
+
+    expect(options.map(getShipmentPalletCount)).toEqual([6, 6, 6]);
   });
 
   it('rejects integers that JavaScript cannot represent exactly', () => {

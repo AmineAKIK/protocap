@@ -10,7 +10,7 @@ The purpose of this document is to make the product surface auditable. A recruit
 | Expiry Check | Interactive validity/status workflow and local history | Shared quality database, validated electronic batch record or cross-device synchronisation |
 | Logistics Call | Request lifecycle, prioritisation, elapsed-time UX and status transitions | Multi-user messaging, websocket/event streaming or real-time logistics synchronisation |
 | Knowledge Base | Search/navigation model for operational references | Connection to an enterprise document-management system |
-| Packing Calculator | Deterministic local packaging calculations | ERP/master-data integration or automatic production-order execution |
+| Packing Calculator | Deterministic local packaging calculations and manual pallet-dispatch progress | ERP/master-data integration, shared dispatch state or automatic production-order execution |
 | Pilot proposal | A structured controlled-pilot proposal and guard-rail thinking | Approval, deployment, production validation or measured benefits |
 
 ## Mock and fictitious data
