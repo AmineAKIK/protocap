@@ -140,3 +140,8 @@ export function getPackingRecommendation(options: PackingOption[]): PackingOptio
   if (carton.variance === 0) return exact;
   return carton;
 }
+
+export function getShipmentPalletCount(option: PackingOption): number {
+  const hasRemainderLoad = option.cartons > 0 || option.units > 0;
+  return option.palettes + (hasRemainderLoad ? 1 : 0);
+}

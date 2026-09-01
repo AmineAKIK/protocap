@@ -20,7 +20,7 @@ The repository deliberately distinguishes **implemented behavior**, **local demo
 | **Expiry Check** | Validity tracking and local action history | Browser-local persistence; no shared quality backend |
 | **Logistics Call** | Request creation, prioritisation and status workflow | Browser-local demonstration; **not multi-user or real-time synchronised** |
 | **Knowledge Base** | Searchable operational reference interface | Static repository content |
-| **Packing Calculator** | Pure packaging calculations with selectable rounding policies | Calculation is local; last form values are stored in the browser |
+| **Packing Calculator** | Packaging calculations with selectable rounding policies and a manual pallet-dispatch counter | Calculation and dispatch progress are browser-local; no shared operational source of truth |
 | **Pilot proposal** | Public three-page proposal for a controlled sampling-reminder pilot | Working proposal only; it is not evidence of a deployed integration |
 
 All public demonstration data is fictitious. Operational or co-authored documents remain outside the software-license perimeter unless expressly stated otherwise; see [LICENSING.md](LICENSING.md).
