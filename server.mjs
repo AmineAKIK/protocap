@@ -91,6 +91,8 @@ const log = createStructuredLogger(console);
 const server = app.listen(port, () => {
   log.info('server_started', {
     port: Number(port),
+    shiftGuideConfigured: Boolean(shiftGuideCode),
+    deepSeekConfigured: Boolean(deepSeekApiKey),
     celineModel,
     celineMaxTokens,
     celineProviderCallsPerMinute: celineCostLimits.providerCallsPerMinute,
