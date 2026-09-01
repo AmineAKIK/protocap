@@ -31,8 +31,7 @@ interface PackingFormState {
 }
 
 interface PackingTrackingState {
-  calculationKey: string;
-  shippedPallets: number;
+  progressByCalculation: Record<string, number>;
 }
 
 const defaultForm: PackingFormState = {
@@ -43,8 +42,7 @@ const defaultForm: PackingFormState = {
 };
 
 const defaultTracking: PackingTrackingState = {
-  calculationKey: '',
-  shippedPallets: 0
+  progressByCalculation: {}
 };
 
 const policyLabels: Record<PackingPolicy, string> = {
@@ -67,6 +65,11 @@ function parsePackingInput(form: PackingFormState): PackingInput | null {
   if (quantity === null || unitsPerCarton === null || cartonsPerPalette === null) return null;
   const input = { quantity, unitsPerCarton, cartonsPerPalette };
   return isValidPackingInput(input) ? input : null;
+}
+
+function getTrackingProgress(tracking: PackingTrackingState | null | undefined): Record<string, number> {
+  const progress = tracking?.progressByCalculation;
+  return progress && typeof progress === 'object' && !Array.isArray(progress) ? progress : {};
 }
 
 function ResultMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
@@ -242,11 +245,9 @@ export function PackingCalculatorPage() {
 
     const calculationKey = `${input.quantity}:${input.unitsPerCarton}:${input.cartonsPerPalette}:${form.policy}`;
     const totalPallets = getShipmentPalletCount(calculation.selected);
-    const storedCount =
-      tracking?.calculationKey === calculationKey && Number.isSafeInteger(tracking?.shippedPallets)
-        ? tracking.shippedPallets
-        : 0;
-    const shippedPallets = Math.min(totalPallets, Math.max(0, storedCount));
+    const storedCount = getTrackingProgress(tracking)[calculationKey];
+    const validStoredCount = Number.isSafeInteger(storedCount) ? storedCount : 0;
+    const shippedPallets = Math.min(totalPallets, Math.max(0, validStoredCount));
 
     return {
       calculationKey,
@@ -254,26 +255,32 @@ export function PackingCalculatorPage() {
       shippedPallets,
       totalPallets
     };
-  }, [calculation, form.policy, input, tracking.calculationKey, tracking.shippedPallets]);
+  }, [calculation, form.policy, input, tracking]);
 
   function changeShippedPallets(delta: number) {
     if (!shipment) return;
 
     setTracking((current) => {
-      const currentCount =
-        current?.calculationKey === shipment.calculationKey && Number.isSafeInteger(current?.shippedPallets)
-          ? current.shippedPallets
-          : 0;
+      const progressByCalculation = getTrackingProgress(current);
+      const storedCount = progressByCalculation[shipment.calculationKey];
+      const currentCount = Number.isSafeInteger(storedCount) ? storedCount : 0;
       return {
-        calculationKey: shipment.calculationKey,
-        shippedPallets: Math.min(shipment.totalPallets, Math.max(0, currentCount + delta))
+        progressByCalculation: {
+          ...progressByCalculation,
+          [shipment.calculationKey]: Math.min(shipment.totalPallets, Math.max(0, currentCount + delta))
+        }
       };
     });
   }
 
   function resetShipmentTracking() {
     if (!shipment) return;
-    setTracking({ calculationKey: shipment.calculationKey, shippedPallets: 0 });
+    setTracking((current) => ({
+      progressByCalculation: {
+        ...getTrackingProgress(current),
+        [shipment.calculationKey]: 0
+      }
+    }));
   }
 
   function updateField(field: keyof PackingFormState, value: string) {
