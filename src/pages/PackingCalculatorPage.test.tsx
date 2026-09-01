@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
@@ -19,6 +19,20 @@ function storePackingForm(quantity = '30880') {
 }
 
 describe('PackingCalculatorPage shipment tracking', () => {
+  it('groups the exact result under the reference parameters and keeps operations together', () => {
+    storePackingForm();
+    render(<PackingCalculatorPage />);
+
+    const referenceColumn = screen.getByRole('region', { name: 'Référence et résultat exact' });
+    expect(within(referenceColumn).getByRole('heading', { name: 'Paramètres de référence' })).toBeTruthy();
+    expect(within(referenceColumn).getByRole('heading', { name: 'Résultat exact' })).toBeTruthy();
+
+    const operationsColumn = screen.getByRole('region', { name: 'Découpage final et suivi manuel' });
+    expect(within(operationsColumn).getByText('Découpage final sélectionné')).toBeTruthy();
+    expect(within(operationsColumn).getByRole('heading', { name: 'Palettes à expédier' })).toBeTruthy();
+    expect(within(operationsColumn).queryByRole('heading', { name: 'Résultat exact' })).toBeNull();
+  });
+
   it('counts the remainder load as a pallet and persists manual dispatch progress', async () => {
     const user = userEvent.setup();
     storePackingForm();
