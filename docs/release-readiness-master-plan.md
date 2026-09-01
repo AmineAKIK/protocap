@@ -100,14 +100,16 @@ The current production Railway service exposes legacy variable names in the `VIT
 - `VITE_OPENAI_API_KEY`
 - `VITE_SHIFTGUIDE_CODE`
 
-The current repository does not appear to reference these names, so this is not currently treated as proof of an active client-side leak. It is nevertheless a release-blocking configuration inconsistency because the public architecture explicitly states that secrets must never use Vite's client-facing namespace.
+Current application code does not appear to reference these names. Repository documentation may still mention them as historical/migration names, so this is not currently treated as proof of an active client-side leak. It is nevertheless a release-blocking configuration inconsistency because the public architecture explicitly states that secrets must never use Vite's client-facing namespace.
 
 ### Actions
 
-- Confirm zero repository references to the legacy variables.
+- Confirm zero application-code references to the legacy variables.
+- Inspect Railway variable references/dependencies before deletion, including whether canonical server-side variables resolve from any legacy `VITE_*` names.
+- If any canonical variable depends on a legacy reference, migrate it to an independent server-side value/reference first and verify the rendered configuration.
 - Confirm generated frontend output does not contain legacy secret values/names where applicable.
-- Remove the three obsolete Railway variables.
-- Verify required server-side variables remain present.
+- Remove the three obsolete Railway variables only after dependency checks/migration are complete.
+- Verify required server-side variables remain present and independently resolved.
 - Redeploy only when the configuration cleanup is explicitly approved.
 - Re-run readiness and live smoke checks after deployment.
 - Update documentation only if production reality or variable requirements change.
@@ -115,6 +117,7 @@ The current repository does not appear to reference these names, so this is not 
 ### Exit criteria
 
 - No secret-like production configuration exists in the `VITE_*` namespace.
+- No required server-side variable depends on a removed legacy reference.
 - Production readiness passes after cleanup.
 - No functional behavior changes.
 
@@ -818,4 +821,4 @@ The release must not be tagged until all of the following are true:
 
 ## Current first action
 
-The first implementation item after this planning PR is merged is **WS-01 — Railway production configuration hygiene**, starting with removal of obsolete `VITE_DEEPSEEK_API_KEY`, `VITE_OPENAI_API_KEY`, and `VITE_SHIFTGUIDE_CODE` after confirming they are unused and before performing a controlled production redeploy/verification.
+The first implementation item after this planning PR is merged is **WS-01 — Railway production configuration hygiene**, starting with a dependency/reference check for `VITE_DEEPSEEK_API_KEY`, `VITE_OPENAI_API_KEY`, and `VITE_SHIFTGUIDE_CODE`; any canonical Railway variable still referencing them must be migrated first, then the obsolete names can be removed before a controlled production redeploy/verification.
