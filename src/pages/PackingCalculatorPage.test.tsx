@@ -18,7 +18,7 @@ function storePackingForm(quantity = '30880') {
   );
 }
 
-describe('PackingCalculatorPage shipment tracking', () => {
+describe('PackingCalculatorPage layout and shipment tracking', () => {
   it('groups the exact result under the reference parameters and keeps operations together', () => {
     storePackingForm();
     render(<PackingCalculatorPage />);
