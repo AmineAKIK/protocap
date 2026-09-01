@@ -82,6 +82,35 @@ function ResultMetric({ label, value, detail }: { label: string; value: number; 
   );
 }
 
+interface ExactResultPanelProps {
+  exact: ReturnType<typeof calculateExactPacking>;
+  input: PackingInput;
+}
+
+function ExactResultPanel({ exact, input }: ExactResultPanelProps) {
+  return (
+    <section className="panel flex-1 p-4 sm:p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
+          <PackagePlus size={20} />
+        </div>
+        <div>
+          <h2 className="font-bold text-slate-950">Résultat exact</h2>
+          <p className="text-sm text-slate-500">
+            {formatNumber(exact.palettesCompletes)} palettes complètes, {formatNumber(exact.cartonsComplets)} cartons complets, {formatNumber(exact.unitesRestantes)} unités restantes.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 min-[520px]:grid-cols-3">
+        <ResultMetric label="Capacité palette" value={exact.unitsPerPalette} detail={formatNumber(input.cartonsPerPalette) + ' cartons'} />
+        <ResultMetric label="Capacité carton" value={input.unitsPerCarton} detail="unités par carton" />
+        <ResultMetric label="Total" value={input.quantity} detail="quantité demandée" />
+      </div>
+    </section>
+  );
+}
+
 interface ShipmentTrackerProps {
   hasRemainderLoad: boolean;
   shippedPallets: number;
@@ -106,7 +135,7 @@ function ShipmentTracker({
   return (
     <section
       aria-labelledby="packing-shipment-title"
-      className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${isComplete ? 'border-emerald-300' : 'border-slate-200'}`}
+      className={`flex-1 overflow-hidden rounded-2xl border bg-white shadow-sm ${isComplete ? 'border-emerald-300' : 'border-slate-200'}`}
     >
       <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5 ${isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
         <div className="flex items-center gap-3">
@@ -312,124 +341,128 @@ export function PackingCalculatorPage() {
         <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">Calcul rapide, écart visible, décision fiabilisée.</p>
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-        <section className="panel p-4 sm:p-5">
-          <div className="mb-5 flex items-start gap-3">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700">
-              <Calculator size={24} />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-slate-950">Paramètres de référence</h2>
-              <p className="text-sm text-slate-500">Les dernières valeurs sont conservées localement dans le navigateur.</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4">
-            <label>
-              <span className="label">Quantité demandée en unités</span>
-              <input
-                className={`field mt-1 ${quantityState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                autoComplete="off"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                type="text"
-                value={form.quantity}
-                placeholder="Ex : 30880"
-                aria-invalid={quantityState === 'invalid'}
-                onChange={(event) => updateField('quantity', event.target.value)}
-              />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="label">Unités par carton</span>
-                <input
-                  className={`field mt-1 ${unitsPerCartonState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                  autoComplete="off"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  type="text"
-                  value={form.unitsPerCarton}
-                  placeholder="Ex : 128"
-                  aria-invalid={unitsPerCartonState === 'invalid'}
-                  onChange={(event) => updateField('unitsPerCarton', event.target.value)}
-                />
-              </label>
-              <label>
-                <span className="label">Cartons par palette</span>
-                <input
-                  className={`field mt-1 ${cartonsPerPaletteState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                  autoComplete="off"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  type="text"
-                  value={form.cartonsPerPalette}
-                  placeholder="Ex : 40"
-                  aria-invalid={cartonsPerPaletteState === 'invalid'}
-                  onChange={(event) => updateField('cartonsPerPalette', event.target.value)}
-                />
-              </label>
-            </div>
-          </div>
-
-          {combinationInvalid ? (
-            <div role="alert" className="mt-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" />
-              <p>
-                Cette combinaison dépasse la précision entière exacte prise en charge par le calculateur. Réduisez la quantité ou le conditionnement avant de calculer.
-              </p>
-            </div>
-          ) : null}
-
-          <div className="mt-5">
-            <p className="label mb-2">Politique opérationnelle</p>
-            <div className="grid gap-2 min-[520px]:grid-cols-3">
-              {(Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
-                <button
-                  key={policy}
-                  type="button"
-                  onClick={() => updateField('policy', policy)}
-                  className={`min-h-[4rem] rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                    form.policy === policy
-                      ? 'border-teal-700 bg-teal-700 text-white shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="block">{policyLabels[policy]}</span>
-                  <span className={`mt-0.5 block min-h-4 text-[11px] font-bold ${form.policy === policy ? 'text-teal-100' : 'text-teal-700'}`}>
-                    {calculation && calculation.recommendation.policy === policy ? 'Recommandé' : ''}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex items-start gap-3">
-              <PackageCheck size={18} className="mt-0.5 shrink-0 text-teal-700" />
-              <div>
-                <p className="text-sm font-bold text-slate-900">Mini formule</p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {input && calculation
-                    ? `1 palette = ${formatNumber(input.cartonsPerPalette)} cartons × ${formatNumber(input.unitsPerCarton)} unités = ${formatNumber(calculation.exact.unitsPerPalette)} unités.`
-                    : combinationInvalid
-                      ? 'Le calcul est bloqué tant que tous les totaux dérivés ne sont pas représentables exactement.'
-                      : 'Renseignez des nombres entiers positifs pour afficher la capacité palette.'}
-                </p>
+      <div className="grid items-stretch gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+        <section aria-label="Référence et résultat exact" className="flex flex-col gap-5">
+          <section className="panel p-4 sm:p-5">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700">
+                <Calculator size={24} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-slate-950">Paramètres de référence</h2>
+                <p className="text-sm text-slate-500">Les dernières valeurs sont conservées localement dans le navigateur.</p>
               </div>
             </div>
-          </div>
 
-          {!neutral && calculation.selected.variance > 0 ? (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-600" />
-              <p>
-                {form.policy === 'round-pallet' ? "L'arrondi palette" : "L'arrondi carton"} prépare {formatNumber(calculation.selected.variance)} unités de plus que la quantité demandée.
-              </p>
+            <div className="grid gap-4">
+              <label>
+                <span className="label">Quantité demandée en unités</span>
+                <input
+                  className={`field mt-1 ${quantityState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  type="text"
+                  value={form.quantity}
+                  placeholder="Ex : 30880"
+                  aria-invalid={quantityState === 'invalid'}
+                  onChange={(event) => updateField('quantity', event.target.value)}
+                />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className="label">Unités par carton</span>
+                  <input
+                    className={`field mt-1 ${unitsPerCartonState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
+                    autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    type="text"
+                    value={form.unitsPerCarton}
+                    placeholder="Ex : 128"
+                    aria-invalid={unitsPerCartonState === 'invalid'}
+                    onChange={(event) => updateField('unitsPerCarton', event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span className="label">Cartons par palette</span>
+                  <input
+                    className={`field mt-1 ${cartonsPerPaletteState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
+                    autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    type="text"
+                    value={form.cartonsPerPalette}
+                    placeholder="Ex : 40"
+                    aria-invalid={cartonsPerPaletteState === 'invalid'}
+                    onChange={(event) => updateField('cartonsPerPalette', event.target.value)}
+                  />
+                </label>
+              </div>
             </div>
-          ) : null}
+
+            {combinationInvalid ? (
+              <div role="alert" className="mt-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" />
+                <p>
+                  Cette combinaison dépasse la précision entière exacte prise en charge par le calculateur. Réduisez la quantité ou le conditionnement avant de calculer.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="mt-5">
+              <p className="label mb-2">Politique opérationnelle</p>
+              <div className="grid gap-2 min-[520px]:grid-cols-3">
+                {(Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
+                  <button
+                    key={policy}
+                    type="button"
+                    onClick={() => updateField('policy', policy)}
+                    className={`min-h-[4rem] rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                      form.policy === policy
+                        ? 'border-teal-700 bg-teal-700 text-white shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block">{policyLabels[policy]}</span>
+                    <span className={`mt-0.5 block min-h-4 text-[11px] font-bold ${form.policy === policy ? 'text-teal-100' : 'text-teal-700'}`}>
+                      {calculation && calculation.recommendation.policy === policy ? 'Recommandé' : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex items-start gap-3">
+                <PackageCheck size={18} className="mt-0.5 shrink-0 text-teal-700" />
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Mini formule</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {input && calculation
+                      ? `1 palette = ${formatNumber(input.cartonsPerPalette)} cartons × ${formatNumber(input.unitsPerCarton)} unités = ${formatNumber(calculation.exact.unitsPerPalette)} unités.`
+                      : combinationInvalid
+                        ? 'Le calcul est bloqué tant que tous les totaux dérivés ne sont pas représentables exactement.'
+                        : 'Renseignez des nombres entiers positifs pour afficher la capacité palette.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {!neutral && calculation.selected.variance > 0 ? (
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                <p>
+                  {form.policy === 'round-pallet' ? "L'arrondi palette" : "L'arrondi carton"} prépare {formatNumber(calculation.selected.variance)} unités de plus que la quantité demandée.
+                </p>
+              </div>
+            ) : null}
+          </section>
+
+          {calculation && input ? <ExactResultPanel exact={calculation.exact} input={input} /> : null}
         </section>
 
-        <section className="space-y-5">
+        <section aria-label="Découpage final et suivi manuel" className="flex flex-col gap-5">
           {neutral ? (
             <div className="panel px-4 py-14 text-center sm:px-6">
               <Scale size={36} className="mx-auto mb-3 text-slate-300" />
@@ -487,26 +520,6 @@ export function PackingCalculatorPage() {
                   onReset={resetShipmentTracking}
                 />
               ) : null}
-
-              <div className="panel p-4 sm:p-5">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
-                    <PackagePlus size={20} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-slate-950">Résultat exact</h2>
-                    <p className="text-sm text-slate-500">
-                      {formatNumber(calculation.exact.palettesCompletes)} palettes complètes, {formatNumber(calculation.exact.cartonsComplets)} cartons complets, {formatNumber(calculation.exact.unitesRestantes)} unités restantes.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 min-[520px]:grid-cols-3">
-                  <ResultMetric label="Capacité palette" value={calculation.exact.unitsPerPalette} detail={`${formatNumber(input.cartonsPerPalette)} cartons`} />
-                  <ResultMetric label="Capacité carton" value={input.unitsPerCarton} detail="unités par carton" />
-                  <ResultMetric label="Total" value={input.quantity} detail="quantité demandée" />
-                </div>
-              </div>
 
             </>
           )}
