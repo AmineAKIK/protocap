@@ -107,7 +107,12 @@ This prevents observability instrumentation from changing authentication, expiry
 
 Unhandled server errors emit `server_error` with the request ID when an API request has one and only the error class name, not the exception message or stack.
 
-Process startup emits `server_started` with the listening port only.
+Process startup emits `server_started` with bounded runtime metadata. In addition to the listening port and non-secret Celine tuning values, the event includes only these configuration-presence booleans:
+
+- `shiftGuideConfigured`: whether `SHIFTGUIDE_CODE` is non-empty in the process environment;
+- `deepSeekConfigured`: whether `DEEPSEEK_API_KEY` is non-empty in the process environment.
+
+These fields deliberately expose **presence only**. Secret values, lengths, prefixes, hashes and Railway reference expressions are never logged. Their purpose is to distinguish a missing bootstrap capability from a valid configuration that fails later in the runtime boundary.
 
 ## Deliberate limits
 
