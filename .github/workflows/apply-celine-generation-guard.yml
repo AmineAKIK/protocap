@@ -19,14 +19,14 @@ jobs:
           ref: release/ws-04-celine-request-generation
           fetch-depth: 0
 
-      - name: Apply request-generation guard and regression test
+      - name: Apply request-generation guard
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          page_path = Path('src/pages/shiftguide/CelinePage.tsx')
-          text = page_path.read_text()
+          path = Path('src/pages/shiftguide/CelinePage.tsx')
+          text = path.read_text()
 
           def replace_one(old: str, new: str) -> None:
               global text
@@ -39,126 +39,123 @@ jobs:
               "  const abortRef = useRef<AbortController | null>(null);\n  const pendingRef = useRef(false);\n  const autoAdvanceRef = useRef<Set<string>>(new Set());",
               "  const abortRef = useRef<AbortController | null>(null);\n  const pendingRef = useRef(false);\n  const conversationGenerationRef = useRef(0);\n  const autoAdvanceRef = useRef<Set<string>>(new Set());",
           )
-
           replace_one(
               "  useEffect(() => () => abortRef.current?.abort(), []);",
               "  useEffect(() => () => {\n    conversationGenerationRef.current += 1;\n    abortRef.current?.abort();\n  }, []);",
           )
-
           replace_one(
               "  const requestSilentAdvance = useCallback(async (sourceMessage: CelineMessage) => {\n    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessage.id)) return;\n    autoAdvanceRef.current.add(sourceMessage.id);\n    pendingRef.current = true;\n    setLoading(true);\n    const controller = new AbortController();\n    abortRef.current = controller;\n    try {\n      const result = await requestCelineGuidance(\"C'est fait.\", controller.signal);\n      if (result.presentation === 'completion' && sourceMessage.workflow) {\n        void markSharedWorkflowComplete(sourceMessage.workflow.runId);\n      }\n      appendAssistant(result);\n    } catch (err: unknown) {\n      if (!(err instanceof Error && err.name === 'AbortError')) {\n        setError(err instanceof Error ? err.message : 'Impossible de préparer l’étape suivante.');\n      }\n    } finally {\n      pendingRef.current = false;\n      setLoading(false);\n    }\n  }, [appendAssistant]);",
               "  const requestSilentAdvance = useCallback(async (sourceMessage: CelineMessage) => {\n    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessage.id)) return;\n    const generation = conversationGenerationRef.current;\n    autoAdvanceRef.current.add(sourceMessage.id);\n    pendingRef.current = true;\n    setLoading(true);\n    const controller = new AbortController();\n    abortRef.current = controller;\n    try {\n      const result = await requestCelineGuidance(\"C'est fait.\", controller.signal);\n      if (generation !== conversationGenerationRef.current) return;\n      if (result.presentation === 'completion' && sourceMessage.workflow) {\n        void markSharedWorkflowComplete(sourceMessage.workflow.runId);\n      }\n      appendAssistant(result);\n    } catch (err: unknown) {\n      if (generation !== conversationGenerationRef.current) return;\n      if (!(err instanceof Error && err.name === 'AbortError')) {\n        setError(err instanceof Error ? err.message : 'Impossible de préparer l’étape suivante.');\n      }\n    } finally {\n      if (generation === conversationGenerationRef.current) {\n        pendingRef.current = false;\n        setLoading(false);\n      }\n    }\n  }, [appendAssistant]);",
           )
-
           replace_one(
               "    pendingRef.current = true;\n    const controller = new AbortController();\n    abortRef.current = controller;\n    setMessages((current) => [...current, userMessage, loadingMessage]);",
               "    const generation = conversationGenerationRef.current;\n    pendingRef.current = true;\n    const controller = new AbortController();\n    abortRef.current = controller;\n    setMessages((current) => [...current, userMessage, loadingMessage]);",
           )
-
           replace_one(
               "    try {\n      appendAssistant(await requestCelineGuidance(trimmed, controller.signal));\n    } catch (err: unknown) {\n      if (!(err instanceof Error && err.name === 'AbortError')) {\n        setError(err instanceof Error ? err.message : 'Une erreur est survenue.');\n        setMessages((current) => current.filter((message) => !message.loading));\n      }\n    } finally {\n      pendingRef.current = false;\n      setLoading(false);\n      inputRef.current?.focus();\n    }",
               "    try {\n      const result = await requestCelineGuidance(trimmed, controller.signal);\n      if (generation !== conversationGenerationRef.current) return;\n      appendAssistant(result);\n    } catch (err: unknown) {\n      if (generation !== conversationGenerationRef.current) return;\n      if (!(err instanceof Error && err.name === 'AbortError')) {\n        setError(err instanceof Error ? err.message : 'Une erreur est survenue.');\n        setMessages((current) => current.filter((message) => !message.loading));\n      }\n    } finally {\n      if (generation === conversationGenerationRef.current) {\n        pendingRef.current = false;\n        setLoading(false);\n        inputRef.current?.focus();\n      }\n    }",
           )
-
           replace_one(
               "  const clearConversation = () => {\n    abortRef.current?.abort();",
               "  const clearConversation = () => {\n    conversationGenerationRef.current += 1;\n    abortRef.current?.abort();",
           )
-
-          page_path.write_text(text)
-
-          test_path = Path('src/pages/shiftguide/CelinePage.test.tsx')
-          test_path.write_text(r'''import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { requestCelineResponseMock } = vi.hoisted(() => ({
-  requestCelineResponseMock: vi.fn(),
-}));
-
-vi.mock('../../features/shiftguide/celineClient', () => ({
-  requestCelineResponse: requestCelineResponseMock,
-}));
-
-import { CelinePage } from './CelinePage';
-
-interface Deferred<T> {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-}
-
-function deferred<T>(): Deferred<T> {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolver) => {
-    resolve = resolver;
-  });
-  return { promise, resolve };
-}
-
-function response(message: string) {
-  return {
-    message,
-    checklist: [],
-    followUp: null,
-    presentation: 'answer' as const,
-  };
-}
-
-beforeEach(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  requestCelineResponseMock.mockReset();
-  Element.prototype.scrollIntoView = vi.fn();
-});
-
-describe('CelinePage conversation request lifecycle', () => {
-  it('ignores a stale response and stale finally after starting a new conversation', async () => {
-    const user = userEvent.setup();
-    const first = deferred<ReturnType<typeof response>>();
-    const second = deferred<ReturnType<typeof response>>();
-    requestCelineResponseMock
-      .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
-
-    render(
-      <MemoryRouter>
-        <CelinePage />
-      </MemoryRouter>
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Je lance un OC' }));
-    expect(requestCelineResponseMock).toHaveBeenCalledTimes(1);
-
-    await user.click(screen.getByRole('button', { name: 'Nouvelle conversation' }));
-    const input = screen.getByPlaceholderText('Décris ta situation…');
-    await user.type(input, 'Deuxième demande');
-    await user.click(screen.getByRole('button', { name: 'Envoyer' }));
-    expect(requestCelineResponseMock).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      first.resolve(response('Réponse obsolète'));
-      await first.promise;
-      await Promise.resolve();
-    });
-
-    expect(screen.queryByText('Réponse obsolète')).toBeNull();
-    await user.type(input, ' encore');
-    expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).disabled).toBe(true);
-
-    await act(async () => {
-      second.resolve(response('Réponse actuelle'));
-      await second.promise;
-      await Promise.resolve();
-    });
-
-    expect(screen.getByText('Réponse actuelle')).toBeTruthy();
-    expect(screen.queryByText('Réponse obsolète')).toBeNull();
-    expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).disabled).toBe(false);
-  });
-});
-''')
+          path.write_text(text)
           PY
+
+      - name: Add stale-response regression test
+        shell: bash
+        run: |
+          cat > src/pages/shiftguide/CelinePage.test.tsx <<'EOF'
+          import { act, render, screen } from '@testing-library/react';
+          import userEvent from '@testing-library/user-event';
+          import { MemoryRouter } from 'react-router-dom';
+          import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+          const { requestCelineResponseMock } = vi.hoisted(() => ({
+            requestCelineResponseMock: vi.fn(),
+          }));
+
+          vi.mock('../../features/shiftguide/celineClient', () => ({
+            requestCelineResponse: requestCelineResponseMock,
+          }));
+
+          import { CelinePage } from './CelinePage';
+
+          interface Deferred<T> {
+            promise: Promise<T>;
+            resolve: (value: T) => void;
+          }
+
+          function deferred<T>(): Deferred<T> {
+            let resolve!: (value: T) => void;
+            const promise = new Promise<T>((resolver) => {
+              resolve = resolver;
+            });
+            return { promise, resolve };
+          }
+
+          function response(message: string) {
+            return {
+              message,
+              checklist: [],
+              followUp: null,
+              presentation: 'answer' as const,
+            };
+          }
+
+          beforeEach(() => {
+            localStorage.clear();
+            sessionStorage.clear();
+            requestCelineResponseMock.mockReset();
+            Element.prototype.scrollIntoView = vi.fn();
+          });
+
+          describe('CelinePage conversation request lifecycle', () => {
+            it('ignores a stale response and stale finally after starting a new conversation', async () => {
+              const user = userEvent.setup();
+              const first = deferred<ReturnType<typeof response>>();
+              const second = deferred<ReturnType<typeof response>>();
+              requestCelineResponseMock
+                .mockReturnValueOnce(first.promise)
+                .mockReturnValueOnce(second.promise);
+
+              render(
+                <MemoryRouter>
+                  <CelinePage />
+                </MemoryRouter>
+              );
+
+              await user.click(screen.getByRole('button', { name: 'Je lance un OC' }));
+              expect(requestCelineResponseMock).toHaveBeenCalledTimes(1);
+
+              await user.click(screen.getByRole('button', { name: 'Nouvelle conversation' }));
+              const input = screen.getByPlaceholderText('Décris ta situation…');
+              await user.type(input, 'Deuxième demande');
+              await user.click(screen.getByRole('button', { name: 'Envoyer' }));
+              expect(requestCelineResponseMock).toHaveBeenCalledTimes(2);
+
+              await act(async () => {
+                first.resolve(response('Réponse obsolète'));
+                await first.promise;
+                await Promise.resolve();
+              });
+
+              expect(screen.queryByText('Réponse obsolète')).toBeNull();
+              await user.type(input, ' encore');
+              expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).disabled).toBe(true);
+
+              await act(async () => {
+                second.resolve(response('Réponse actuelle'));
+                await second.promise;
+                await Promise.resolve();
+              });
+
+              expect(screen.getByText('Réponse actuelle')).toBeTruthy();
+              expect(screen.queryByText('Réponse obsolète')).toBeNull();
+              expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).disabled).toBe(false);
+            });
+          });
+          EOF
 
       - name: Remove temporary workflow and commit guarded lifecycle
         shell: bash
