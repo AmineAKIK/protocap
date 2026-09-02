@@ -8,8 +8,9 @@ import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
 import { installGracefulShutdown } from './server/lifecycle.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
-import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 import { cleanupExpiredState, parseJsonEnvValue } from './server/runtimeUtils.mjs';
+import { isConfiguredSecret } from './server/security.mjs';
+import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = existsSync(join(__dirname, 'dist'))
@@ -91,8 +92,8 @@ const log = createStructuredLogger(console);
 const server = app.listen(port, () => {
   log.info('server_started', {
     port: Number(port),
-    shiftGuideConfigured: Boolean(shiftGuideCode),
-    deepSeekConfigured: Boolean(deepSeekApiKey),
+    shiftGuideConfigured: isConfiguredSecret(shiftGuideCode),
+    deepSeekConfigured: isConfiguredSecret(deepSeekApiKey),
     celineModel,
     celineMaxTokens,
     celineProviderCallsPerMinute: celineCostLimits.providerCallsPerMinute,

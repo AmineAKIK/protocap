@@ -2,6 +2,7 @@ import {
   createCelineProviderCostGuard,
   DEFAULT_CELINE_COST_LIMITS,
 } from '../celineCostGuard.mjs';
+import { isConfiguredSecret } from '../security.mjs';
 
 export class CelineProviderError extends Error {
   constructor(code, message, options = {}) {
@@ -52,7 +53,7 @@ export function createDeepSeekProvider({
   costLimits = DEFAULT_CELINE_COST_LIMITS,
   costNow = () => Date.now(),
 } = {}) {
-  if (!apiKey) return null;
+  if (!isConfiguredSecret(apiKey)) return null;
   const costGuard = createCelineProviderCostGuard({ limits: costLimits, now: costNow });
 
   return {

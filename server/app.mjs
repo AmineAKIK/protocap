@@ -27,6 +27,7 @@ import { createReadinessSnapshot } from './readiness.mjs';
 import { createClientDisconnectSignal } from './requestCancellation.mjs';
 import {
   buildSecurityHeaders,
+  isConfiguredSecret,
   safeCompareSecrets,
   toClientShiftGuideData,
 } from './security.mjs';
@@ -120,8 +121,9 @@ export function createServerApp({
   ingressTrust = DIRECT_INGRESS_TRUST,
 } = {}) {
   const log = createStructuredLogger(logger);
+  const shiftGuideConfigured = isConfiguredSecret(shiftGuideCode);
   const parsedConfig = parseShiftGuideConfig(shiftGuideConfig);
-  if (shiftGuideCode && !parsedConfig.ok) {
+  if (shiftGuideConfigured && !parsedConfig.ok) {
     throw new Error(`ShiftGuide configuration is invalid: ${parsedConfig.errors.join('; ')}`);
   }
   const canonicalConfig = parsedConfig.value;
@@ -129,7 +131,7 @@ export function createServerApp({
   const parsedRouting = canonicalConfig
     ? parseCelineRoutingSpec(celineRoutingSpec, canonicalConfig)
     : { ok: false, errors: ['ShiftGuide configuration must be valid before routing validation'], value: null };
-  if (shiftGuideCode && !parsedRouting.ok) {
+  if (shiftGuideConfigured && !parsedRouting.ok) {
     throw new Error(`Celine routing configuration is invalid: ${parsedRouting.errors.join('; ')}`);
   }
   const canonicalRouting = parsedRouting.value;
@@ -209,7 +211,7 @@ export function createServerApp({
 
   app.post('/api/shiftguide/unlock', (req, res) => {
     if (
-      !shiftGuideCode ||
+      !shiftGuideConfigured ||
       !celineSystemPrompt ||
       !shiftGuideClientData ||
       !configRevision ||

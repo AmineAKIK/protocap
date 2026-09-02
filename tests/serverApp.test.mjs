@@ -82,6 +82,25 @@ test('server startup fails closed when routing references an action absent from 
   );
 });
 
+test('whitespace-only ShiftGuide code stays unconfigured across startup and unlock gates', async () => {
+  assert.doesNotThrow(() => createServerApp({
+    shiftGuideCode: '   ',
+    shiftGuideConfig: null,
+    celineRoutingSpec: null,
+    logger: { error() {} },
+  }));
+
+  await withServer({ shiftGuideCode: '   ' }, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/shiftguide/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: '   ' }),
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { error: 'Accès ShiftGuide non configuré.' });
+  });
+});
+
 test('Express factory supports unlock, session and logout with stable routing identity', async () => {
   await withServer({}, async (baseUrl) => {
     const badUnlock = await fetch(`${baseUrl}/api/shiftguide/unlock`, {

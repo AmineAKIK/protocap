@@ -5,6 +5,11 @@ import {
   createDeepSeekProvider,
 } from '../server/providers/deepSeekProvider.mjs';
 
+test('DeepSeek adapter is absent for missing or whitespace-only API keys', () => {
+  assert.equal(createDeepSeekProvider({ apiKey: '' }), null);
+  assert.equal(createDeepSeekProvider({ apiKey: '   \t\n' }), null);
+});
+
 test('DeepSeek adapter owns provider request shape and returns content plus usage telemetry', async () => {
   let captured;
   const provider = createDeepSeekProvider({
