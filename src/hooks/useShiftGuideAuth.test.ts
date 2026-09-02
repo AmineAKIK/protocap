@@ -221,6 +221,35 @@ describe('ShiftGuide browser auth boundary', () => {
     expect(localStorage.getItem(PROGRESS_KEY)).not.toBeNull();
   });
 
+  it('clears browser credentials before a pending server revocation resolves', async () => {
+    storeValidSession(Date.now() + 60_000);
+    storeCelineMemory(localStorage);
+    storeCelineMemory(sessionStorage);
+    storeProgress();
+
+    let resolveRevocation!: () => void;
+    const pendingRevocation = new Promise<void>((resolve) => {
+      resolveRevocation = resolve;
+    });
+    const fetchMock = vi.fn().mockReturnValue(pendingRevocation);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const logoutPromise = logoutShiftGuide();
+
+    expect(getShiftGuideToken()).toBeNull();
+    expect(getCelineAuthorityRevision()).toBeNull();
+    expect(localStorage.getItem(CELINE_HISTORY_KEY)).toBeNull();
+    expect(sessionStorage.getItem(CELINE_HISTORY_KEY)).toBeNull();
+    expect(localStorage.getItem(PROGRESS_KEY)).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith('/api/shiftguide/session', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer session-token' },
+    });
+
+    resolveRevocation();
+    await expect(logoutPromise).resolves.toBeUndefined();
+  });
+
   it('logs out locally and clears Celine memory even when server revocation cannot be reached', async () => {
     storeValidSession(Date.now() + 60_000);
     storeCelineMemory(localStorage);
