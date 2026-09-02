@@ -250,12 +250,10 @@ export async function logoutShiftGuide(): Promise<void> {
 
   if (!token) return;
 
-  try {
-    await fetch('/api/shiftguide/session', {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
+  void fetch('/api/shiftguide/session', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => {
     // Server revocation is best-effort once the browser session is already locked.
-  }
+  });
 }
