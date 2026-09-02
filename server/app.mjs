@@ -107,6 +107,18 @@ function withContextHint(state, contextHint) {
   return { ...state, context: contextHint };
 }
 
+function authorizeProviderDecision(authority, decision) {
+  if (!decision || typeof decision !== 'object') return { authorized: false, response: null };
+  if (decision.kind === 'route') {
+    return { authorized: authority.routes.has(decision.id), response: null };
+  }
+  if (decision.kind === 'clarify') {
+    return { authorized: authority.clarifications.has(decision.id), response: null };
+  }
+  const response = resolveCelineDecision(authority, decision);
+  return { authorized: Boolean(response), response };
+}
+
 export function createServerApp({
   shiftGuideCode,
   shiftGuideConfig,
@@ -365,14 +377,12 @@ export function createServerApp({
       const providerResult = normalizeProviderResult(rawProviderResult, celineProvider);
       const providerDurationMs = Math.max(0, telemetryNow() - providerStartedAt);
       const decision = parseCelineDecision(providerResult.content);
-      const authorityResponse = decision
-        ? resolveCelineDecision(celineAuthority, decision)
-        : null;
-      const resolved = decision && authorityResponse
+      const authorization = authorizeProviderDecision(celineAuthority, decision);
+      const resolved = decision && authorization.authorized
         ? celineDomainEngine.handleProviderDecision(
             direct?.state ?? currentOperationalState,
             decision,
-            () => authorityResponse
+            () => authorization.response
           )
         : null;
       const response = resolved?.handled ? resolved.response : null;
