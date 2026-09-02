@@ -20,8 +20,12 @@ function digestSecret(value) {
   return createHash('sha256').update(value, 'utf8').digest();
 }
 
+export function isConfiguredSecret(value) {
+  return typeof value === 'string' && /\S/.test(value);
+}
+
 export function safeCompareSecrets(candidate, expected) {
-  if (typeof candidate !== 'string' || typeof expected !== 'string' || expected.length === 0) {
+  if (!isConfiguredSecret(candidate) || !isConfiguredSecret(expected)) {
     return false;
   }
 
