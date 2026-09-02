@@ -251,6 +251,17 @@ describe('ShiftGuide browser auth boundary', () => {
     await pendingRevocation;
   });
 
+  it('keeps logout resolved when revocation throws synchronously', async () => {
+    storeValidSession(Date.now() + 60_000);
+    vi.stubGlobal('fetch', vi.fn(() => {
+      throw new Error('fetch unavailable');
+    }));
+
+    await expect(logoutShiftGuide()).resolves.toBeUndefined();
+    expect(getShiftGuideToken()).toBeNull();
+    expect(getCelineAuthorityRevision()).toBeNull();
+  });
+
   it('logs out locally and clears Celine memory even when server revocation cannot be reached', async () => {
     storeValidSession(Date.now() + 60_000);
     storeCelineMemory(localStorage);
