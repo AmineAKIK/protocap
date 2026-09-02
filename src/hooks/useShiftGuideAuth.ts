@@ -244,16 +244,18 @@ export function lockShiftGuide() {
 export async function logoutShiftGuide(): Promise<void> {
   const token = getShiftGuideToken();
 
+  // Logout is local-first: credentials and protected conversational memory must
+  // disappear before any best-effort network revocation can block or fail.
+  lockShiftGuide();
+
+  if (!token) return;
+
   try {
-    if (token) {
-      await fetch('/api/shiftguide/session', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    }
+    await fetch('/api/shiftguide/session', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
   } catch {
-    // Logout remains local-first: a network failure must never keep credentials in the browser.
-  } finally {
-    lockShiftGuide();
+    // Server revocation is best-effort once the browser session is already locked.
   }
 }
