@@ -328,10 +328,14 @@ export function CelinePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const pendingRef = useRef(false);
+  const conversationGenerationRef = useRef(0);
   const autoAdvanceRef = useRef<Set<string>>(new Set());
   const sendMessageRef = useRef<(text: string) => Promise<void>>(async () => undefined);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => {
+    conversationGenerationRef.current += 1;
+    abortRef.current?.abort();
+  }, []);
 
   const { listening, toggle: toggleMic, supported: micSupported } = useSpeechInput((transcript) => {
     void sendMessageRef.current(transcript);
@@ -369,6 +373,7 @@ export function CelinePage() {
 
   const requestSilentAdvance = useCallback(async (sourceMessage: CelineMessage) => {
     if (pendingRef.current || autoAdvanceRef.current.has(sourceMessage.id)) return;
+    const generation = conversationGenerationRef.current;
     autoAdvanceRef.current.add(sourceMessage.id);
     pendingRef.current = true;
     setLoading(true);
@@ -376,17 +381,21 @@ export function CelinePage() {
     abortRef.current = controller;
     try {
       const result = await requestCelineGuidance("C'est fait.", controller.signal);
+      if (generation !== conversationGenerationRef.current) return;
       if (result.presentation === 'completion' && sourceMessage.workflow) {
         void markSharedWorkflowComplete(sourceMessage.workflow.runId);
       }
       appendAssistant(result);
     } catch (err: unknown) {
+      if (generation !== conversationGenerationRef.current) return;
       if (!(err instanceof Error && err.name === 'AbortError')) {
         setError(err instanceof Error ? err.message : 'Impossible de préparer l’étape suivante.');
       }
     } finally {
-      pendingRef.current = false;
-      setLoading(false);
+      if (generation === conversationGenerationRef.current) {
+        pendingRef.current = false;
+        setLoading(false);
+      }
     }
   }, [appendAssistant]);
 
@@ -453,6 +462,7 @@ export function CelinePage() {
       loading: true,
     };
 
+    const generation = conversationGenerationRef.current;
     pendingRef.current = true;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -462,16 +472,21 @@ export function CelinePage() {
     setLoading(true);
 
     try {
-      appendAssistant(await requestCelineGuidance(trimmed, controller.signal));
+      const result = await requestCelineGuidance(trimmed, controller.signal);
+      if (generation !== conversationGenerationRef.current) return;
+      appendAssistant(result);
     } catch (err: unknown) {
+      if (generation !== conversationGenerationRef.current) return;
       if (!(err instanceof Error && err.name === 'AbortError')) {
         setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
         setMessages((current) => current.filter((message) => !message.loading));
       }
     } finally {
-      pendingRef.current = false;
-      setLoading(false);
-      inputRef.current?.focus();
+      if (generation === conversationGenerationRef.current) {
+        pendingRef.current = false;
+        setLoading(false);
+        inputRef.current?.focus();
+      }
     }
   }, [appendAssistant]);
 
@@ -480,6 +495,7 @@ export function CelinePage() {
   }, [sendMessage]);
 
   const clearConversation = () => {
+    conversationGenerationRef.current += 1;
     abortRef.current?.abort();
     pendingRef.current = false;
     autoAdvanceRef.current.clear();
