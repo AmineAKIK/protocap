@@ -232,6 +232,35 @@ test('Celine provider history stores the canonical route accepted by the domain 
   });
 });
 
+test('Celine provider history hides undeclared deterministic clarification ids', async () => {
+  let providerRequest = null;
+  const celineProvider = {
+    async complete(input) {
+      providerRequest = input;
+      return JSON.stringify({ kind: 'unknown' });
+    },
+  };
+
+  await withServer({ celineProvider }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const first = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'fin de poste' },
+    ]);
+    assert.equal(first.status, 200);
+    assert.match((await first.json()).message, /OC ouvert/);
+    assert.equal(providerRequest, null);
+
+    const second = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'situation toujours ambiguë' },
+    ]);
+    assert.equal(second.status, 200);
+    assert.deepEqual(providerRequest.history.slice(0, 2), [
+      { role: 'user', content: 'fin de poste' },
+      { role: 'assistant', content: '{"kind":"unknown"}' },
+    ]);
+  });
+});
+
 test('Celine provider cannot invoke undeclared hard-coded domain aliases', async () => {
   for (const decision of [
     { kind: 'route', id: 'fin_oc' },
