@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
 import { createServerApp } from '../server/app.mjs';
+import { CELINE_SAFE_FALLBACK_RESPONSE } from '../server/celineFallback.mjs';
 import { CelineProviderError } from '../server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
 import { TEST_CELINE_ROUTING_SPEC } from './celineRoutingFixture.mjs';
@@ -166,6 +167,28 @@ test('Celine HTTP route turns provider routing into one focused canonical workfl
   });
 });
 
+test('Celine provider cannot invoke undeclared hard-coded domain aliases', async () => {
+  for (const decision of [
+    { kind: 'route', id: 'fin_oc' },
+    { kind: 'clarify', id: 'fin_poste_etat' },
+  ]) {
+    const celineProvider = {
+      async complete() {
+        return JSON.stringify(decision);
+      },
+    };
+
+    await withServer({ celineProvider }, async (baseUrl) => {
+      const unlocked = await unlock(baseUrl);
+      const response = await chat(baseUrl, unlocked.token, [
+        { role: 'user', content: 'situation terrain non classée' },
+      ]);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), CELINE_SAFE_FALLBACK_RESPONSE);
+    });
+  }
+});
+
 test('Celine HTTP route handles greetings without calling the provider', async () => {
   let calls = 0;
   const celineProvider = {
@@ -228,11 +251,7 @@ test('Celine HTTP route discards provider prose and degrades safely on unauthori
     const unlocked = await unlock(baseUrl);
     const response = await chat(baseUrl, unlocked.token);
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
-      message: 'Je n’ai pas pu déterminer une réponse fiable à partir de ta demande. Précise la situation terrain ou vois avec ton responsable.',
-      checklist: [],
-      followUp: null,
-    });
+    assert.deepEqual(await response.json(), CELINE_SAFE_FALLBACK_RESPONSE);
   });
 });
 
