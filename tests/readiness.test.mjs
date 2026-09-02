@@ -62,6 +62,26 @@ test('readiness snapshot exposes only capability booleans', () => {
   assert.doesNotMatch(JSON.stringify(snapshot), /secret|prompt|sha256/);
 });
 
+test('readiness treats whitespace-only ShiftGuide configuration as absent', () => {
+  const snapshot = createReadinessSnapshot({
+    shiftGuideCode: '   \t',
+    shiftGuideClientData: {},
+    configRevision: 'sha256:config',
+    celineAuthorityRevision: 'sha256:authority',
+    celineSystemPrompt: 'prompt',
+    celineAuthority: {},
+    celineProvider: { complete() {} },
+  });
+
+  assert.deepEqual(snapshot, {
+    ok: false,
+    checks: {
+      shiftGuide: false,
+      celine: false,
+    },
+  });
+});
+
 test('liveness stays healthy while readiness reports an unconfigured Celine provider', async () => {
   await withServer({ celineProvider: null }, async (baseUrl) => {
     const health = await fetch(`${baseUrl}/api/health`);
