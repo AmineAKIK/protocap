@@ -14,9 +14,9 @@ It intentionally does not inspect ShiftGuide configuration or the AI provider. T
 
 A ready process requires:
 
-- ShiftGuide access to be configured;
+- ShiftGuide access to be configured with a code containing at least one non-whitespace character;
 - the ShiftGuide client payload, configuration revision, Celine authority revision, routing authority and system prompt to have been constructed successfully;
-- a callable Celine provider adapter to be present.
+- a callable Celine provider adapter to be present. The DeepSeek adapter is not created when its API key is missing or whitespace-only.
 
 The response contains only capability booleans:
 
@@ -32,7 +32,7 @@ The response contains only capability booleans:
 
 When one of the required capabilities is unavailable, the endpoint returns HTTP `503` with the same boolean-only shape. It never returns secrets, environment-variable names, configuration hashes, provider credentials or validation details.
 
-The snapshot is derived once during application construction. Invalid ShiftGuide/routing configuration already fails startup when ShiftGuide is enabled; readiness covers missing required bootstrap capabilities that would otherwise leave the process alive but functionally incomplete.
+The snapshot is derived once during application construction. Invalid ShiftGuide/routing configuration already fails startup when ShiftGuide is enabled; readiness covers missing required bootstrap capabilities that would otherwise leave the process alive but functionally incomplete. Whitespace-only protected credentials are treated as missing rather than as configured values; this presence check does not trim or rewrite valid secret values.
 
 ## Why readiness does not call DeepSeek
 
