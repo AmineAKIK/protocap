@@ -7,7 +7,7 @@ This document defines the runtime guardrails that keep that boundary economicall
 ## Defaults
 
 - provider calls: maximum 8 per rolling minute for the running process;
-- provider tokens: maximum 100,000 reported tokens per rolling hour for the running process;
+- provider tokens: 100,000 reported-token rolling-hour threshold for starting new provider work in the running process;
 - aggregate Céline classifier system prompt: maximum 32 KiB UTF-8 at configuration/build time;
 - provider history: maximum four semantic turns;
 - operator message sent to the provider path: maximum 2,000 characters;
@@ -22,9 +22,9 @@ This document defines the runtime guardrails that keep that boundary economicall
 2. The Céline domain engine attempts to resolve the operator interaction deterministically.
 3. If the domain engine handles the interaction, DeepSeek is not called and provider budgets are untouched.
 4. Only an unresolved semantic interaction reaches the provider adapter.
-5. Before network work starts, the provider cost guard checks prompt/history size, the rolling provider-call rate and rolling provider-token consumption.
+5. Before network work starts, the provider cost guard checks prompt/history size, the rolling provider-call rate and already-recorded rolling provider-token consumption.
 6. A blocked request never reaches DeepSeek.
-7. After a successful provider response, DeepSeek-reported token usage is added to the rolling hourly budget.
+7. After a successful provider response, DeepSeek-reported token usage is added to the rolling hourly total. If that response moves recorded usage above the threshold, later provider requests remain blocked until rolling usage falls below it.
 
 The call-rate budget is independent from the general `/api/celine/chat` rate limiter. This prevents a regression in language routing from converting normal chat capacity directly into model spend.
 
@@ -48,6 +48,8 @@ If ProtoCap later becomes multi-replica or a client product, provider budgets mu
 
 ## Failure semantics
 
-A burst that exceeds the local provider-call rate or the rolling hourly provider-token budget is exposed through the existing provider `rate_limited` path. Oversized prompt/history input is rejected as a local `budget_exceeded` provider failure. In every case the blocked DeepSeek request is not sent.
+A burst that exceeds the local provider-call rate or starts after the rolling hourly provider-token threshold has already been reached is exposed through the existing provider `rate_limited` path. Oversized prompt/history input is rejected as a local `budget_exceeded` provider failure. In every case a request blocked by the guard is not sent to DeepSeek.
+
+The token setting is a request-admission threshold, not a reservation-based or provider-billing hard ceiling. Provider usage is known only after a successful response, so a request admitted while recorded usage is below the threshold can move the total above it. Subsequent provider work is then blocked until rolling usage falls below the configured threshold. The independent call-rate, input-size and completion-token limits bound exposure without pretending that the demonstrator provides provider-side billing enforcement.
 
 The guard is deliberately conservative. It is a last-resort safety boundary; product quality should still come primarily from keeping deterministic interactions on the domain-engine path.
