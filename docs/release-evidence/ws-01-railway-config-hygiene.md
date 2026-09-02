@@ -38,7 +38,7 @@ The first rollout after that cleanup failed the `/api/ready` healthcheck with HT
 
 Owner-side inspection then confirmed the concrete cause: the canonical `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY` variables still held same-service references to the deleted legacy variables. Once those source variables were removed, the canonical variables resolved to empty values.
 
-A narrow WS-02 diagnostic change subsequently added presence-only startup flags. The failed deployment on `main` commit `ad35662d693917a0d0cf7112bd9e0eb6bcb41377` confirmed:
+WS-02 then added presence-only startup flags, and commit `ad35662d693917a0d0cf7112bd9e0eb6bcb41377` was deployed while the canonical variables were still empty. That failed deployment confirmed:
 
 - `shiftGuideConfigured: false`
 - `deepSeekConfigured: false`
