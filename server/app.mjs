@@ -119,6 +119,14 @@ function authorizeProviderDecision(authority, decision) {
   return { authorized: Boolean(response), response };
 }
 
+function selectProviderContextDecision(authority, providerDecision, resolved, response) {
+  if (!response) return { kind: 'unknown' };
+  const candidate = resolved?.decision ?? providerDecision;
+  return authorizeProviderDecision(authority, candidate).authorized
+    ? candidate
+    : { kind: 'unknown' };
+}
+
 export function createServerApp({
   shiftGuideCode,
   shiftGuideConfig,
@@ -386,7 +394,12 @@ export function createServerApp({
           )
         : null;
       const response = resolved?.handled ? resolved.response : null;
-      const storedDecision = response && decision ? decision : { kind: 'unknown' };
+      const storedDecision = selectProviderContextDecision(
+        celineAuthority,
+        decision,
+        resolved,
+        response
+      );
 
       if (resolved?.state) celineOperationalStates.set(token, resolved.state);
       celineContexts.set(
