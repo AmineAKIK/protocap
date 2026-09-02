@@ -1,3 +1,5 @@
+import { isConfiguredSecret } from './security.mjs';
+
 export function createReadinessSnapshot({
   shiftGuideCode,
   shiftGuideClientData,
@@ -8,7 +10,7 @@ export function createReadinessSnapshot({
   celineProvider,
 } = {}) {
   const shiftGuideReady = Boolean(
-    shiftGuideCode &&
+    isConfiguredSecret(shiftGuideCode) &&
     shiftGuideClientData &&
     configRevision &&
     celineAuthorityRevision &&
