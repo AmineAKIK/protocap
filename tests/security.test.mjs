@@ -2,15 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildSecurityHeaders,
+  isConfiguredSecret,
   safeCompareSecrets,
   toClientShiftGuideData,
 } from '../server/security.mjs';
+
+test('secret configuration requires at least one non-whitespace character', () => {
+  assert.equal(isConfiguredSecret('secret'), true);
+  assert.equal(isConfiguredSecret(' secret '), true);
+  assert.equal(isConfiguredSecret(''), false);
+  assert.equal(isConfiguredSecret('   \t\n'), false);
+  assert.equal(isConfiguredSecret(null), false);
+});
 
 test('safeCompareSecrets accepts only the exact configured code', () => {
   assert.equal(safeCompareSecrets('correct-code', 'correct-code'), true);
   assert.equal(safeCompareSecrets('wrong-code', 'correct-code'), false);
   assert.equal(safeCompareSecrets('correct-code ', 'correct-code'), false);
   assert.equal(safeCompareSecrets('', ''), false);
+  assert.equal(safeCompareSecrets('   ', '   '), false);
 });
 
 test('toClientShiftGuideData never exposes server prompt configuration', () => {
