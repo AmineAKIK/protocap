@@ -365,11 +365,14 @@ export function createServerApp({
       const providerResult = normalizeProviderResult(rawProviderResult, celineProvider);
       const providerDurationMs = Math.max(0, telemetryNow() - providerStartedAt);
       const decision = parseCelineDecision(providerResult.content);
-      const resolved = decision
+      const authorityResponse = decision
+        ? resolveCelineDecision(celineAuthority, decision)
+        : null;
+      const resolved = decision && authorityResponse
         ? celineDomainEngine.handleProviderDecision(
             direct?.state ?? currentOperationalState,
             decision,
-            (candidate) => resolveCelineDecision(celineAuthority, candidate)
+            () => authorityResponse
           )
         : null;
       const response = resolved?.handled ? resolved.response : null;
