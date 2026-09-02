@@ -109,10 +109,10 @@ Unhandled server errors emit `server_error` with the request ID when an API requ
 
 Process startup emits `server_started` with bounded runtime metadata. In addition to the listening port and non-secret Celine tuning values, the event includes only these configuration-presence booleans:
 
-- `shiftGuideConfigured`: whether `SHIFTGUIDE_CODE` is non-empty in the process environment;
-- `deepSeekConfigured`: whether `DEEPSEEK_API_KEY` is non-empty in the process environment.
+- `shiftGuideConfigured`: whether `SHIFTGUIDE_CODE` contains at least one non-whitespace character in the process environment;
+- `deepSeekConfigured`: whether `DEEPSEEK_API_KEY` contains at least one non-whitespace character in the process environment.
 
-These fields deliberately expose **presence only**. Secret values, lengths, prefixes, hashes and Railway reference expressions are never logged. Their purpose is to distinguish a missing bootstrap capability from a valid configuration that fails later in the runtime boundary.
+These fields deliberately expose **presence only**. Secret values, lengths, prefixes, hashes and Railway reference expressions are never logged. Whitespace-only values are treated as unconfigured so the startup signal matches readiness/provider construction semantics. The values themselves are never trimmed or rewritten by this check.
 
 ## Deliberate limits
 
