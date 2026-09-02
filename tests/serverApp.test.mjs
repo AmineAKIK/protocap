@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
-import { createServerApp } from '../server/app.mjs';
+import { createServerApp, createServerRuntimeState } from '../server/app.mjs';
 import { CELINE_SAFE_FALLBACK_RESPONSE } from '../server/celineFallback.mjs';
+import { withCelineState } from '../server/celineOperationalState.mjs';
 import { CelineProviderError } from '../server/providers/deepSeekProvider.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
 import { TEST_CELINE_ROUTING_SPEC } from './celineRoutingFixture.mjs';
@@ -164,6 +165,99 @@ test('Celine HTTP route turns provider routing into one focused canonical workfl
     assert.match(providerRequest.systemPrompt, /module_standard/);
     assert.match(providerRequest.systemPrompt, /Utiliser pour le module standard de test/);
     assert.doesNotMatch(providerRequest.systemPrompt, /Faire le contrôle/);
+  });
+});
+
+test('Celine provider history stores the canonical route accepted by the domain engine', async () => {
+  const runtimeState = createServerRuntimeState();
+  const remapRouting = {
+    version: 1,
+    routes: [
+      {
+        id: 'debut_oc',
+        label: 'Début OC',
+        decisionGuide: 'Début OC avec précédent clôturé.',
+        actionIds: ['action_1'],
+      },
+      {
+        id: 'debut_oc_precedent_ouvert',
+        label: 'Début OC avec précédent ouvert',
+        decisionGuide: 'Début OC avec précédent encore ouvert.',
+        actionIds: ['action_1'],
+      },
+    ],
+    clarifications: [{
+      id: 'clarifier_situation',
+      question: 'Peux-tu préciser la situation ?',
+      decisionGuide: 'Utiliser quand la situation est ambiguë.',
+    }],
+    classifierRules: ['Ne jamais supposer un état absent.'],
+  };
+  let calls = 0;
+  let secondProviderRequest;
+  const celineProvider = {
+    async complete(input) {
+      calls += 1;
+      if (calls === 1) {
+        return JSON.stringify({ kind: 'route', id: 'debut_oc_precedent_ouvert' });
+      }
+      secondProviderRequest = input;
+      return JSON.stringify({ kind: 'unknown' });
+    },
+  };
+
+  await withServer({ runtimeState, celineRoutingSpec: remapRouting, celineProvider }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const initialState = runtimeState.celineOperationalStates.get(unlocked.token);
+    runtimeState.celineOperationalStates.set(
+      unlocked.token,
+      withCelineState(initialState, { ocStatus: 'closed' })
+    );
+
+    const first = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'situation terrain à classifier' },
+    ]);
+    assert.equal(first.status, 200);
+    assert.equal((await first.json()).workflow.routeId, 'debut_oc');
+
+    const second = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'autre situation terrain à classifier' },
+    ]);
+    assert.equal(second.status, 200);
+    assert.equal(calls, 2);
+    assert.deepEqual(secondProviderRequest.history.slice(0, 2), [
+      { role: 'user', content: 'situation terrain à classifier' },
+      { role: 'assistant', content: '{"kind":"route","id":"debut_oc"}' },
+    ]);
+  });
+});
+
+test('Celine provider history hides undeclared deterministic clarification ids', async () => {
+  let providerRequest = null;
+  const celineProvider = {
+    async complete(input) {
+      providerRequest = input;
+      return JSON.stringify({ kind: 'unknown' });
+    },
+  };
+
+  await withServer({ celineProvider }, async (baseUrl) => {
+    const unlocked = await unlock(baseUrl);
+    const first = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'fin de poste' },
+    ]);
+    assert.equal(first.status, 200);
+    assert.match((await first.json()).message, /OC ouvert/);
+    assert.equal(providerRequest, null);
+
+    const second = await chat(baseUrl, unlocked.token, [
+      { role: 'user', content: 'situation toujours ambiguë' },
+    ]);
+    assert.equal(second.status, 200);
+    assert.deepEqual(providerRequest.history.slice(0, 2), [
+      { role: 'user', content: 'fin de poste' },
+      { role: 'assistant', content: '{"kind":"unknown"}' },
+    ]);
   });
 });
 
