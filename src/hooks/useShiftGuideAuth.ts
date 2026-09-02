@@ -251,11 +251,13 @@ export async function logoutShiftGuide(): Promise<void> {
   if (!token) return;
 
   try {
-    await fetch('/api/shiftguide/session', {
+    void fetch('/api/shiftguide/session', {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {
+      // Async revocation failures are best-effort after local logout completed.
     });
   } catch {
-    // Server revocation is best-effort once the browser session is already locked.
+    // Synchronous fetch failures must not make local logout/navigation fail either.
   }
 }

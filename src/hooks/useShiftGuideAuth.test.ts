@@ -221,7 +221,7 @@ describe('ShiftGuide browser auth boundary', () => {
     expect(localStorage.getItem(PROGRESS_KEY)).not.toBeNull();
   });
 
-  it('clears browser credentials before a pending server revocation resolves', async () => {
+  it('completes local logout while server revocation is still pending', async () => {
     storeValidSession(Date.now() + 60_000);
     storeCelineMemory(localStorage);
     storeCelineMemory(sessionStorage);
@@ -245,9 +245,21 @@ describe('ShiftGuide browser auth boundary', () => {
       method: 'DELETE',
       headers: { Authorization: 'Bearer session-token' },
     });
+    await expect(logoutPromise).resolves.toBeUndefined();
 
     resolveRevocation();
-    await expect(logoutPromise).resolves.toBeUndefined();
+    await pendingRevocation;
+  });
+
+  it('keeps logout resolved when revocation throws synchronously', async () => {
+    storeValidSession(Date.now() + 60_000);
+    vi.stubGlobal('fetch', vi.fn(() => {
+      throw new Error('fetch unavailable');
+    }));
+
+    await expect(logoutShiftGuide()).resolves.toBeUndefined();
+    expect(getShiftGuideToken()).toBeNull();
+    expect(getCelineAuthorityRevision()).toBeNull();
   });
 
   it('logs out locally and clears Celine memory even when server revocation cannot be reached', async () => {
