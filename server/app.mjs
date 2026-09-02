@@ -54,6 +54,13 @@ const CELINE_CONTEXT_HINTS = new Set([
   'tri',
   'reprise',
 ]);
+const CELINE_PROVIDER_CONTEXT_KINDS = new Set([
+  'route',
+  'clarify',
+  'lexicon',
+  'emergency',
+  'unknown',
+]);
 
 export function createServerRuntimeState() {
   return {
@@ -120,8 +127,9 @@ function authorizeProviderDecision(authority, decision) {
 }
 
 function selectProviderContextDecision(authority, providerDecision, resolved, response) {
-  if (!response) return { kind: 'unknown' };
   const candidate = resolved?.decision ?? providerDecision;
+  if (!candidate || !CELINE_PROVIDER_CONTEXT_KINDS.has(candidate.kind)) return candidate;
+  if (!response) return { kind: 'unknown' };
   return authorizeProviderDecision(authority, candidate).authorized
     ? candidate
     : { kind: 'unknown' };
@@ -348,12 +356,18 @@ export function createServerApp({
     const direct = celineDomainEngine.handleBeforeProvider(currentOperationalState, userMessage);
     if (direct?.handled && direct.response) {
       celineOperationalStates.set(token, direct.state);
+      const storedDecision = selectProviderContextDecision(
+        celineAuthority,
+        direct.decision,
+        direct,
+        direct.response
+      );
       celineContexts.set(
         token,
         appendCelineProviderDecision(
           celineContexts.get(token),
           userMessage,
-          direct.decision ?? { kind: 'unknown' }
+          storedDecision
         )
       );
       log.info('celine_domain', {
