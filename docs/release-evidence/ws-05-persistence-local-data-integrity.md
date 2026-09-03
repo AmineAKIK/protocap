@@ -51,14 +51,14 @@ The page keeps the full current in-memory conversation while it is open, but bro
 
 This count aligns with the existing server-side 100-message input boundary without changing provider context, which remains independently bounded to four semantic turns. Workflow/procedure state is unaffected because it is persisted separately by workflow `runId`.
 
-### 4. ShiftGuide progress is revision-bound and sanitised
+### 4. ShiftGuide progress is revision-bound and sanitized
 
 The existing `shared/shiftGuideProgress.js` contract already provides the resilience required by this workstream:
 
 - progress format is explicitly versioned (`PROGRESS_VERSION = 4`);
 - stored state must match the active configuration revision;
-- action statuses and active choices are sanitised;
-- workflow runs are sanitised and bounded to the 50 most recently updated runs;
+- action statuses and active choices are sanitized;
+- workflow runs are sanitized and bounded to the 50 most recently updated runs;
 - V3 progress migrates to V4;
 - malformed, stale-revision, or incompatible state resets to a fresh valid document;
 - legacy progress keys are removed after successful normalization/migration;
@@ -87,7 +87,7 @@ No database, distributed lock, shared cache, or cross-device synchronization was
 | localStorage key naming and ownership | PASS | Public datasets use named `.v8` keys through `useLocalStorage`; ShiftGuide uses named shared persistence constants and a dedicated storage adapter. |
 | Schema/version compatibility | PASS | Public datasets have runtime validators; ShiftGuide progress is V4 and revision-bound; V3 migration is explicit. |
 | JSON parse failure handling | PASS | Generic public hydration, Céline history, and shared ShiftGuide progress all catch malformed JSON and return safe state. |
-| Invalid/partial persisted state | PASS | PR #101 validates all five public documents; PR #102 validates Céline history; ShiftGuide progress sanitises nested fields. |
+| Invalid/partial persisted state | PASS | PR #101 validates all five public documents; PR #102 validates Céline history; ShiftGuide progress sanitizes nested fields. |
 | Bounds and numeric validation | PASS | Packing numeric state is validated; shipment progress requires non-negative safe integers; Céline content/checklists/history counts and ShiftGuide workflow runs are bounded. |
 | Reset/clear behavior | PASS | Invalid public documents self-heal to defaults; Packing exposes tracking reset; ShiftGuide provides module resets, revision resets, logout cleanup, and fresh Céline history on unlock. |
 | Cross-tab expectations | PASS with documented demo boundary | ShiftGuide progress uses Web Locks with a documented single-page fallback; public demo state is explicitly not collaborative. |
