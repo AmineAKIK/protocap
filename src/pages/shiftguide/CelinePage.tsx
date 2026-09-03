@@ -58,6 +58,7 @@ const SpeechRecognitionAPI = (
 ) as SpeechRecognitionCtor | undefined;
 const storage = getShiftGuidePersistentStorage();
 const STORAGE_KEY_HISTORY = 'shiftguide_celine_history';
+const MAX_PERSISTED_HISTORY_MESSAGES = 100;
 
 function useSpeechInput(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
@@ -205,7 +206,9 @@ function loadHistory(): CelineMessage[] {
     const raw = storage.getItem(STORAGE_KEY_HISTORY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isValidMessage) : [];
+    return Array.isArray(parsed)
+      ? parsed.slice(-MAX_PERSISTED_HISTORY_MESSAGES).filter(isValidMessage)
+      : [];
   } catch {
     return [];
   }
@@ -373,7 +376,10 @@ export function CelinePage() {
   });
 
   useEffect(() => {
-    storage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages.filter((message) => !message.loading)));
+    const persistedMessages = messages
+      .filter((message) => !message.loading)
+      .slice(-MAX_PERSISTED_HISTORY_MESSAGES);
+    storage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(persistedMessages));
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
