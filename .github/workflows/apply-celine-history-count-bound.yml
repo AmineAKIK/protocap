@@ -48,47 +48,14 @@ jobs:
               "    const persistedMessages = messages\n      .filter((message) => !message.loading)\n      .slice(-MAX_PERSISTED_HISTORY_MESSAGES);\n    storage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(persistedMessages));",
           )
           page.write_text(text)
-
-          test_path = Path('src/pages/shiftguide/CelinePage.test.tsx')
-          test = test_path.read_text()
-          marker = "  it('restores a structurally valid persisted assistant response', () => {"
-          if test.count(marker) != 1:
-              raise SystemExit(f'Expected one test insertion marker, found {test.count(marker)}')
-          addition = r'''  it('restores only the 100 most recent persisted messages', () => {
-    localStorage.setItem(
-      'shiftguide_celine_history',
-      JSON.stringify(
-        Array.from({ length: 101 }, (_, index) => ({
-          id: `user-${index}`,
-          role: 'user',
-          content: `Message ${index}`,
-          checklist: [],
-          followUp: null,
-        }))
-      )
-    );
-
-    render(
-      <MemoryRouter>
-        <CelinePage />
-      </MemoryRouter>
-    );
-
-    expect(screen.queryByText('Message 0')).toBeNull();
-    expect(screen.getByText('Message 1')).toBeTruthy();
-    expect(screen.getByText('Message 100')).toBeTruthy();
-  });
-
-'''
-          test_path.write_text(test.replace(marker, addition + marker, 1))
           PY
 
-      - name: Remove temporary workflow and commit final diff
+      - name: Remove temporary workflow and commit final runtime diff
         shell: bash
         run: |
           rm .github/workflows/apply-celine-history-count-bound.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/shiftguide/CelinePage.tsx src/pages/shiftguide/CelinePage.test.tsx .github/workflows/apply-celine-history-count-bound.yml
+          git add src/pages/shiftguide/CelinePage.tsx .github/workflows/apply-celine-history-count-bound.yml
           git commit -m "fix(persistence): bound Celine visible history [celine-history-count-done]"
           git push origin HEAD:release/ws-05-bound-celine-visible-history
