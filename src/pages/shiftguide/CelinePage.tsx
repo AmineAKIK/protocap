@@ -18,10 +18,11 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type {
-  SharedCelinePresentation,
-  SharedCelineWorkflow,
-  SharedCompletedCelineWorkflow,
+import {
+  isCelineResponse,
+  type SharedCelinePresentation,
+  type SharedCelineWorkflow,
+  type SharedCompletedCelineWorkflow,
 } from '../../../shared/celineContract.js';
 import { AccessibleDialog } from '../../components/AccessibleDialog';
 import { getSgModules } from '../../data/shiftguideModules';
@@ -157,16 +158,46 @@ async function requestCelineGuidance(userMessage: string, signal: AbortSignal) {
   };
 }
 
-function isValidMessage(value: unknown): value is CelineMessage {
-  if (!value || typeof value !== 'object') return false;
-  const message = value as Record<string, unknown>;
+function isValidChecklistItem(value: unknown): value is ChecklistItem {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
   return (
-    typeof message.id === 'string' &&
-    (message.role === 'user' || message.role === 'assistant') &&
-    typeof message.content === 'string' &&
-    Array.isArray(message.checklist) &&
-    (message.followUp === null || typeof message.followUp === 'string')
+    typeof item.id === 'string' &&
+    item.id.length > 0 &&
+    typeof item.done === 'boolean' &&
+    typeof item.na === 'boolean' &&
+    !(item.done && item.na)
   );
+}
+
+function isValidMessage(value: unknown): value is CelineMessage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const message = value as Record<string, unknown>;
+  if (typeof message.id !== 'string' || message.id.length === 0) return false;
+  if (message.role !== 'user' && message.role !== 'assistant') return false;
+  if (typeof message.content !== 'string' || message.content.length === 0 || message.content.length > 20_000) return false;
+  if (!Array.isArray(message.checklist) || message.checklist.length > 100) return false;
+  if (!message.checklist.every(isValidChecklistItem)) return false;
+  if (message.loading !== undefined && message.loading !== false) return false;
+
+  if (message.role === 'user') {
+    return (
+      message.checklist.length === 0 &&
+      message.followUp === null &&
+      message.presentation === undefined &&
+      message.workflow === undefined &&
+      message.completedWorkflow === undefined
+    );
+  }
+
+  return isCelineResponse({
+    message: message.content,
+    checklist: message.checklist,
+    followUp: message.followUp,
+    presentation: message.presentation,
+    workflow: message.workflow,
+    completedWorkflow: message.completedWorkflow,
+  });
 }
 
 function loadHistory(): CelineMessage[] {
