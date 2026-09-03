@@ -21,16 +21,18 @@ jobs:
           cache: npm
       - name: Install locked graph
         run: npm ci
-      - name: Capture full audit before repair
-        run: npm audit --json || true
-      - name: Simulate compatible lockfile repair
+      - name: Repair compatible transitive advisories
         run: npm audit fix --package-lock-only
-      - name: Show lockfile-only repair
+      - name: Approve reviewed esbuild install script
+        run: npm approve-scripts esbuild
+      - name: Show proposed supply-chain diff
         run: |
           git status --short
-          git diff --stat -- package-lock.json
-          git diff -- package-lock.json
-      - name: Capture full audit after repair
-        run: npm audit --json || true
-      - name: Capture production audit after repair
-        run: npm audit --omit=dev --json || true
+          git diff --stat -- package.json package-lock.json
+          git diff -- package.json package-lock.json
+      - name: Reinstall from proposed metadata
+        run: npm ci
+      - name: Verify full audit after repair
+        run: npm audit --json
+      - name: Verify production audit after repair
+        run: npm audit --omit=dev --json
