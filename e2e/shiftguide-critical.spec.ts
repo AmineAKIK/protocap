@@ -84,7 +84,10 @@ test.describe('ShiftGuide critical journeys', () => {
     });
 
     await secondPage.getByRole('button', { name: 'Valider' }).click();
-    await secondPage.waitForTimeout(150);
+    await expect.poll(() => secondPage.evaluate(async () => {
+      const snapshot = await navigator.locks.query();
+      return snapshot.pending.some((lock) => lock.name === 'protocap:shiftguide:progress');
+    })).toBe(true);
 
     expect(await secondPage.evaluate(() => {
       const state = JSON.parse(localStorage.getItem('shiftguide_progress_v4') ?? '{}');
