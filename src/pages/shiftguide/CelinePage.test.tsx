@@ -113,6 +113,62 @@ describe('CelinePage persisted history validation', () => {
     expect(screen.getByText('Que se passe-t-il sur la ligne ?')).toBeTruthy();
   });
 
+  it('rejects a persisted checklist above the shared response bound', () => {
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify([
+        {
+          id: 'assistant-oversized-checklist',
+          role: 'assistant',
+          content: 'Réponse avec checklist surdimensionnée',
+          checklist: Array.from({ length: 101 }, (_, index) => ({
+            id: `item-${index}`,
+            actionId: `action-${index}`,
+            text: `Action ${index}`,
+            note: null,
+            module: null,
+            done: false,
+            na: false,
+          })),
+          followUp: null,
+          presentation: 'answer',
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <CelinePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Réponse avec checklist surdimensionnée')).toBeNull();
+    expect(screen.getByText('Que se passe-t-il sur la ligne ?')).toBeTruthy();
+  });
+
+  it('rejects persisted user content above the local history bound', () => {
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify([
+        {
+          id: 'user-oversized',
+          role: 'user',
+          content: 'x'.repeat(20_001),
+          checklist: [],
+          followUp: null,
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <CelinePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Que se passe-t-il sur la ligne ?')).toBeTruthy();
+  });
+
   it('restores a structurally valid persisted assistant response', () => {
     localStorage.setItem(
       'shiftguide_celine_history',
