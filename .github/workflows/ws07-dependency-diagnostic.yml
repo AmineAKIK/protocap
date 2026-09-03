@@ -21,7 +21,16 @@ jobs:
           cache: npm
       - name: Install locked graph
         run: npm ci
-      - name: Capture full audit
+      - name: Capture full audit before repair
         run: npm audit --json || true
-      - name: Capture production audit
+      - name: Simulate compatible lockfile repair
+        run: npm audit fix --package-lock-only
+      - name: Show lockfile-only repair
+        run: |
+          git status --short
+          git diff --stat -- package-lock.json
+          git diff -- package-lock.json
+      - name: Capture full audit after repair
+        run: npm audit --json || true
+      - name: Capture production audit after repair
         run: npm audit --omit=dev --json || true
