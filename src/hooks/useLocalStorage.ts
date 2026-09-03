@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
+import { isValidPublicStorageValue } from '../utils/publicStorageValidation';
 
 const DATA_VERSION = 'v8';
-
-type StorageValidator<T> = (value: unknown) => value is T;
 
 function versionedKey(key: string) {
   return `${key}.${DATA_VERSION}`;
 }
 
-export function useLocalStorage<T>(key: string, initialValue: T, isValid: StorageValidator<T>) {
+export function useLocalStorage<T>(key: string, initialValue: T) {
   const vkey = versionedKey(key);
 
   const [value, setValue] = useState<T>(() => {
@@ -16,7 +15,7 @@ export function useLocalStorage<T>(key: string, initialValue: T, isValid: Storag
       const stored = window.localStorage.getItem(vkey);
       if (!stored) return initialValue;
       const parsed: unknown = JSON.parse(stored);
-      return isValid(parsed) ? parsed : initialValue;
+      return isValidPublicStorageValue(key, parsed) ? (parsed as T) : initialValue;
     } catch {
       return initialValue;
     }
