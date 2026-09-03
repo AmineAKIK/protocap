@@ -55,5 +55,8 @@
     "vite": "^6.0.1",
     "vite-plugin-pwa": "^0.21.1",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }
