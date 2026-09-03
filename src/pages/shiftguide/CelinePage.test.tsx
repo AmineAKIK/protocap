@@ -169,6 +169,31 @@ describe('CelinePage persisted history validation', () => {
     expect(screen.getByText('Que se passe-t-il sur la ligne ?')).toBeTruthy();
   });
 
+  it('restores only the 100 most recent persisted messages', () => {
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify(
+        Array.from({ length: 101 }, (_, index) => ({
+          id: `user-${index}`,
+          role: 'user',
+          content: `Message ${index}`,
+          checklist: [],
+          followUp: null,
+        }))
+      )
+    );
+
+    render(
+      <MemoryRouter>
+        <CelinePage />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Message 0')).toBeNull();
+    expect(screen.getByText('Message 1')).toBeTruthy();
+    expect(screen.getByText('Message 100')).toBeTruthy();
+  });
+
   it('restores a structurally valid persisted assistant response', () => {
     localStorage.setItem(
       'shiftguide_celine_history',
