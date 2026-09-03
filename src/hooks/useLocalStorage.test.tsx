@@ -10,6 +10,12 @@ const defaultPackingForm = {
   policy: 'no-overrun' as const,
 };
 
+function expectStoredDefault() {
+  return waitFor(() => {
+    expect(JSON.parse(localStorage.getItem(packingFormKey) ?? 'null')).toEqual(defaultPackingForm);
+  });
+}
+
 describe('useLocalStorage hydration', () => {
   it('falls back and self-heals when stored JSON has the wrong registered schema', async () => {
     localStorage.setItem(packingFormKey, JSON.stringify({ quantity: 30880 }));
@@ -19,8 +25,17 @@ describe('useLocalStorage hydration', () => {
     );
 
     expect(result.current[0]).toEqual(defaultPackingForm);
-    await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem(packingFormKey) ?? 'null')).toEqual(defaultPackingForm);
-    });
+    await expectStoredDefault();
+  });
+
+  it('falls back and self-heals when stored JSON is malformed', async () => {
+    localStorage.setItem(packingFormKey, '{not-json');
+
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm)
+    );
+
+    expect(result.current[0]).toEqual(defaultPackingForm);
+    await expectStoredDefault();
   });
 });
