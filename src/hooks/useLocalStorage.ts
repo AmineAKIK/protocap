@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isValidPublicStorageValue } from '../utils/publicStorageValidation';
 
 const DATA_VERSION = 'v8';
 
@@ -12,7 +13,9 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(() => {
     try {
       const stored = window.localStorage.getItem(vkey);
-      return stored ? (JSON.parse(stored) as T) : initialValue;
+      if (!stored) return initialValue;
+      const parsed: unknown = JSON.parse(stored);
+      return isValidPublicStorageValue(key, parsed) ? (parsed as T) : initialValue;
     } catch {
       return initialValue;
     }
