@@ -175,8 +175,9 @@ function isValidMessage(value: unknown): value is CelineMessage {
   const message = value as Record<string, unknown>;
   if (typeof message.id !== 'string' || message.id.length === 0) return false;
   if (message.role !== 'user' && message.role !== 'assistant') return false;
-  if (typeof message.content !== 'string' || message.content.length === 0) return false;
-  if (!Array.isArray(message.checklist) || !message.checklist.every(isValidChecklistItem)) return false;
+  if (typeof message.content !== 'string' || message.content.length === 0 || message.content.length > 20_000) return false;
+  if (!Array.isArray(message.checklist) || message.checklist.length > 100) return false;
+  if (!message.checklist.every(isValidChecklistItem)) return false;
   if (message.loading !== undefined && message.loading !== false) return false;
 
   if (message.role === 'user') {
