@@ -28,6 +28,8 @@ Cross-browser smoke scripts do not call a live AI provider. They run against the
 
 Coverage is intentionally scoped to behavior-bearing frontend modules that have direct automated tests. Large presentation-oriented pages are not counted merely to inflate or depress a global percentage.
 
+The percentage is therefore **risk-targeted, not repository-wide**. High-risk integration surfaces can remain outside the V8 denominator when their release risk is better exercised through focused component tests plus browser journeys. `src/pages/shiftguide/CelinePage.tsx` is one such surface: its request lifecycle and persistence hydration have direct Vitest regressions, while the protected Céline journey is also exercised through Playwright. Exclusion from the percentage must not be read as exclusion from automated testing.
+
 Current minimum floors are:
 
 - statements: 60%
