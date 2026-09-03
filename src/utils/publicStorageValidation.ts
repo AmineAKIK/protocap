@@ -25,7 +25,7 @@ function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || isString(value);
 }
 
-function isIsoDateString(value: unknown): value is string {
+function isDateString(value: unknown): value is string {
   return isString(value) && value.length > 0 && Number.isFinite(Date.parse(value));
 }
 
@@ -55,13 +55,13 @@ function isLogisticsRequest(value: unknown): value is LogisticsRequest {
     isPriority(value.priority) &&
     isString(value.nature) &&
     isOptionalString(value.comment) &&
-    isIsoDateString(value.createdAt) &&
-    (value.completedAt === undefined || isIsoDateString(value.completedAt)) &&
+    isDateString(value.createdAt) &&
+    (value.completedAt === undefined || isDateString(value.completedAt)) &&
     isLogisticsStatus(value.status)
   );
 }
 
-export function isLogisticsRequestList(value: unknown): value is LogisticsRequest[] {
+function isLogisticsRequestList(value: unknown): value is LogisticsRequest[] {
   return Array.isArray(value) && value.every(isLogisticsRequest);
 }
 
@@ -70,8 +70,8 @@ function isContactElement(value: unknown): value is ContactElement {
   return (
     value.type === 'fillingBlock' &&
     isString(value.label) &&
-    isIsoDateString(value.lastChangedAt) &&
-    isIsoDateString(value.expiresAt) &&
+    isDateString(value.lastChangedAt) &&
+    isDateString(value.expiresAt) &&
     isPositiveSafeInteger(value.validityDays) &&
     isString(value.operator) &&
     isOptionalString(value.comment)
@@ -85,14 +85,14 @@ function isConditioningLine(value: unknown): value is ConditioningLine {
     isString(value.name) &&
     isString(value.vat) &&
     isString(value.product) &&
-    isIsoDateString(value.conditioningStartedAt) &&
+    isDateString(value.conditioningStartedAt) &&
     Array.isArray(value.elements) &&
     value.elements.length > 0 &&
     value.elements.every(isContactElement)
   );
 }
 
-export function isConditioningLineList(value: unknown): value is ConditioningLine[] {
+function isConditioningLineList(value: unknown): value is ConditioningLine[] {
   return Array.isArray(value) && value.length > 0 && value.every(isConditioningLine);
 }
 
@@ -103,15 +103,15 @@ function isChangeHistoryEntry(value: unknown): value is ChangeHistoryEntry {
     isString(value.lineId) &&
     isString(value.lineName) &&
     isString(value.elementLabel) &&
-    isIsoDateString(value.changedAt) &&
+    isDateString(value.changedAt) &&
     isString(value.operator) &&
     isOptionalString(value.comment) &&
-    (value.previousExpiresAt === undefined || isIsoDateString(value.previousExpiresAt)) &&
-    isIsoDateString(value.newExpiresAt)
+    (value.previousExpiresAt === undefined || isDateString(value.previousExpiresAt)) &&
+    isDateString(value.newExpiresAt)
   );
 }
 
-export function isChangeHistoryList(value: unknown): value is ChangeHistoryEntry[] {
+function isChangeHistoryList(value: unknown): value is ChangeHistoryEntry[] {
   return Array.isArray(value) && value.every(isChangeHistoryEntry);
 }
 
@@ -119,7 +119,7 @@ function isPackingPolicy(value: unknown): value is PackingPolicy {
   return value === 'no-overrun' || value === 'round-carton' || value === 'round-pallet';
 }
 
-export function isPackingFormState(value: unknown): value is PersistedPackingFormState {
+function isPackingFormState(value: unknown): value is PersistedPackingFormState {
   if (!isRecord(value)) return false;
   return (
     isString(value.quantity) &&
@@ -129,7 +129,21 @@ export function isPackingFormState(value: unknown): value is PersistedPackingFor
   );
 }
 
-export function isPackingTrackingState(value: unknown): value is PersistedPackingTrackingState {
+function isPackingTrackingState(value: unknown): value is PersistedPackingTrackingState {
   if (!isRecord(value) || !isRecord(value.progressByCalculation)) return false;
   return Object.values(value.progressByCalculation).every(isNonNegativeSafeInteger);
+}
+
+type Validator = (value: unknown) => boolean;
+
+const validators: Readonly<Record<string, Validator>> = {
+  'lineops.expiry.lines': isConditioningLineList,
+  'lineops.expiry.history': isChangeHistoryList,
+  'lineops.logistics.requests': isLogisticsRequestList,
+  'lineops.packing.form.inputs': isPackingFormState,
+  'lineops.packing.shipment.progress': isPackingTrackingState,
+};
+
+export function isValidPublicStorageValue(key: string, value: unknown): boolean {
+  return validators[key]?.(value) ?? false;
 }
