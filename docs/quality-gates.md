@@ -10,7 +10,7 @@ ProtoCap uses `npm run check` as the repository-level local and CI quality gate.
 4. ESLint, including targeted type-aware async checks for TypeScript source under `src/`.
 5. A production frontend build through TypeScript and Vite.
 
-The GitHub Quality Gate then adds a production Docker build, browser-level checks, and a production-dependency audit.
+The GitHub Quality Gate then adds a production Docker build, browser-level checks, a high/critical advisory gate for the full development/build graph, and a separate production-dependency audit.
 
 ## Browser and accessibility policy
 
@@ -48,15 +48,27 @@ Type-aware ESLint analysis is restricted to `src/**/*.{ts,tsx}`, which is covere
 
 This keeps async mistakes visible without applying type-aware parser requirements to unrelated JavaScript, build configuration, or E2E files.
 
+## Supply-chain audit policy
+
+Dependency risk is split by trust surface instead of treating every package as equivalent:
+
+- `npm run audit:full` runs `npm audit --audit-level=high` against the complete development/build/runtime graph and fails CI on high or critical advisories;
+- `npm run audit:prod` runs `npm audit --omit=dev` and remains the stricter production-runtime gate, where any reported vulnerability fails the command;
+- `package-lock.json` is committed and CI installs with `npm ci`, so reviewed transitive resolutions are reproducible;
+- dependency install scripts are reviewed explicitly. The current Vite toolchain requires the `esbuild@0.25.12` postinstall script, and `package.json` records that exact version in `allowScripts` rather than approving future esbuild versions implicitly.
+
+The WS-07 refresh removed the then-current full-graph advisories by updating only compatible transitive lockfile resolutions. Both the complete graph and the production-only graph subsequently audited at zero vulnerabilities.
+
 ## Known install-time warnings
 
-The locked development/build dependency graph currently emits three `npm ci` warnings in CI:
+The locked development/build dependency graph still emits two deprecation warnings during `npm ci`:
 
 - `source-map@0.8.0-beta.0` is deprecated by its maintainer;
-- `glob@11.1.0` emits npm's old-version/security-support deprecation notice;
-- npm `allow-scripts` reports the `esbuild@0.25.12` postinstall script as not yet covered by an `allowScripts` declaration.
+- `glob@11.1.0` emits npm's old-version/security-support deprecation notice.
 
-These warnings are not suppressed or presented as clean output. They are dependency-hygiene debt in the development/build graph and should be revisited during normal dependency upgrades. The repository's full install audit and the explicit `npm audit --omit=dev` production audit currently report zero vulnerabilities; that audit result is the security signal, while the warnings remain tracked maintenance work.
+Both are transitive build dependencies under `vite-plugin-pwa -> workbox-build@7.4.1`. They are not direct application dependencies, are excluded from the production-only install, and the current audited graph reports no vulnerability for either package. Workbox 7.4.1 is the current upstream release and still carries this dependency debt, so forcing a major PWA-tooling migration solely to hide these warnings would add more release risk than it removes. The warnings remain visible and should be revisited when upstream Workbox replaces the deprecated dependencies.
+
+The prior npm `allow-scripts` warning for `esbuild@0.25.12` is intentionally resolved through the pinned `allowScripts` policy described above; it is not suppressed generically.
 
 The production Docker build also uses `npm cache clean --force`, for which npm prints its standard `using --force Recommended protections disabled` warning. The flag is limited to cache cleanup in the image build and does not disable runtime application protections.
 

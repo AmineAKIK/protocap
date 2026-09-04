@@ -47,3 +47,16 @@ test('npm lockfile root metadata stays aligned with package metadata', async () 
     packageJson.devDependencies['@vitest/coverage-v8'],
   );
 });
+
+test('supply-chain policy audits build tooling and production separately', async () => {
+  const [packageJson, workflow] = await Promise.all([
+    read('package.json').then(JSON.parse),
+    read('.github/workflows/ci.yml'),
+  ]);
+
+  assert.equal(packageJson.scripts['audit:full'], 'npm audit --audit-level=high');
+  assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev');
+  assert.deepEqual(packageJson.allowScripts, { 'esbuild@0.25.12': true });
+  assert.match(workflow, /npm run audit:full/);
+  assert.match(workflow, /npm run audit:prod/);
+});

@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit full dependency graph for high advisories
+        run: npm run audit:full
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
       - name: Verify generated directories are not tracked
         run: |
           if git ls-files node_modules dist coverage | grep -q .; then
@@ -57,6 +63,3 @@ jobs:
 
       - name: Run accessibility smoke tests
         run: npm run test:e2e:a11y
-
-      - name: Audit production dependencies
-        run: npm run audit:prod
