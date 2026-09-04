@@ -16,11 +16,28 @@ test('production packaging uses the repository Dockerfile only', () => {
   assert.match(dockerfile, /^CMD \["node", "server\.mjs"\]$/m);
 });
 
-test('runtime npm graph contains only server execution dependencies', () => {
+test('direct runtime dependencies contain only server execution packages', () => {
+  assert.ok(
+    packageJson.dependencies &&
+      typeof packageJson.dependencies === 'object' &&
+      !Array.isArray(packageJson.dependencies),
+    'package.json must declare a dependencies object'
+  );
+  assert.ok(
+    packageJson.devDependencies &&
+      typeof packageJson.devDependencies === 'object' &&
+      !Array.isArray(packageJson.devDependencies),
+    'package.json must declare a devDependencies object'
+  );
+
   assert.deepEqual(Object.keys(packageJson.dependencies).sort(), ['express']);
 
   for (const dependency of ['lucide-react', 'react', 'react-dom', 'react-router-dom']) {
-    assert.equal(typeof packageJson.devDependencies[dependency], 'string');
+    assert.equal(
+      typeof packageJson.devDependencies[dependency],
+      'string',
+      `${dependency} must remain a build-stage dependency`
+    );
   }
 });
 
