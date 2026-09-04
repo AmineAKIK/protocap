@@ -1,0 +1,50 @@
+name: WS-08 runtime dependency diagnostic
+
+on:
+  push:
+    branches:
+      - audit/ws-08-runtime-dependency-split
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Reclassify frontend-only packages in workspace
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const path = 'package.json';
+          const pkg = JSON.parse(await readFile(path, 'utf8'));
+          for (const name of ['lucide-react', 'react', 'react-dom', 'react-router-dom']) {
+            pkg.devDependencies[name] = pkg.dependencies[name];
+            delete pkg.dependencies[name];
+          }
+          await writeFile(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+          npm install --package-lock-only
+      - name: Show proposed metadata diff
+        run: |
+          git diff --stat -- package.json package-lock.json
+          git diff -- package.json package-lock.json
+      - name: Install and verify repository
+        run: |
+          npm ci
+          npm run check
+          npm run audit:full
+          npm run audit:prod
+      - name: Build production image
+        run: docker build --tag protocap-ws08 .
+      - name: Inspect runtime dependency graph
+        run: docker run --rm --entrypoint npm protocap-ws08 ls --omit=dev --depth=0
+      - name: Inspect runtime image size
+        run: docker image inspect protocap-ws08 --format '{{.Size}}'
