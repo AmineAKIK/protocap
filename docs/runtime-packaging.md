@@ -7,7 +7,9 @@ Protocap uses the repository root `Dockerfile` as the production build and runti
 - Node.js 24 on Debian Bookworm slim is used for both build and runtime stages.
 - `npm ci` installs the exact lockfile dependency graph in the build stage.
 - `npm run build` produces the Vite/PWA `dist` bundle.
-- The runtime stage performs a fresh `npm ci --omit=dev --ignore-scripts` and contains only production dependencies plus `dist`, `server.mjs`, `server/` and `shared/`.
+- Frontend libraries (`react`, `react-dom`, `react-router-dom`, `lucide-react`) are build-stage dependencies from the container perspective: Vite bundles their browser code into `dist`, so Node does not need their npm packages in the final image.
+- The runtime stage performs a fresh `npm ci --omit=dev --ignore-scripts`; its direct npm runtime dependency is therefore limited to `express`, plus the transitive packages Express requires.
+- The final image contains only the production npm graph plus `dist`, `server.mjs`, `server/` and `shared/`.
 - The process runs as the image's non-root `node` user.
 - Railway supplies `PORT`; the image's `EXPOSE 3000` documents the local default only.
 
@@ -26,6 +28,6 @@ The repository therefore contains no `nixpacks.toml` or `railway.toml`. There is
 
 ## Verification
 
-The repository Quality Gate runs `docker build --tag protocap-ci .` for every pull request and push to `main`. `tests/runtimePackaging.test.mjs` also locks the key packaging invariants and prevents the obsolete config files from returning unnoticed.
+The repository Quality Gate runs `docker build --tag protocap-ci .` for every pull request and push to `main`. `tests/runtimePackaging.test.mjs` locks the key packaging invariants, including the direct runtime npm dependency boundary, and prevents obsolete config files from returning unnoticed.
 
 A successful container build proves that the repository can produce its production image. It does not by itself prove that Railway accepted or activated a deployment; deployment success is verified separately through Railway status and `/api/ready`.
