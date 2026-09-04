@@ -1,6 +1,6 @@
 # WS-07 — Dependency and supply-chain hygiene evidence
 
-**Status:** COMPLETE
+**Status:** CLOSED
 
 ## Scope
 
@@ -50,7 +50,7 @@ The final PR moves both dependency audits immediately after `npm ci`:
 1. full graph: `npm audit --audit-level=high`;
 2. production graph: `npm audit --omit=dev`.
 
-The exact-head Quality Gate proved both audits pass in fail-fast position before Docker and Playwright work.
+The exact-head Quality Gate proved that both audits pass in fail-fast position before Docker and Playwright work.
 
 ### 4. Two deprecation warnings remain upstream build-tool residue
 
