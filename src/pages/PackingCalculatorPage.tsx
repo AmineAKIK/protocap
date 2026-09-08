@@ -238,7 +238,7 @@ function ShipmentExecution({
             </span>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Exécution atelier</p>
-              <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">Palettes à expédier</h2>
+              <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">Charges à expédier</h2>
             </div>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-500">Enregistré sur cet appareil</span>
@@ -247,19 +247,24 @@ function ShipmentExecution({
 
       <div className="p-5 sm:p-6">
         <p className="sr-only" role="status" aria-live="polite">
-          {formatNumber(progress.remainingLoads)} {progress.remainingLoads === 1 ? 'palette restante' : 'palettes restantes'}, {formatNumber(progress.shippedLoads)} {progress.shippedLoads === 1 ? 'palette envoyée' : 'palettes envoyées'} sur {formatNumber(plan.totalLoads)}.
+          {formatNumber(progress.remainingLoads)} {progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}, {formatNumber(progress.shippedLoads)} {progress.shippedLoads === 1 ? 'charge expédiée' : 'charges expédiées'} sur {formatNumber(plan.totalLoads)}.
         </p>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-end">
           <div className="min-w-0">
-            <p className={`text-[clamp(3.5rem,8vw,6.5rem)] font-black leading-[0.85] tracking-[-0.07em] tabular-nums ${isComplete ? 'text-emerald-700' : 'text-slate-950'}`} aria-label={`${formatNumber(progress.remainingLoads)} ${progress.remainingLoads === 1 ? 'palette restante' : 'palettes restantes'}`}>
+            <p
+              className={`text-[clamp(3.5rem,8vw,6.5rem)] font-black leading-[0.85] tracking-[-0.07em] tabular-nums ${isComplete ? 'text-emerald-700' : 'text-slate-950'}`}
+              aria-label={`${formatNumber(progress.remainingLoads)} ${progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}`}
+            >
               {formatNumber(progress.remainingLoads)}
             </p>
             <p className="mt-3 text-sm font-black uppercase tracking-[0.14em] text-slate-500">
               {progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}
             </p>
             <p className="mt-3 text-sm font-semibold text-slate-600">
-              {isComplete ? 'Toutes les palettes prévues ont été déclarées comme envoyées.' : `${formatNumber(progress.shippedLoads)} / ${formatNumber(plan.totalLoads)} charges expédiées`}
+              {isComplete
+                ? 'Toutes les charges prévues ont été déclarées comme expédiées.'
+                : `${formatNumber(progress.shippedLoads)} / ${formatNumber(plan.totalLoads)} charges expédiées`}
             </p>
           </div>
 
@@ -283,8 +288,18 @@ function ShipmentExecution({
               </div>
               <span className="text-sm font-black tabular-nums text-slate-500">{loadPercent} %</span>
             </div>
-            <div role="progressbar" aria-label="Avancement des palettes envoyées" aria-valuemin={0} aria-valuemax={plan.totalLoads} aria-valuenow={progress.shippedLoads} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-teal-600'}`} style={{ width: `${progress.loadProgressRatio * 100}%` }} />
+            <div
+              role="progressbar"
+              aria-label="Avancement des charges expédiées"
+              aria-valuemin={0}
+              aria-valuemax={plan.totalLoads}
+              aria-valuenow={progress.shippedLoads}
+              className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-teal-600'}`}
+                style={{ width: `${progress.loadProgressRatio * 100}%` }}
+              />
             </div>
           </div>
 
@@ -296,8 +311,18 @@ function ShipmentExecution({
               </div>
               <span className="shrink-0 text-sm font-black tabular-nums text-slate-500">{volumePercent} %</span>
             </div>
-            <div role="progressbar" aria-label="Volume d'unités expédié" aria-valuemin={0} aria-valuemax={plan.totalUnits} aria-valuenow={progress.shippedUnits} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-slate-800'}`} style={{ width: `${progress.unitProgressRatio * 100}%` }} />
+            <div
+              role="progressbar"
+              aria-label="Volume d'unités expédié"
+              aria-valuemin={0}
+              aria-valuemax={plan.totalUnits}
+              aria-valuenow={progress.shippedUnits}
+              className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"
+            >
+              <div
+                className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-slate-800'}`}
+                style={{ width: `${progress.unitProgressRatio * 100}%` }}
+              />
             </div>
           </div>
         </div>
@@ -305,7 +330,7 @@ function ShipmentExecution({
         <div className="mt-6 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
           <button
             type="button"
-            aria-label="Retirer une palette envoyée"
+            aria-label="Corriger la dernière charge expédiée"
             disabled={progress.shippedLoads === 0}
             onClick={onDecrement}
             className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 sm:min-w-36"
@@ -315,7 +340,7 @@ function ShipmentExecution({
           </button>
           <button
             type="button"
-            aria-label="Déclarer une palette envoyée"
+            aria-label={isComplete ? 'Expédition terminée' : 'Déclarer la prochaine charge expédiée'}
             disabled={isComplete}
             onClick={onIncrement}
             className="inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-teal-700 px-6 text-base font-black text-white shadow-lg shadow-teal-900/15 transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 disabled:cursor-not-allowed disabled:bg-emerald-700 sm:min-h-16"
@@ -402,7 +427,11 @@ export function PackingCalculatorPage() {
   const quantityState = fieldState(form.quantity);
   const unitsPerCartonState = fieldState(form.unitsPerCarton);
   const cartonsPerPaletteState = fieldState(form.cartonsPerPalette);
-  const combinationInvalid = quantityState === 'valid' && unitsPerCartonState === 'valid' && cartonsPerPaletteState === 'valid' && !input;
+  const combinationInvalid =
+    quantityState === 'valid' &&
+    unitsPerCartonState === 'valid' &&
+    cartonsPerPaletteState === 'valid' &&
+    !input;
   const neutral = !calculation || !input;
 
   return (
@@ -416,7 +445,9 @@ export function PackingCalculatorPage() {
               ProtoCap · Conditionnement
             </div>
             <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-slate-950 sm:text-4xl">Packing Calculator</h1>
-            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">Transformer une quantité demandée en plan de préparation clair, comparable et directement exécutable à l'atelier.</p>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+              Transformer une quantité demandée en plan de préparation clair, comparable et directement exécutable à l'atelier.
+            </p>
           </div>
           <div className="flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur sm:self-auto">
             <CircleDot size={13} className="text-teal-700" aria-hidden="true" />
@@ -445,8 +476,20 @@ export function PackingCalculatorPage() {
                   onChange={(value) => updateField('quantity', value)}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <PackingField label="Unités par carton" value={form.unitsPerCarton} placeholder="Ex : 128" invalid={unitsPerCartonState === 'invalid'} onChange={(value) => updateField('unitsPerCarton', value)} />
-                  <PackingField label="Cartons par palette" value={form.cartonsPerPalette} placeholder="Ex : 40" invalid={cartonsPerPaletteState === 'invalid'} onChange={(value) => updateField('cartonsPerPalette', value)} />
+                  <PackingField
+                    label="Unités par carton"
+                    value={form.unitsPerCarton}
+                    placeholder="Ex : 128"
+                    invalid={unitsPerCartonState === 'invalid'}
+                    onChange={(value) => updateField('unitsPerCarton', value)}
+                  />
+                  <PackingField
+                    label="Cartons par palette"
+                    value={form.cartonsPerPalette}
+                    placeholder="Ex : 40"
+                    invalid={cartonsPerPaletteState === 'invalid'}
+                    onChange={(value) => updateField('cartonsPerPalette', value)}
+                  />
                 </div>
               </div>
 
@@ -463,7 +506,9 @@ export function PackingCalculatorPage() {
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="text-2xl font-black tabular-nums">{formatNumber(calculation.exact.unitsPerPalette)}</span>
                     <span className="text-sm font-bold text-slate-300">unités / palette</span>
-                    <span className="text-xs font-semibold text-slate-500">· {formatNumber(input.cartonsPerPalette)} cartons × {formatNumber(input.unitsPerCarton)}</span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      · {formatNumber(input.cartonsPerPalette)} cartons × {formatNumber(input.unitsPerCarton)}
+                    </span>
                   </div>
                 ) : (
                   <p className="mt-2 text-sm font-medium text-slate-400">Renseignez les trois valeurs pour construire le plan.</p>
@@ -481,7 +526,13 @@ export function PackingCalculatorPage() {
               <div role="radiogroup" aria-label="Politique opérationnelle" className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
                 {calculation
                   ? calculation.options.map((option) => (
-                      <StrategyCard key={option.policy} option={option} active={form.policy === option.policy} recommended={calculation.recommendation.policy === option.policy} onSelect={() => updateField('policy', option.policy)} />
+                      <StrategyCard
+                        key={option.policy}
+                        option={option}
+                        active={form.policy === option.policy}
+                        recommended={calculation.recommendation.policy === option.policy}
+                        onSelect={() => updateField('policy', option.policy)}
+                      />
                     ))
                   : (Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
                       <button key={policy} type="button" disabled className="min-h-36 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left opacity-60">
@@ -500,7 +551,9 @@ export function PackingCalculatorPage() {
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Référence théorique</p>
                     <h2 id="packing-exact-title" className="mt-1 text-sm font-black text-slate-950">Résultat exact</h2>
                   </div>
-                  <p className="text-right text-sm font-bold tabular-nums text-slate-600">{formatNumber(calculation.exact.palettesCompletes)} P · {formatNumber(calculation.exact.cartonsComplets)} C · {formatNumber(calculation.exact.unitesRestantes)} U</p>
+                  <p className="text-right text-sm font-bold tabular-nums text-slate-600">
+                    {formatNumber(calculation.exact.palettesCompletes)} P · {formatNumber(calculation.exact.cartonsComplets)} C · {formatNumber(calculation.exact.unitesRestantes)} U
+                  </p>
                 </div>
               </section>
             ) : null}
@@ -510,9 +563,15 @@ export function PackingCalculatorPage() {
             {neutral ? (
               <div className="grid min-h-[28rem] place-items-center rounded-[2rem] border border-dashed border-slate-300 bg-white/70 px-6 text-center shadow-sm">
                 <div className="max-w-md">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Boxes size={27} aria-hidden="true" /></span>
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400">
+                    <Boxes size={27} aria-hidden="true" />
+                  </span>
                   <h2 className="mt-5 text-xl font-black tracking-tight text-slate-950">Plan en attente</h2>
-                  <p className="mt-2 text-sm font-medium leading-6 text-slate-500">{combinationInvalid ? 'La combinaison saisie dépasse le domaine de calcul exact.' : 'Renseignez la quantité et le conditionnement. Le plan de préparation apparaîtra immédiatement.'}</p>
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+                    {combinationInvalid
+                      ? 'La combinaison saisie dépasse le domaine de calcul exact.'
+                      : 'Renseignez la quantité et le conditionnement. Le plan de préparation apparaîtra immédiatement.'}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -542,12 +601,16 @@ export function PackingCalculatorPage() {
                       <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Composition du reliquat</p>
-                          <p className="mt-1 text-base font-black">{loadDescription({ index: shipment!.plan.fullLoadCount, ...shipment!.plan.remainderLoad })}</p>
+                          <p className="mt-1 text-base font-black">
+                            {loadDescription({ index: shipment!.plan.fullLoadCount, ...shipment!.plan.remainderLoad })}
+                          </p>
                         </div>
                         <ArrowRight size={20} className="hidden text-teal-300 sm:block" aria-hidden="true" />
                       </div>
                     ) : (
-                      <div className="mt-7 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200">Aucun reliquat : le plan utilise uniquement des palettes complètes.</div>
+                      <div className="mt-7 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200">
+                        Aucun reliquat : le plan utilise uniquement des palettes complètes.
+                      </div>
                     )}
 
                     <div className="mt-7 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
@@ -561,13 +624,23 @@ export function PackingCalculatorPage() {
                       </div>
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Écart</p>
-                        <p className={`mt-1 break-words text-xl font-black tabular-nums ${calculation.selected.variance === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>+{formatNumber(calculation.selected.variance)}</p>
+                        <p className={`mt-1 break-words text-xl font-black tabular-nums ${calculation.selected.variance === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                          +{formatNumber(calculation.selected.variance)}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                {shipment ? <ShipmentExecution plan={shipment.plan} progress={shipment.progress} onDecrement={() => changeShippedPallets(-1)} onIncrement={() => changeShippedPallets(1)} onReset={resetShipmentTracking} /> : null}
+                {shipment ? (
+                  <ShipmentExecution
+                    plan={shipment.plan}
+                    progress={shipment.progress}
+                    onDecrement={() => changeShippedPallets(-1)}
+                    onIncrement={() => changeShippedPallets(1)}
+                    onReset={resetShipmentTracking}
+                  />
+                ) : null}
               </>
             )}
           </section>
