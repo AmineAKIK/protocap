@@ -44,6 +44,7 @@ test.describe('critical accessibility smoke', () => {
   });
 
   test('Packing Calculator filled workshop state has no serious automated WCAG violations', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
     await configurePacking(page);
     await expect(page.getByRole('radiogroup', { name: 'Politique opérationnelle' })).toBeVisible();
     await expect(page.getByRole('progressbar', { name: 'Avancement des charges expédiées' })).toBeVisible();
