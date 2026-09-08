@@ -52,9 +52,9 @@ function assertValidPackingOption(option: PackingOption): void {
 /**
  * Build the physical shipment plan without allocating one object per pallet.
  *
- * The plan follows the current Packing contract: all complete pallets are shipped
- * first and, when cartons or loose units remain, one final physical pallet carries
- * that remainder. This is the same ordering already implied by the manual counter.
+ * Complete pallets are represented first. Cartons that fill an additional complete
+ * pallet are normalized into that complete-load count. At most one final physical
+ * pallet then carries the remaining cartons and/or loose units.
  */
 export function createPackingShipmentPlan(
   input: PackingInput,
@@ -66,14 +66,23 @@ export function createPackingShipmentPlan(
   assertValidPackingOption(option);
 
   const unitsPerFullLoad = input.unitsPerCarton * input.cartonsPerPalette;
-  const remainderUnits = option.cartons * input.unitsPerCarton + option.units;
-  if (!Number.isSafeInteger(remainderUnits)) {
-    throw new RangeError('Packing remainder must be exactly representable.');
+  const extraFullLoads = Math.floor(option.cartons / input.cartonsPerPalette);
+  const remainderCartons = option.cartons % input.cartonsPerPalette;
+  const fullLoadCount = option.palettes + extraFullLoads;
+  const remainderUnits = remainderCartons * input.unitsPerCarton + option.units;
+
+  if (
+    option.units >= input.unitsPerCarton ||
+    !Number.isSafeInteger(extraFullLoads) ||
+    !Number.isSafeInteger(fullLoadCount) ||
+    !Number.isSafeInteger(remainderUnits)
+  ) {
+    throw new RangeError('Packing option cannot be normalized into physical shipment loads.');
   }
 
   const hasRemainder = remainderUnits > 0;
-  const totalLoads = option.palettes + (hasRemainder ? 1 : 0);
-  const fullLoadUnits = option.palettes * unitsPerFullLoad;
+  const totalLoads = fullLoadCount + (hasRemainder ? 1 : 0);
+  const fullLoadUnits = fullLoadCount * unitsPerFullLoad;
   const totalUnits = fullLoadUnits + remainderUnits;
 
   if (
@@ -86,11 +95,11 @@ export function createPackingShipmentPlan(
   }
 
   return {
-    fullLoadCount: option.palettes,
+    fullLoadCount,
     remainderLoad: hasRemainder
       ? {
           kind: 'remainder',
-          cartons: option.cartons,
+          cartons: remainderCartons,
           looseUnits: option.units,
           totalUnits: remainderUnits,
         }
@@ -128,11 +137,11 @@ function normalizeShippedLoads(value: number, totalLoads: number): number {
 }
 
 /**
- * Calculate both operational load progress and exact unit-volume progress.
+ * Calculate operational load progress and exact unit-volume progress separately.
  *
- * Unit progress is only exact because the shipment plan has a deterministic order:
- * complete pallets first, final remainder load last. UI code must not present the
- * unit ratio as exact if it later allows arbitrary out-of-order load selection.
+ * Unit progress is exact under this plan's deterministic order: complete pallets
+ * first, final remainder load last. If a future UI permits out-of-order selection,
+ * it must track load identity rather than reuse this sequential-counter contract.
  */
 export function getPackingShipmentProgress(
   plan: PackingShipmentPlan,
@@ -142,7 +151,10 @@ export function getPackingShipmentProgress(
   const shippedFullLoads = Math.min(shippedLoads, plan.fullLoadCount);
   const remainderShipped = Boolean(plan.remainderLoad) && shippedLoads > plan.fullLoadCount;
   const shippedFullUnits = shippedFullLoads * plan.unitsPerFullLoad;
-  const shippedUnits = shippedFullUnits + (remainderShipped ? plan.remainderLoad!.totalUnits : 0);
+  const shippedRemainderUnits = remainderShipped && plan.remainderLoad
+    ? plan.remainderLoad.totalUnits
+    : 0;
+  const shippedUnits = shippedFullUnits + shippedRemainderUnits;
 
   if (!Number.isSafeInteger(shippedFullUnits) || !Number.isSafeInteger(shippedUnits)) {
     throw new RangeError('Packing shipment progress exceeds exact integer range.');
