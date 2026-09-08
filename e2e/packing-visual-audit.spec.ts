@@ -19,6 +19,12 @@ type AuditFinding = {
   suspiciousWordBreaks: Array<{ tag: string; text: string; height: number; lineHeight: number }>;
 };
 
+async function resetPackingState(page: Page) {
+  await page.goto('/packing-calculator');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+}
+
 async function fillReference(page: Page, quantity = '30880') {
   await page.getByLabel('Quantité demandée en unités').fill(quantity);
   await page.getByLabel('Unités par carton').fill('128');
@@ -82,7 +88,7 @@ test('capture exhaustive packing visual matrix', async ({ page }, testInfo) => {
     const viewport = `${width}x${height}`;
     await page.setViewportSize({ width, height });
 
-    await page.goto('/packing-calculator');
+    await resetPackingState(page);
     findings.push(await auditDom(page, viewport, 'empty'));
     await page.screenshot({ path: `${outDir}/${viewport}-empty.png`, fullPage: true });
 
@@ -99,7 +105,7 @@ test('capture exhaustive packing visual matrix', async ({ page }, testInfo) => {
     findings.push(await auditDom(page, viewport, 'complete'));
     await page.screenshot({ path: `${outDir}/${viewport}-complete.png`, fullPage: true });
 
-    await page.goto('/packing-calculator');
+    await resetPackingState(page);
     await fillReference(page, '5120000000');
     findings.push(await auditDom(page, viewport, 'large-numbers'));
     await page.screenshot({ path: `${outDir}/${viewport}-large.png`, fullPage: true });
