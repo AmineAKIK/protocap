@@ -45,7 +45,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     const pallet = within(strategyGroup).getByRole('radio', { name: /Palette/i });
 
     expect(carton.getAttribute('aria-checked')).toBe('true');
-    expect(within(strategyGroup).getByText('30 976')).toBeTruthy();
+    expect(within(strategyGroup).getByText(/30\s976/)).toBeTruthy();
     expect(within(strategyGroup).getByText('+96 unités')).toBeTruthy();
 
     await user.click(exact);
@@ -91,7 +91,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     for (let load = 0; load < 6; load += 1) await user.click(increment);
 
     expect(within(shipment).getByText('6 / 7 charges expédiées')).toBeTruthy();
-    expect(within(shipment).getByText('30 720 / 30 976')).toBeTruthy();
+    expect(within(shipment).getByText(/30\s720\s\/\s30\s976/)).toBeTruthy();
     expect(within(shipment).getByText('99,2 %')).toBeTruthy();
     expect(within(shipment).getByText('Charge reliquat')).toBeTruthy();
     expect(within(shipment).getByText('2 cartons · 256 unités')).toBeTruthy();
