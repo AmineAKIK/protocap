@@ -13,7 +13,9 @@ const referenceInput: PackingInput = {
 };
 
 function option(policy: PackingOption['policy']) {
-  return calculatePackingOptions(referenceInput).find((candidate) => candidate.policy === policy)!;
+  const selected = calculatePackingOptions(referenceInput).find((candidate) => candidate.policy === policy);
+  if (!selected) throw new Error(`Missing packing option: ${policy}`);
+  return selected;
 }
 
 describe('packing shipment plans', () => {
@@ -62,6 +64,33 @@ describe('packing shipment plans', () => {
       cartons: 2,
       looseUnits: 0,
       totalUnits: 256,
+    });
+  });
+
+  it('promotes a carton-rounded remainder that fills a pallet into a complete physical load', () => {
+    const input: PackingInput = {
+      quantity: 5_000,
+      unitsPerCarton: 128,
+      cartonsPerPalette: 40,
+    };
+    const selected = calculatePackingOptions(input).find((candidate) => candidate.policy === 'round-carton');
+    if (!selected) throw new Error('Missing round-carton option');
+
+    expect(selected).toMatchObject({ palettes: 0, cartons: 40, units: 0, totalPrepared: 5_120 });
+
+    const plan = createPackingShipmentPlan(input, selected);
+    expect(plan).toMatchObject({
+      fullLoadCount: 1,
+      remainderLoad: null,
+      totalLoads: 1,
+      totalUnits: 5_120,
+    });
+    expect(getPackingShipmentLoad(plan, 0)).toEqual({
+      index: 0,
+      kind: 'full-pallet',
+      cartons: 40,
+      looseUnits: 0,
+      totalUnits: 5_120,
     });
   });
 
