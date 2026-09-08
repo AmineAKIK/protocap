@@ -17,7 +17,7 @@ jobs:
   quality:
     name: Quality gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -63,3 +63,14 @@ jobs:
 
       - name: Run accessibility smoke tests
         run: npm run test:e2e:a11y
+
+      - name: Run exhaustive Packing visual audit
+        run: npx playwright test e2e/packing-visual-audit.spec.ts --project=chromium
+
+      - name: Upload Packing visual audit
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: packing-visual-audit
+          path: test-results/packing-visual-audit
+          if-no-files-found: warn
