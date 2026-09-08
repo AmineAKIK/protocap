@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const ACCESS_CODE = 'e2e-access-code';
 
-async function expectNoHorizontalOverflow(page: Parameters<typeof test>[0] extends never ? never : any) {
+async function expectNoHorizontalOverflow(page: Page) {
   const viewport = await page.evaluate(() => ({
     innerWidth: window.innerWidth,
     scrollWidth: document.documentElement.scrollWidth,
