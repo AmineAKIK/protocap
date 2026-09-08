@@ -1,7 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { requestCelineResponseMock } = vi.hoisted(() => ({
   requestCelineResponseMock: vi.fn(),
@@ -35,11 +36,41 @@ function response(message: string) {
   };
 }
 
+function focusedWorkflowMessage({ done = false }: { done?: boolean } = {}) {
+  return {
+    id: 'assistant-focus',
+    role: 'assistant',
+    content: 'Début de poste — ligne en production — étape 7/7.',
+    checklist: [{
+      id: 'pzd_1',
+      actionId: 'pzd',
+      text: 'Vérifier les PZD',
+      note: null,
+      module: 'Début de poste',
+      done,
+      na: false,
+    }],
+    followUp: null,
+    presentation: 'focus',
+    workflow: {
+      runId: 'debut_poste_production_123',
+      routeId: 'debut_poste_production',
+      label: 'Début de poste — ligne en production',
+      currentIndex: 6,
+      totalActions: 7,
+    },
+  };
+}
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   requestCelineResponseMock.mockReset();
   Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('CelinePage conversation request lifecycle', () => {
@@ -85,6 +116,95 @@ describe('CelinePage conversation request lifecycle', () => {
     expect(screen.getByText('Réponse actuelle')).toBeTruthy();
     expect(screen.queryByText('Réponse obsolète')).toBeNull();
     expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('never auto-advances a completed checklist restored from history, including under StrictMode', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify([focusedWorkflowMessage({ done: true })])
+    );
+
+    render(
+      <StrictMode>
+        <MemoryRouter>
+          <CelinePage />
+        </MemoryRouter>
+      </StrictMode>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Début de poste — ligne en production — étape 7/7.')).toBeTruthy();
+    expect(requestCelineResponseMock).not.toHaveBeenCalled();
+  });
+
+  it('does not resurrect a completed workflow hidden behind a later completion message', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify([
+        focusedWorkflowMessage({ done: true }),
+        {
+          id: 'assistant-completion',
+          role: 'assistant',
+          content: 'Début de poste — ligne en production terminée.',
+          checklist: [],
+          followUp: null,
+          presentation: 'completion',
+          completedWorkflow: {
+            routeId: 'debut_poste_production',
+            label: 'Début de poste — ligne en production',
+          },
+        },
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <CelinePage />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Début de poste — ligne en production terminée.')).toBeTruthy();
+    expect(requestCelineResponseMock).not.toHaveBeenCalled();
+  });
+
+  it('still auto-advances exactly once after the operator completes the current focused checklist', async () => {
+    vi.useFakeTimers();
+    localStorage.setItem(
+      'shiftguide_celine_history',
+      JSON.stringify([focusedWorkflowMessage()])
+    );
+    requestCelineResponseMock.mockResolvedValue(response('Étape suivante'));
+
+    render(
+      <StrictMode>
+        <MemoryRouter>
+          <CelinePage />
+        </MemoryRouter>
+      </StrictMode>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Valider : Vérifier les PZD' }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(requestCelineResponseMock).toHaveBeenCalledTimes(1);
+    expect(requestCelineResponseMock.mock.calls[0][0]).toBe("C'est fait.");
+    expect(screen.getByText('Étape suivante')).toBeTruthy();
   });
 });
 
