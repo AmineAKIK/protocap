@@ -29,7 +29,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
 
     const operationsColumn = screen.getByRole('region', { name: 'Découpage final et suivi manuel' });
     expect(within(operationsColumn).getByRole('heading', { name: 'Découpage final sélectionné' })).toBeTruthy();
-    expect(within(operationsColumn).getByRole('heading', { name: 'Palettes à expédier' })).toBeTruthy();
+    expect(within(operationsColumn).getByRole('heading', { name: 'Charges à expédier' })).toBeTruthy();
     expect(within(operationsColumn).queryByRole('heading', { name: 'Résultat exact' })).toBeNull();
     expect(within(operationsColumn).getByText('2 cartons · 256 unités')).toBeTruthy();
   });
@@ -61,17 +61,17 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     storePackingForm();
     const view = render(<PackingCalculatorPage />);
 
-    const shipment = screen.getByRole('region', { name: 'Palettes à expédier' });
-    expect(within(shipment).getByLabelText('7 palettes restantes')).toBeTruthy();
+    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
+    expect(within(shipment).getByLabelText('7 charges restantes')).toBeTruthy();
     expect(within(shipment).getByText('0 / 7 charges expédiées')).toBeTruthy();
 
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer une palette envoyée' });
-    const decrement = within(shipment).getByRole('button', { name: 'Retirer une palette envoyée' });
+    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
+    const decrement = within(shipment).getByRole('button', { name: 'Corriger la dernière charge expédiée' });
     await user.click(increment);
     await user.click(increment);
     await user.click(decrement);
 
-    expect(within(shipment).getByLabelText('6 palettes restantes')).toBeTruthy();
+    expect(within(shipment).getByLabelText('6 charges restantes')).toBeTruthy();
     expect(within(shipment).getByText('1 / 7 charges expédiées')).toBeTruthy();
     await waitFor(() => expect(localStorage.getItem(trackingStorageKey)).toContain('"30880:128:40:round-carton":1'));
 
@@ -85,8 +85,8 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     storePackingForm();
     render(<PackingCalculatorPage />);
 
-    const shipment = screen.getByRole('region', { name: 'Palettes à expédier' });
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer une palette envoyée' });
+    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
+    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
 
     for (let load = 0; load < 6; load += 1) await user.click(increment);
 
@@ -102,16 +102,16 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     storePackingForm('30720');
     render(<PackingCalculatorPage />);
 
-    const shipment = screen.getByRole('region', { name: 'Palettes à expédier' });
-    const decrement = within(shipment).getByRole('button', { name: 'Retirer une palette envoyée' });
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer une palette envoyée' });
+    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
+    const decrement = within(shipment).getByRole('button', { name: 'Corriger la dernière charge expédiée' });
+    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
     expect((decrement as HTMLButtonElement).disabled).toBe(true);
 
     for (let load = 0; load < 6; load += 1) await user.click(increment);
 
-    expect(within(shipment).getByLabelText('0 palettes restantes')).toBeTruthy();
+    expect(within(shipment).getByLabelText('0 charges restantes')).toBeTruthy();
     expect((increment as HTMLButtonElement).disabled).toBe(true);
-    expect(within(shipment).getByText('Toutes les palettes prévues ont été déclarées comme envoyées.')).toBeTruthy();
+    expect(within(shipment).getByText('Toutes les charges prévues ont été déclarées comme expédiées.')).toBeTruthy();
 
     await user.click(within(shipment).getByRole('button', { name: 'Réinitialiser le suivi' }));
     expect(screen.getByText('0 / 6 charges expédiées')).toBeTruthy();
@@ -123,12 +123,12 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     storePackingForm('30720');
     render(<PackingCalculatorPage />);
 
-    await user.click(screen.getByRole('button', { name: 'Déclarer une palette envoyée' }));
+    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
     const quantity = screen.getByLabelText('Quantité demandée en unités');
     await user.clear(quantity);
     await user.type(quantity, '30880');
-    await user.click(screen.getByRole('button', { name: 'Déclarer une palette envoyée' }));
-    await user.click(screen.getByRole('button', { name: 'Déclarer une palette envoyée' }));
+    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
+    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
 
     await user.clear(quantity);
     await user.type(quantity, '30720');
