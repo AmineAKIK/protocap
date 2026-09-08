@@ -364,6 +364,7 @@ export function CelinePage() {
   const pendingRef = useRef(false);
   const conversationGenerationRef = useRef(0);
   const autoAdvanceRef = useRef<Set<string>>(new Set());
+  const autoAdvanceArmedRef = useRef<Set<string>>(new Set());
   const sendMessageRef = useRef<(text: string) => Promise<void>>(async () => undefined);
 
   useEffect(() => () => {
@@ -409,9 +410,14 @@ export function CelinePage() {
   }, []);
 
   const requestSilentAdvance = useCallback(async (sourceMessage: CelineMessage) => {
-    if (pendingRef.current || autoAdvanceRef.current.has(sourceMessage.id)) return;
+    if (
+      pendingRef.current ||
+      autoAdvanceRef.current.has(sourceMessage.id) ||
+      !autoAdvanceArmedRef.current.has(sourceMessage.id)
+    ) return;
     const generation = conversationGenerationRef.current;
     autoAdvanceRef.current.add(sourceMessage.id);
+    autoAdvanceArmedRef.current.delete(sourceMessage.id);
     pendingRef.current = true;
     setLoading(true);
     const controller = new AbortController();
@@ -438,13 +444,22 @@ export function CelinePage() {
 
   useEffect(() => {
     if (loading || pendingRef.current) return;
-    const last = [...messages].reverse().find((message) =>
-      message.role === 'assistant' &&
-      message.presentation === 'focus' &&
-      message.workflow &&
-      message.checklist.length > 0
-    );
+    let last: CelineMessage | undefined;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.presentation === 'completion') break;
+      if (
+        message.role === 'assistant' &&
+        message.presentation === 'focus' &&
+        message.workflow &&
+        message.checklist.length > 0
+      ) {
+        last = message;
+        break;
+      }
+    }
     if (!last || autoAdvanceRef.current.has(last.id)) return;
+    if (!autoAdvanceArmedRef.current.has(last.id)) return;
     if (!last.checklist.every((item) => item.done || item.na)) return;
     const timer = window.setTimeout(() => void requestSilentAdvance(last), 350);
     return () => window.clearTimeout(timer);
@@ -456,6 +471,17 @@ export function CelinePage() {
     if (!item) return;
     const nextDone = action === 'done' ? !item.done : false;
     const nextNa = action === 'na' ? !item.na : false;
+    const completesFocusedWorkflow = Boolean(
+      sourceMessage?.presentation === 'focus' &&
+      sourceMessage.workflow &&
+      sourceMessage.checklist.length > 0 &&
+      sourceMessage.checklist.every((candidate) =>
+        candidate.id === itemId ? nextDone || nextNa : candidate.done || candidate.na
+      )
+    );
+
+    if (completesFocusedWorkflow) autoAdvanceArmedRef.current.add(messageId);
+    else autoAdvanceArmedRef.current.delete(messageId);
 
     setMessages((current) => current.map((message) => {
       if (message.id !== messageId) return message;
@@ -536,6 +562,7 @@ export function CelinePage() {
     abortRef.current?.abort();
     pendingRef.current = false;
     autoAdvanceRef.current.clear();
+    autoAdvanceArmedRef.current.clear();
     setMessages([]);
     setError(null);
     setLoading(false);
