@@ -37,6 +37,30 @@ textarea {
   background-size: 32px 32px;
 }
 
+/*
+ * Packing Calculator is designed as an at-a-glance workshop surface. Keep
+ * supporting labels comfortably above AA contrast on light surfaces while
+ * preserving the lighter-on-dark hierarchy inside the active plan cards.
+ * Scoping these overrides to the two packing regions avoids changing the
+ * visual language of unrelated ProtoCap modules.
+ */
+[aria-label='Référence et résultat exact'] .text-slate-400,
+[aria-label='Découpage final et suivi manuel'] .text-slate-400 {
+  color: #475569;
+}
+
+[aria-label='Référence et résultat exact'] .text-slate-500,
+[aria-label='Découpage final et suivi manuel'] .text-slate-500 {
+  color: #334155;
+}
+
+[aria-label='Référence et résultat exact'] .bg-slate-950 .text-slate-400,
+[aria-label='Référence et résultat exact'] .bg-slate-950 .text-slate-500,
+[aria-label='Découpage final et suivi manuel'] .bg-slate-950 .text-slate-400,
+[aria-label='Découpage final et suivi manuel'] .bg-slate-950 .text-slate-500 {
+  color: #cbd5e1;
+}
+
 @media (max-width: 1023px) {
   /* The shell bottom nav is the only global ShiftGuide navigation on mobile/tablet. */
   .shiftguide-shell header a[href='/shiftguide/celine'],
