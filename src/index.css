@@ -109,7 +109,7 @@ textarea {
     padding: 1rem;
   }
 
-  section[aria-label='Référence et résultat exact'] > section > div:first-child {
+  section[aria-label='Référence et résultat exact'] > section:not([aria-labelledby='packing-exact-title']) > div:first-child {
     margin-bottom: 0.875rem;
   }
 
@@ -120,7 +120,7 @@ textarea {
     line-height: 1.5rem;
   }
 
-  section[aria-label='Référence et résultat exact'] > section:first-child label:first-of-type input {
+  section[aria-label='Référence et résultat exact'] > section:first-child > div:nth-of-type(2) > label:first-child input {
     min-height: 3.25rem;
     font-size: 1.5rem;
     line-height: 2rem;
