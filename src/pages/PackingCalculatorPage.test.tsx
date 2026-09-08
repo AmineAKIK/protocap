@@ -18,10 +18,17 @@ function storePackingForm(quantity = '30880', policy = 'round-carton') {
   );
 }
 
+async function chooseCartonStrategy(user: ReturnType<typeof userEvent.setup>) {
+  const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
+  await user.click(within(strategyGroup).getByRole('radio', { name: /Carton/i }));
+}
+
 describe('PackingCalculatorPage premium workshop flow', () => {
-  it('keeps reference theory separate from the active operational plan', () => {
+  it('keeps reference theory separate from the active operational plan', async () => {
+    const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
 
     const referenceColumn = screen.getByRole('region', { name: 'Référence et résultat exact' });
     expect(within(referenceColumn).getByRole('heading', { name: 'Paramètres de référence' })).toBeTruthy();
@@ -34,6 +41,28 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     expect(within(operationsColumn).getByText('2 cartons · 256 unités')).toBeTruthy();
   });
 
+  it('requires an explicit operator choice before activating any strategy', async () => {
+    const user = userEvent.setup();
+    storePackingForm('30880', 'no-overrun');
+    render(<PackingCalculatorPage />);
+
+    const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
+    const exact = within(strategyGroup).getByRole('radio', { name: /Exact/i });
+    const carton = within(strategyGroup).getByRole('radio', { name: /Carton/i });
+    const pallet = within(strategyGroup).getByRole('radio', { name: /Palette/i });
+
+    expect(exact.getAttribute('aria-checked')).toBe('false');
+    expect(carton.getAttribute('aria-checked')).toBe('false');
+    expect(pallet.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('heading', { name: 'Plan en attente' })).toBeTruthy();
+    expect(screen.getByText('Choisissez une stratégie de préparation pour activer le plan et le suivi atelier.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Charges à expédier' })).toBeNull();
+
+    await user.click(carton);
+    expect(carton.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('heading', { name: 'Charges à expédier' })).toBeTruthy();
+  });
+
   it('shows the three strategies as a real radio decision with their consequences', async () => {
     const user = userEvent.setup();
     storePackingForm();
@@ -44,7 +73,6 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     const carton = within(strategyGroup).getByRole('radio', { name: /Carton/i });
     const pallet = within(strategyGroup).getByRole('radio', { name: /Palette/i });
 
-    expect(carton.getAttribute('aria-checked')).toBe('true');
     expect(within(strategyGroup).getByText(/30\s976/)).toBeTruthy();
     expect(within(strategyGroup).getByText('+96 unités')).toBeTruthy();
 
@@ -54,12 +82,14 @@ describe('PackingCalculatorPage premium workshop flow', () => {
 
     await user.click(pallet);
     expect(pallet.getAttribute('aria-checked')).toBe('true');
+    expect(exact.getAttribute('aria-checked')).toBe('false');
   });
 
   it('persists sequential shipment progress and exposes exact load and volume progress', async () => {
     const user = userEvent.setup();
     storePackingForm();
     const view = render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
 
     const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
     expect(within(shipment).getByLabelText('7 charges restantes')).toBeTruthy();
@@ -76,7 +106,10 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     await waitFor(() => expect(localStorage.getItem(trackingStorageKey)).toContain('"30880:128:40:round-carton":1'));
 
     view.unmount();
+    const secondUser = userEvent.setup();
     render(<PackingCalculatorPage />);
+    expect(screen.queryByText('1 / 7 charges expédiées')).toBeNull();
+    await chooseCartonStrategy(secondUser);
     expect(screen.getByText('1 / 7 charges expédiées')).toBeTruthy();
   });
 
@@ -84,6 +117,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
 
     const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
     const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
@@ -101,6 +135,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     const user = userEvent.setup();
     storePackingForm('30720');
     render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
 
     const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
     const decrement = within(shipment).getByRole('button', { name: 'Corriger la dernière charge expédiée' });
@@ -122,6 +157,7 @@ describe('PackingCalculatorPage premium workshop flow', () => {
     const user = userEvent.setup();
     storePackingForm('30720');
     render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
 
     await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
     const quantity = screen.getByLabelText('Quantité demandée en unités');
