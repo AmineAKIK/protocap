@@ -220,8 +220,8 @@
     gap: 0.5rem !important;
   }
 
-  .packing-calculator-page section:has(> div #packing-shipment-title) button:last-of-type {
-    min-height: 2.8rem !important;
+  .packing-calculator-page section:has(> div #packing-shipment-title) > div:last-child > div.mt-6:has(> button) > button:last-child {
+    min-height: 3.5rem !important;
   }
 
   .packing-calculator-page svg {
