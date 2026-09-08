@@ -60,6 +60,24 @@ textarea {
   hyphens: none;
 }
 
+/* Keep strategy copy visually separated from the selection indicator. */
+.packing-calculator-page [role='radio'] > div:first-child {
+  gap: 0.75rem;
+}
+
+/*
+ * Load progress and shipped volume are intentionally different metrics when
+ * the final load is a partial remainder. Keep the load card as an operational
+ * counter (e.g. 8 / 17) and reserve percentage display for actual volume.
+ */
+.packing-calculator-page section:has(> div #packing-shipment-title)
+  > div:last-child
+  > div.mt-6:has([aria-label='Avancement des charges expédiées'])
+  > div:first-child
+  span {
+  display: none;
+}
+
 /*
  * Packing Calculator is designed as an at-a-glance workshop surface. Keep
  * supporting labels comfortably above AA contrast on light surfaces while
@@ -228,7 +246,7 @@ textarea {
   }
 
   .packing-calculator-page [role='radio'] > div:first-child {
-    gap: 0.53rem;
+    gap: 0.8rem;
   }
 
   .packing-calculator-page [role='radio'] > div:first-child > span {
