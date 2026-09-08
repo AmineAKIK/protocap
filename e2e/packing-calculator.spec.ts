@@ -23,7 +23,10 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function expectBusinessNumbersReadable(page: Page) {
-  const unreadable = await page.locator('.tabular-nums').evaluateAll((elements) =>
+  const businessNumbers = page.locator('.tabular-nums');
+  expect(await businessNumbers.count()).toBeGreaterThan(0);
+
+  const unreadable = await businessNumbers.evaluateAll((elements) =>
     elements
       .map((element) => {
         const node = element as HTMLElement;
@@ -74,7 +77,7 @@ test.describe('Packing Calculator premium workshop hardening', () => {
     const carton = strategyGroup.getByRole('radio', { name: /Carton/i });
 
     await exact.focus();
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Space');
 
     await expect(exact).toHaveAttribute('aria-checked', 'true');
     await expect(carton).toHaveAttribute('aria-checked', 'false');
