@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function configurePacking(page: Page) {
+async function configurePacking(page: Page, quantity = '30880') {
   await page.goto('/packing-calculator');
-  await page.getByLabel('Quantité demandée en unités').fill('30880');
+  await page.getByLabel('Quantité demandée en unités').fill(quantity);
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
   await page.getByRole('radio', { name: /Carton/i }).click();
@@ -82,6 +82,40 @@ test.describe('Packing Calculator premium workshop hardening', () => {
     await expect(exact).toHaveAttribute('aria-checked', 'true');
     await expect(carton).toHaveAttribute('aria-checked', 'false');
     await expect(page.getByRole('heading', { name: 'Découpage final sélectionné' })).toBeVisible();
+  });
+
+  test('keeps million-scale operational numbers atomic at 320px', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await configurePacking(page, '5120000000');
+
+    await expectNoHorizontalOverflow(page);
+    await expectBusinessNumbersReadable(page);
+
+    const million = page.getByText('1\u202f000\u202f000', { exact: true }).first();
+    await expect(million).toBeVisible();
+    expect(await million.evaluate((node) => getComputedStyle(node).whiteSpace)).toBe('nowrap');
+
+    const navLabels = page.locator('nav.fixed span');
+    const viewportWidth = await page.evaluate(() => window.innerWidth);
+    const boxes = await navLabels.evaluateAll((nodes) => nodes.map((node) => {
+      const rect = (node as HTMLElement).getBoundingClientRect();
+      return { text: node.textContent ?? '', left: rect.left, right: rect.right, overflow: getComputedStyle(node).textOverflow };
+    }));
+    expect(boxes.every((box) => box.left >= -1 && box.right <= viewportWidth + 1 && box.overflow !== 'ellipsis')).toBe(true);
+  });
+
+  test('keeps strategy labels on natural word boundaries at the 2xl transition', async ({ page }) => {
+    await page.setViewportSize({ width: 1536, height: 864 });
+    await configurePacking(page);
+
+    const strategyGroup = page.getByRole('radiogroup', { name: 'Politique opérationnelle' });
+    const labels = strategyGroup.locator('p');
+    const wrapping = await labels.evaluateAll((nodes) => nodes.map((node) => {
+      const style = getComputedStyle(node);
+      return { text: node.textContent?.trim() ?? '', overflowWrap: style.overflowWrap, wordBreak: style.wordBreak };
+    }));
+
+    expect(wrapping.every((entry) => entry.overflowWrap !== 'anywhere' && entry.wordBreak !== 'break-all')).toBe(true);
   });
 
   for (const viewport of [

@@ -1,6 +1,6 @@
 import { Bot, Boxes, Calculator, ClipboardCheck, FileText, FlaskConical, Home, Library, RadioTower } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
@@ -18,6 +18,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const { pathname } = useLocation();
+  const pageClassName = pathname === '/packing-calculator' ? ' packing-calculator-page' : '';
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Top header */}
@@ -57,19 +60,21 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {/* Page content — padding-bottom on mobile to avoid bottom nav overlap */}
-      <main className="pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0">{children}</main>
+      {/* Two compact rows on narrow phones keep every destination legible without clipping. */}
+      <main className={`pb-[calc(8.5rem_+_env(safe-area-inset-bottom))] sm:pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0${pageClassName}`}>
+        {children}
+      </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile/tablet bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm xl:hidden">
-        <div className="grid grid-cols-8">
+        <div className="grid grid-cols-4 sm:grid-cols-8">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex min-h-14 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
+                `flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
                   isActive ? 'text-teal-700' : 'text-slate-400'
                 }`
               }
@@ -77,7 +82,7 @@ export function AppShell({ children }: AppShellProps) {
               {({ isActive }) => (
                 <>
                   <item.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
-                  <span className="max-w-[52px] truncate">{item.label.split(' ')[0]}</span>
+                  <span className="max-w-full whitespace-nowrap leading-none">{item.label.split(' ')[0]}</span>
                 </>
               )}
             </NavLink>
