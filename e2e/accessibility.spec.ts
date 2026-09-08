@@ -27,10 +27,27 @@ async function unlock(page: Page, path: string) {
   await expect(page.getByText('Accès restreint')).toBeHidden();
 }
 
+async function configurePacking(page: Page) {
+  await page.goto('/packing-calculator');
+  await page.getByLabel('Quantité demandée en unités').fill('30880');
+  await page.getByLabel('Unités par carton').fill('128');
+  await page.getByLabel('Cartons par palette').fill('40');
+  await page.getByRole('radio', { name: /Carton/i }).click();
+  await expect(page.getByRole('region', { name: 'Charges à expédier' })).toBeVisible();
+}
+
 test.describe('critical accessibility smoke', () => {
   test('public landing page has no serious automated WCAG violations', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/ProtoCap/);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('Packing Calculator filled workshop state has no serious automated WCAG violations', async ({ page }) => {
+    await configurePacking(page);
+    await expect(page.getByRole('radiogroup', { name: 'Politique opérationnelle' })).toBeVisible();
+    await expect(page.getByRole('progressbar', { name: 'Avancement des charges expédiées' })).toBeVisible();
+    await expect(page.getByRole('progressbar', { name: "Volume d'unités expédié" })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
 
