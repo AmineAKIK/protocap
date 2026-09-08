@@ -1,12 +1,14 @@
 import {
-  Calculator,
+  ArrowRight,
+  Boxes,
+  Check,
   CheckCircle2,
+  CircleDot,
   Minus,
   PackageCheck,
-  PackagePlus,
   Plus,
   RotateCcw,
-  Scale,
+  Sparkles,
   TriangleAlert,
   Truck
 } from 'lucide-react';
@@ -16,12 +18,19 @@ import {
   calculateExactPacking,
   calculatePackingOptions,
   getPackingRecommendation,
-  getShipmentPalletCount,
   isValidPackingInput,
   parsePositiveIntegerInput,
   type PackingInput,
+  type PackingOption,
   type PackingPolicy
 } from '../utils/packing';
+import {
+  createPackingShipmentPlan,
+  getPackingShipmentProgress,
+  type PackingShipmentLoad,
+  type PackingShipmentPlan,
+  type PackingShipmentProgress
+} from '../utils/packingShipment';
 
 interface PackingFormState {
   quantity: string;
@@ -46,15 +55,26 @@ const defaultTracking: PackingTrackingState = {
 };
 
 const policyLabels: Record<PackingPolicy, string> = {
-  'no-overrun': 'Ne pas dépasser',
-  'round-carton': 'Arrondir au carton',
-  'round-pallet': 'Arrondir à la palette'
+  'no-overrun': 'Exact',
+  'round-carton': 'Carton',
+  'round-pallet': 'Palette'
+};
+
+const policyDescriptions: Record<PackingPolicy, string> = {
+  'no-overrun': 'Sans dépassement',
+  'round-carton': 'Cartons complets',
+  'round-pallet': 'Palettes complètes'
 };
 
 const numberFormatter = new Intl.NumberFormat('fr-FR');
+const percentFormatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 function formatNumber(value: number): string {
   return numberFormatter.format(value);
+}
+
+function formatPercent(ratio: number): string {
+  return percentFormatter.format(ratio * 100);
 }
 
 function parsePackingInput(form: PackingFormState): PackingInput | null {
@@ -72,180 +92,243 @@ function getTrackingProgress(tracking: PackingTrackingState | null | undefined):
   return progress && typeof progress === 'object' && !Array.isArray(progress) ? progress : {};
 }
 
-function ResultMetric({ label, value, detail }: { label: string; value: number; detail?: string }) {
+function PackingField({
+  label,
+  value,
+  placeholder,
+  invalid,
+  onChange,
+  prominent = false
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  invalid: boolean;
+  onChange: (value: string) => void;
+  prominent?: boolean;
+}) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white px-4 py-3">
-      <p className="label leading-4">{label}</p>
-      <p className="mt-2 truncate text-2xl font-black tabular-nums text-slate-950 sm:text-3xl">{formatNumber(value)}</p>
-      {detail ? <p className="mt-1 text-xs font-medium text-slate-500">{detail}</p> : null}
+    <label className="block min-w-0">
+      <span className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
+      <input
+        className={`w-full rounded-2xl border bg-white font-black tabular-nums text-slate-950 outline-none transition focus:ring-4 ${
+          prominent ? 'min-h-16 px-4 text-2xl sm:text-3xl' : 'min-h-14 px-4 text-lg'
+        } ${
+          invalid
+            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10'
+            : 'border-slate-200 focus:border-teal-600 focus:ring-teal-600/10'
+        }`}
+        autoComplete="off"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        aria-invalid={invalid}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function StrategyCard({
+  option,
+  active,
+  recommended,
+  onSelect
+}: {
+  option: PackingOption;
+  active: boolean;
+  recommended: boolean;
+  onSelect: () => void;
+}) {
+  const varianceLabel = option.variance === 0 ? 'Écart 0' : `+${formatNumber(option.variance)} unités`;
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={onSelect}
+      className={`group min-w-0 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 ${
+        active
+          ? 'border-slate-900 bg-slate-950 text-white shadow-xl shadow-slate-950/10'
+          : 'border-slate-200 bg-white text-slate-950 hover:border-slate-300 hover:shadow-md'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${active ? 'text-teal-300' : 'text-slate-400'}`}>
+            {policyDescriptions[option.policy]}
+          </p>
+          <p className="mt-1 text-base font-black">{policyLabels[option.policy]}</p>
+        </div>
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${active ? 'border-teal-400 bg-teal-400 text-slate-950' : 'border-slate-200 text-transparent'}`}>
+          <Check size={15} strokeWidth={3} aria-hidden="true" />
+        </span>
+      </div>
+
+      <p className="mt-5 break-words text-2xl font-black tabular-nums sm:text-[1.7rem]">{formatNumber(option.totalPrepared)}</p>
+      <p className={`mt-1 text-xs font-bold ${option.variance === 0 ? (active ? 'text-emerald-300' : 'text-emerald-700') : (active ? 'text-amber-300' : 'text-amber-700')}`}>
+        {varianceLabel}
+      </p>
+
+      <div className={`mt-4 flex min-h-6 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+        {recommended ? (
+          <>
+            <Sparkles size={13} aria-hidden="true" />
+            Recommandé
+          </>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
+function PlanMetric({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="break-words text-[clamp(2rem,5vw,4.25rem)] font-black leading-none tracking-[-0.05em] tabular-nums text-white">
+        {formatNumber(value)}
+      </p>
+      <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 sm:text-xs">{label}</p>
     </div>
   );
 }
 
-interface ExactResultPanelProps {
-  exact: ReturnType<typeof calculateExactPacking>;
-  input: PackingInput;
+function loadDescription(load: PackingShipmentLoad | null): string {
+  if (!load) return 'Aucune charge restante';
+  if (load.kind === 'full-pallet') {
+    return `${formatNumber(load.cartons)} cartons · ${formatNumber(load.totalUnits)} unités`;
+  }
+
+  const parts: string[] = [];
+  if (load.cartons > 0) parts.push(`${formatNumber(load.cartons)} ${load.cartons === 1 ? 'carton' : 'cartons'}`);
+  if (load.looseUnits > 0) parts.push(`${formatNumber(load.looseUnits)} unités libres`);
+  return `${parts.join(' + ')} · ${formatNumber(load.totalUnits)} unités`;
 }
 
-function ExactResultPanel({ exact, input }: ExactResultPanelProps) {
-  return (
-    <section className="panel flex-1 p-4 sm:p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
-          <PackagePlus size={20} />
-        </div>
-        <div>
-          <h2 className="font-bold text-slate-950">Résultat exact</h2>
-          <p className="text-sm text-slate-500">
-            {formatNumber(exact.palettesCompletes)} palettes complètes, {formatNumber(exact.cartonsComplets)} cartons complets, {formatNumber(exact.unitesRestantes)} unités restantes.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-3 min-[520px]:grid-cols-3">
-        <ResultMetric label="Capacité palette" value={exact.unitsPerPalette} detail={formatNumber(input.cartonsPerPalette) + ' cartons'} />
-        <ResultMetric label="Capacité carton" value={input.unitsPerCarton} detail="unités par carton" />
-        <ResultMetric label="Total" value={input.quantity} detail="quantité demandée" />
-      </div>
-    </section>
-  );
-}
-
-interface ShipmentTrackerProps {
-  hasRemainderLoad: boolean;
-  shippedPallets: number;
-  totalPallets: number;
-  onDecrement: () => void;
-  onIncrement: () => void;
-  onReset: () => void;
-}
-
-function ShipmentTracker({
-  hasRemainderLoad,
-  shippedPallets,
-  totalPallets,
+function ShipmentExecution({
+  plan,
+  progress,
   onDecrement,
   onIncrement,
   onReset
-}: ShipmentTrackerProps) {
-  const remainingPallets = totalPallets - shippedPallets;
-  const isComplete = remainingPallets === 0;
-  const progress = Math.round((shippedPallets / totalPallets) * 100);
+}: {
+  plan: PackingShipmentPlan;
+  progress: PackingShipmentProgress;
+  onDecrement: () => void;
+  onIncrement: () => void;
+  onReset: () => void;
+}) {
+  const isComplete = progress.remainingLoads === 0;
+  const loadPercent = formatPercent(progress.loadProgressRatio);
+  const volumePercent = formatPercent(progress.unitProgressRatio);
 
   return (
     <section
       aria-labelledby="packing-shipment-title"
-      className={`flex-1 overflow-hidden rounded-2xl border bg-white shadow-sm ${isComplete ? 'border-emerald-300' : 'border-slate-200'}`}
+      className={`overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}
     >
-      <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5 ${isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
-        <div className="flex items-center gap-3">
-          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white ${isComplete ? 'bg-emerald-700' : 'bg-slate-900'}`}>
-            {isComplete ? <CheckCircle2 size={22} aria-hidden="true" /> : <Truck size={22} aria-hidden="true" />}
+      <div className={`border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-white'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className={`grid h-10 w-10 place-items-center rounded-xl ${isComplete ? 'bg-emerald-700 text-white' : 'bg-slate-950 text-white'}`}>
+              {isComplete ? <CheckCircle2 size={20} aria-hidden="true" /> : <Truck size={20} aria-hidden="true" />}
+            </span>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Exécution atelier</p>
+              <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">Palettes à expédier</h2>
+            </div>
           </div>
-          <div>
-            <p className="label">Suivi manuel</p>
-            <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-bold text-slate-950">
-              Palettes à expédier
-            </h2>
-          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-500">Enregistré sur cet appareil</span>
         </div>
-        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-          Enregistré sur cet appareil
-        </span>
       </div>
 
-      <div className="p-4 sm:p-5">
-        <div className="grid items-center gap-5 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
-          <div>
-            <p className="sr-only" role="status" aria-live="polite">
-              {formatNumber(remainingPallets)} {remainingPallets === 1 ? 'palette restante' : 'palettes restantes'},{' '}
-              {formatNumber(shippedPallets)} {shippedPallets === 1 ? 'palette envoyée' : 'palettes envoyées'} sur{' '}
-              {formatNumber(totalPallets)}.
+      <div className="p-5 sm:p-6">
+        <p className="sr-only" role="status" aria-live="polite">
+          {formatNumber(progress.remainingLoads)} {progress.remainingLoads === 1 ? 'palette restante' : 'palettes restantes'}, {formatNumber(progress.shippedLoads)} {progress.shippedLoads === 1 ? 'palette envoyée' : 'palettes envoyées'} sur {formatNumber(plan.totalLoads)}.
+        </p>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-end">
+          <div className="min-w-0">
+            <p className={`text-[clamp(3.5rem,8vw,6.5rem)] font-black leading-[0.85] tracking-[-0.07em] tabular-nums ${isComplete ? 'text-emerald-700' : 'text-slate-950'}`} aria-label={`${formatNumber(progress.remainingLoads)} ${progress.remainingLoads === 1 ? 'palette restante' : 'palettes restantes'}`}>
+              {formatNumber(progress.remainingLoads)}
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className={`rounded-xl border px-4 py-3 ${isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-teal-200 bg-teal-50'}`}>
-                <p className="label">Restantes</p>
-                <p
-                  aria-label={`${formatNumber(remainingPallets)} ${remainingPallets === 1 ? 'palette restante' : 'palettes restantes'}`}
-                  className={`mt-1 text-3xl font-black tabular-nums ${isComplete ? 'text-emerald-700' : 'text-teal-800'}`}
-                >
-                  {formatNumber(remainingPallets)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                <p className="label">Envoyées</p>
-                <p
-                  aria-label={`${formatNumber(shippedPallets)} ${shippedPallets === 1 ? 'palette envoyée' : 'palettes envoyées'} sur ${formatNumber(totalPallets)}`}
-                  className="mt-1 text-3xl font-black tabular-nums text-slate-950"
-                >
-                  {formatNumber(shippedPallets)}
-                  <span className="ml-1 text-base font-bold text-slate-400">/ {formatNumber(totalPallets)}</span>
-                </p>
-              </div>
-            </div>
-            <p className={`mt-3 text-sm font-medium ${isComplete ? 'text-emerald-800' : 'text-slate-600'}`} aria-live="polite">
-              {isComplete
-                ? 'Toutes les palettes prévues ont été déclarées comme envoyées.'
-                : hasRemainderLoad
-                  ? "Le total inclut la palette utilisée pour le reliquat du découpage sélectionné."
-                  : 'Le total correspond aux palettes complètes du découpage sélectionné.'}
+            <p className="mt-3 text-sm font-black uppercase tracking-[0.14em] text-slate-500">
+              {progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}
+            </p>
+            <p className="mt-3 text-sm font-semibold text-slate-600">
+              {isComplete ? 'Toutes les palettes prévues ont été déclarées comme envoyées.' : `${formatNumber(progress.shippedLoads)} / ${formatNumber(plan.totalLoads)} charges expédiées`}
             </p>
           </div>
 
-          <div className="flex items-stretch justify-center gap-2" role="group" aria-label="Modifier le nombre de palettes envoyées">
-            <button
-              type="button"
-              aria-label="Retirer une palette envoyée"
-              disabled={shippedPallets === 0}
-              onClick={onDecrement}
-              className="grid min-h-12 min-w-12 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300"
-            >
-              <Minus size={22} aria-hidden="true" />
-            </button>
-            <div className="grid min-w-24 place-items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-              <span className="label">Compteur</span>
-              <span className="text-2xl font-black tabular-nums text-slate-950">{formatNumber(shippedPallets)}</span>
-            </div>
-            <button
-              type="button"
-              aria-label="Déclarer une palette envoyée"
-              disabled={isComplete}
-              onClick={onIncrement}
-              className="grid min-h-12 min-w-12 place-items-center rounded-xl border border-teal-700 bg-teal-700 text-white shadow-sm transition hover:border-teal-800 hover:bg-teal-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300"
-            >
-              <Plus size={22} aria-hidden="true" />
-            </button>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{isComplete ? 'Statut' : 'Prochaine charge'}</p>
+            <p className="mt-2 text-lg font-black text-slate-950">
+              {isComplete ? 'Expédition terminée' : progress.nextLoad?.kind === 'remainder' ? 'Charge reliquat' : `Palette ${formatNumber((progress.nextLoad?.index ?? 0) + 1)}`}
+            </p>
+            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">
+              {isComplete ? `${formatNumber(plan.totalUnits)} unités déclarées expédiées.` : loadDescription(progress.nextLoad)}
+            </p>
           </div>
         </div>
 
-        <div className="mt-5">
-          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
-            <span>Avancement</span>
-            <span className="tabular-nums">{progress} %</span>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Avancement des charges</p>
+                <p className="mt-1 text-xl font-black tabular-nums text-slate-950">{formatNumber(progress.shippedLoads)} / {formatNumber(plan.totalLoads)}</p>
+              </div>
+              <span className="text-sm font-black tabular-nums text-slate-500">{loadPercent} %</span>
+            </div>
+            <div role="progressbar" aria-label="Avancement des palettes envoyées" aria-valuemin={0} aria-valuemax={plan.totalLoads} aria-valuenow={progress.shippedLoads} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-teal-600'}`} style={{ width: `${progress.loadProgressRatio * 100}%` }} />
+            </div>
           </div>
-          <div
-            role="progressbar"
-            aria-label="Avancement des palettes envoyées"
-            aria-valuemin={0}
-            aria-valuemax={totalPallets}
-            aria-valuenow={shippedPallets}
-            className="h-2.5 overflow-hidden rounded-full bg-slate-100"
+
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Volume expédié</p>
+                <p className="mt-1 break-words text-xl font-black tabular-nums text-slate-950">{formatNumber(progress.shippedUnits)} / {formatNumber(plan.totalUnits)}</p>
+              </div>
+              <span className="shrink-0 text-sm font-black tabular-nums text-slate-500">{volumePercent} %</span>
+            </div>
+            <div role="progressbar" aria-label="Volume d'unités expédié" aria-valuemin={0} aria-valuemax={plan.totalUnits} aria-valuenow={progress.shippedUnits} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? 'bg-emerald-600' : 'bg-slate-800'}`} style={{ width: `${progress.unitProgressRatio * 100}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+          <button
+            type="button"
+            aria-label="Retirer une palette envoyée"
+            disabled={progress.shippedLoads === 0}
+            onClick={onDecrement}
+            className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 sm:min-w-36"
           >
-            <div
-              className={`h-full rounded-full transition-[width] duration-300 ${isComplete ? 'bg-emerald-600' : 'bg-teal-600'}`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+            <Minus size={18} aria-hidden="true" />
+            Corriger
+          </button>
+          <button
+            type="button"
+            aria-label="Déclarer une palette envoyée"
+            disabled={isComplete}
+            onClick={onIncrement}
+            className="inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-teal-700 px-6 text-base font-black text-white shadow-lg shadow-teal-900/15 transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 disabled:cursor-not-allowed disabled:bg-emerald-700 sm:min-h-16"
+          >
+            {isComplete ? <CheckCircle2 size={21} aria-hidden="true" /> : <Plus size={21} aria-hidden="true" />}
+            {isComplete ? 'Expédition terminée' : 'Déclarer la prochaine charge expédiée'}
+          </button>
         </div>
 
-        {shippedPallets > 0 ? (
+        {progress.shippedLoads > 0 ? (
           <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
-            >
-              <RotateCcw size={16} aria-hidden="true" />
+            <button type="button" onClick={onReset} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950">
+              <RotateCcw size={15} aria-hidden="true" />
               Réinitialiser le suivi
             </button>
           </div>
@@ -273,17 +356,11 @@ export function PackingCalculatorPage() {
     if (!calculation || !input) return null;
 
     const calculationKey = `${input.quantity}:${input.unitsPerCarton}:${input.cartonsPerPalette}:${form.policy}`;
-    const totalPallets = getShipmentPalletCount(calculation.selected);
+    const plan = createPackingShipmentPlan(input, calculation.selected);
     const storedCount = getTrackingProgress(tracking)[calculationKey];
-    const validStoredCount = Number.isSafeInteger(storedCount) ? storedCount : 0;
-    const shippedPallets = Math.min(totalPallets, Math.max(0, validStoredCount));
+    const progress = getPackingShipmentProgress(plan, Number.isSafeInteger(storedCount) ? storedCount : 0);
 
-    return {
-      calculationKey,
-      hasRemainderLoad: calculation.selected.cartons > 0 || calculation.selected.units > 0,
-      shippedPallets,
-      totalPallets
-    };
+    return { calculationKey, plan, progress };
   }, [calculation, form.policy, input, tracking]);
 
   function changeShippedPallets(delta: number) {
@@ -296,7 +373,7 @@ export function PackingCalculatorPage() {
       return {
         progressByCalculation: {
           ...progressByCalculation,
-          [shipment.calculationKey]: Math.min(shipment.totalPallets, Math.max(0, currentCount + delta))
+          [shipment.calculationKey]: Math.min(shipment.plan.totalLoads, Math.max(0, currentCount + delta))
         }
       };
     });
@@ -325,213 +402,177 @@ export function PackingCalculatorPage() {
   const quantityState = fieldState(form.quantity);
   const unitsPerCartonState = fieldState(form.unitsPerCarton);
   const cartonsPerPaletteState = fieldState(form.cartonsPerPalette);
-  const combinationInvalid =
-    quantityState === 'valid' &&
-    unitsPerCartonState === 'valid' &&
-    cartonsPerPaletteState === 'valid' &&
-    !input;
+  const combinationInvalid = quantityState === 'valid' && unitsPerCartonState === 'valid' && cartonsPerPaletteState === 'valid' && !input;
   const neutral = !calculation || !input;
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="mb-6">
-        <p className="label">Module calcul</p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Packing Calculator</h1>
-        <p className="mt-2 max-w-3xl text-slate-600">Convertir une quantité demandée en découpage opérationnel selon le conditionnement de la référence.</p>
-        <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">Calcul rapide, écart visible, décision fiabilisée.</p>
-      </div>
-
-      <div className="grid items-stretch gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-        <section aria-label="Référence et résultat exact" className="flex flex-col gap-5">
-          <section className="panel p-4 sm:p-5">
-            <div className="mb-5 flex items-start gap-3">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700">
-                <Calculator size={24} />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-lg font-bold text-slate-950">Paramètres de référence</h2>
-                <p className="text-sm text-slate-500">Les dernières valeurs sont conservées localement dans le navigateur.</p>
-              </div>
+    <div className="relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-slate-100/80 to-transparent" aria-hidden="true" />
+      <div className="relative mx-auto max-w-[1480px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8 xl:py-8">
+        <header className="mb-5 flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-teal-700">
+              <Boxes size={14} aria-hidden="true" />
+              ProtoCap · Conditionnement
             </div>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-slate-950 sm:text-4xl">Packing Calculator</h1>
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">Transformer une quantité demandée en plan de préparation clair, comparable et directement exécutable à l'atelier.</p>
+          </div>
+          <div className="flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur sm:self-auto">
+            <CircleDot size={13} className="text-teal-700" aria-hidden="true" />
+            Calcul local · instantané
+          </div>
+        </header>
 
-            <div className="grid gap-4">
-              <label>
-                <span className="label">Quantité demandée en unités</span>
-                <input
-                  className={`field mt-1 ${quantityState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                  autoComplete="off"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  type="text"
+        <div className="grid gap-5 xl:grid-cols-[minmax(22rem,0.78fr)_minmax(0,1.22fr)] xl:items-start">
+          <section aria-label="Référence et résultat exact" className="min-w-0 space-y-5">
+            <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">01 · Référence</p>
+                  <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Paramètres de référence</h2>
+                </div>
+                <PackageCheck size={22} className="text-teal-700" aria-hidden="true" />
+              </div>
+
+              <div className="grid gap-4">
+                <PackingField
+                  label="Quantité demandée en unités"
                   value={form.quantity}
                   placeholder="Ex : 30880"
-                  aria-invalid={quantityState === 'invalid'}
-                  onChange={(event) => updateField('quantity', event.target.value)}
+                  invalid={quantityState === 'invalid'}
+                  prominent
+                  onChange={(value) => updateField('quantity', value)}
                 />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label>
-                  <span className="label">Unités par carton</span>
-                  <input
-                    className={`field mt-1 ${unitsPerCartonState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                    autoComplete="off"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    type="text"
-                    value={form.unitsPerCarton}
-                    placeholder="Ex : 128"
-                    aria-invalid={unitsPerCartonState === 'invalid'}
-                    onChange={(event) => updateField('unitsPerCarton', event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span className="label">Cartons par palette</span>
-                  <input
-                    className={`field mt-1 ${cartonsPerPaletteState === 'invalid' ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10' : ''}`}
-                    autoComplete="off"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    type="text"
-                    value={form.cartonsPerPalette}
-                    placeholder="Ex : 40"
-                    aria-invalid={cartonsPerPaletteState === 'invalid'}
-                    onChange={(event) => updateField('cartonsPerPalette', event.target.value)}
-                  />
-                </label>
-              </div>
-            </div>
-
-            {combinationInvalid ? (
-              <div role="alert" className="mt-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-                <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" />
-                <p>
-                  Cette combinaison dépasse la précision entière exacte prise en charge par le calculateur. Réduisez la quantité ou le conditionnement avant de calculer.
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-5">
-              <p className="label mb-2">Politique opérationnelle</p>
-              <div className="grid gap-2 min-[520px]:grid-cols-3">
-                {(Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
-                  <button
-                    key={policy}
-                    type="button"
-                    onClick={() => updateField('policy', policy)}
-                    className={`min-h-[4rem] rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                      form.policy === policy
-                        ? 'border-teal-700 bg-teal-700 text-white shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="block">{policyLabels[policy]}</span>
-                    <span className={`mt-0.5 block min-h-4 text-[11px] font-bold ${form.policy === policy ? 'text-teal-100' : 'text-teal-700'}`}>
-                      {calculation && calculation.recommendation.policy === policy ? 'Recommandé' : ''}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <PackageCheck size={18} className="mt-0.5 shrink-0 text-teal-700" />
-                <div>
-                  <p className="text-sm font-bold text-slate-900">Mini formule</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {input && calculation
-                      ? `1 palette = ${formatNumber(input.cartonsPerPalette)} cartons × ${formatNumber(input.unitsPerCarton)} unités = ${formatNumber(calculation.exact.unitsPerPalette)} unités.`
-                      : combinationInvalid
-                        ? 'Le calcul est bloqué tant que tous les totaux dérivés ne sont pas représentables exactement.'
-                        : 'Renseignez des nombres entiers positifs pour afficher la capacité palette.'}
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PackingField label="Unités par carton" value={form.unitsPerCarton} placeholder="Ex : 128" invalid={unitsPerCartonState === 'invalid'} onChange={(value) => updateField('unitsPerCarton', value)} />
+                  <PackingField label="Cartons par palette" value={form.cartonsPerPalette} placeholder="Ex : 40" invalid={cartonsPerPaletteState === 'invalid'} onChange={(value) => updateField('cartonsPerPalette', value)} />
                 </div>
               </div>
-            </div>
 
-            {!neutral && calculation.selected.variance > 0 ? (
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <TriangleAlert size={18} className="mt-0.5 shrink-0 text-amber-600" />
-                <p>
-                  {form.policy === 'round-pallet' ? "L'arrondi palette" : "L'arrondi carton"} prépare {formatNumber(calculation.selected.variance)} unités de plus que la quantité demandée.
-                </p>
+              {combinationInvalid ? (
+                <div role="alert" className="mt-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium leading-6 text-rose-900">
+                  <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" aria-hidden="true" />
+                  Cette combinaison dépasse le domaine de calcul entier exact. Réduisez la quantité ou le conditionnement.
+                </div>
+              ) : null}
+
+              <div className="mt-5 rounded-2xl bg-slate-950 px-4 py-4 text-white">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Capacité de référence</p>
+                {input && calculation ? (
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-2xl font-black tabular-nums">{formatNumber(calculation.exact.unitsPerPalette)}</span>
+                    <span className="text-sm font-bold text-slate-300">unités / palette</span>
+                    <span className="text-xs font-semibold text-slate-500">· {formatNumber(input.cartonsPerPalette)} cartons × {formatNumber(input.unitsPerCarton)}</span>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm font-medium text-slate-400">Renseignez les trois valeurs pour construire le plan.</p>
+                )}
               </div>
+            </section>
+
+            <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)] sm:p-6">
+              <div className="mb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">02 · Décision</p>
+                <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Stratégie de préparation</h2>
+                <p className="mt-1 text-sm font-medium text-slate-500">Comparez l'impact avant de choisir.</p>
+              </div>
+
+              <div role="radiogroup" aria-label="Politique opérationnelle" className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+                {calculation
+                  ? calculation.options.map((option) => (
+                      <StrategyCard key={option.policy} option={option} active={form.policy === option.policy} recommended={calculation.recommendation.policy === option.policy} onSelect={() => updateField('policy', option.policy)} />
+                    ))
+                  : (Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
+                      <button key={policy} type="button" disabled className="min-h-36 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left opacity-60">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{policyDescriptions[policy]}</p>
+                        <p className="mt-1 font-black text-slate-700">{policyLabels[policy]}</p>
+                        <p className="mt-5 text-2xl font-black text-slate-300">—</p>
+                      </button>
+                    ))}
+              </div>
+            </section>
+
+            {calculation && input ? (
+              <section aria-labelledby="packing-exact-title" className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Référence théorique</p>
+                    <h2 id="packing-exact-title" className="mt-1 text-sm font-black text-slate-950">Résultat exact</h2>
+                  </div>
+                  <p className="text-right text-sm font-bold tabular-nums text-slate-600">{formatNumber(calculation.exact.palettesCompletes)} P · {formatNumber(calculation.exact.cartonsComplets)} C · {formatNumber(calculation.exact.unitesRestantes)} U</p>
+                </div>
+              </section>
             ) : null}
           </section>
 
-          {calculation && input ? <ExactResultPanel exact={calculation.exact} input={input} /> : null}
-        </section>
-
-        <section aria-label="Découpage final et suivi manuel" className="flex flex-col gap-5">
-          {neutral ? (
-            <div className="panel px-4 py-14 text-center sm:px-6">
-              <Scale size={36} className="mx-auto mb-3 text-slate-300" />
-              <h2 className="text-lg font-bold text-slate-950">Calcul en attente</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-                {combinationInvalid
-                  ? 'La combinaison saisie dépasse le domaine de calcul exact. Réduisez les valeurs avant de poursuivre.'
-                  : 'Saisissez une quantité, des unités par carton et des cartons par palette avec des nombres entiers positifs.'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="rounded-2xl border-2 border-teal-500 bg-teal-50 p-3 shadow-md sm:p-4">
-                <div className="rounded-xl bg-teal-700 px-4 py-4 text-white">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-teal-100">Découpage final sélectionné</p>
-                      <h2 className="mt-1 text-2xl font-black">{calculation.selected.label}</h2>
-                    </div>
-                    <CheckCircle2 size={28} className="text-teal-100" />
-                  </div>
-                </div>
-
-                <div className="mt-3 grid gap-3 min-[520px]:grid-cols-3">
-                  <ResultMetric label="Palettes complètes" value={calculation.selected.palettes} />
-                  <ResultMetric label="Cartons complets" value={calculation.selected.cartons} />
-                  <ResultMetric label="Unités restantes" value={calculation.selected.units} />
-                </div>
-
-                <div className="mt-3 grid gap-3 min-[520px]:grid-cols-3">
-                  <div className="rounded-lg bg-white px-4 py-3">
-                    <p className="label">Total demandé</p>
-                    <p className="mt-1 truncate text-lg font-black tabular-nums text-slate-950">{formatNumber(input.quantity)}</p>
-                  </div>
-                  <div className="rounded-lg bg-white px-4 py-3">
-                    <p className="label">Total préparé</p>
-                    <p className="mt-1 truncate text-lg font-black tabular-nums text-slate-950">{formatNumber(calculation.selected.totalPrepared)}</p>
-                  </div>
-                  <div className="rounded-lg bg-white px-4 py-3">
-                    <p className="label">Écart</p>
-                    <p className={`mt-1 text-lg font-black tabular-nums ${calculation.selected.variance === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      +{formatNumber(calculation.selected.variance)}
-                    </p>
-                  </div>
+          <section aria-label="Découpage final et suivi manuel" className="min-w-0 space-y-5">
+            {neutral ? (
+              <div className="grid min-h-[28rem] place-items-center rounded-[2rem] border border-dashed border-slate-300 bg-white/70 px-6 text-center shadow-sm">
+                <div className="max-w-md">
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Boxes size={27} aria-hidden="true" /></span>
+                  <h2 className="mt-5 text-xl font-black tracking-tight text-slate-950">Plan en attente</h2>
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-500">{combinationInvalid ? 'La combinaison saisie dépasse le domaine de calcul exact.' : 'Renseignez la quantité et le conditionnement. Le plan de préparation apparaîtra immédiatement.'}</p>
                 </div>
               </div>
+            ) : (
+              <>
+                <section className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+                  <div className="border-b border-white/10 px-5 py-4 sm:px-7">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">03 · Plan actif</p>
+                        <h2 className="mt-1 text-xl font-black tracking-tight">Découpage final sélectionné</h2>
+                      </div>
+                      <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
+                        <CheckCircle2 size={14} className="text-teal-300" aria-hidden="true" />
+                        {calculation.selected.label}
+                      </span>
+                    </div>
+                  </div>
 
-              {shipment ? (
-                <ShipmentTracker
-                  hasRemainderLoad={shipment.hasRemainderLoad}
-                  shippedPallets={shipment.shippedPallets}
-                  totalPallets={shipment.totalPallets}
-                  onDecrement={() => changeShippedPallets(-1)}
-                  onIncrement={() => changeShippedPallets(1)}
-                  onReset={resetShipmentTracking}
-                />
-              ) : null}
+                  <div className="p-5 sm:p-7">
+                    <div className="grid gap-6 sm:grid-cols-3">
+                      <PlanMetric value={shipment!.plan.fullLoadCount} label="Palettes complètes" />
+                      <PlanMetric value={shipment!.plan.remainderLoad ? 1 : 0} label="Charge reliquat" />
+                      <PlanMetric value={shipment!.plan.totalLoads} label="Charges à expédier" />
+                    </div>
 
-            </>
-          )}
-        </section>
+                    {shipment!.plan.remainderLoad ? (
+                      <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Composition du reliquat</p>
+                          <p className="mt-1 text-base font-black">{loadDescription({ index: shipment!.plan.fullLoadCount, ...shipment!.plan.remainderLoad })}</p>
+                        </div>
+                        <ArrowRight size={20} className="hidden text-teal-300 sm:block" aria-hidden="true" />
+                      </div>
+                    ) : (
+                      <div className="mt-7 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200">Aucun reliquat : le plan utilise uniquement des palettes complètes.</div>
+                    )}
+
+                    <div className="mt-7 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Demandé</p>
+                        <p className="mt-1 break-words text-xl font-black tabular-nums">{formatNumber(input.quantity)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Préparé</p>
+                        <p className="mt-1 break-words text-xl font-black tabular-nums">{formatNumber(calculation.selected.totalPrepared)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Écart</p>
+                        <p className={`mt-1 break-words text-xl font-black tabular-nums ${calculation.selected.variance === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>+{formatNumber(calculation.selected.variance)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {shipment ? <ShipmentExecution plan={shipment.plan} progress={shipment.progress} onDecrement={() => changeShippedPallets(-1)} onIncrement={() => changeShippedPallets(1)} onReset={resetShipmentTracking} /> : null}
+              </>
+            )}
+          </section>
+        </div>
       </div>
-
-      <section className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
-        <h2 className="text-base font-bold text-slate-950">Pourquoi ce module ?</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Réduit les calculs manuels et rend visible l'écart entre la quantité demandée et la quantité préparée.
-        </p>
-      </section>
     </div>
   );
 }
