@@ -18,7 +18,7 @@ test.describe('browser and responsive smoke', () => {
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', /manifest/i);
     await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /width=device-width/);
 
-    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
+    const manifestHref = await page.locator('link[rel="manifest"]')).getAttribute('href');
     expect(manifestHref).toBeTruthy();
     const manifest = await page.evaluate(async (href) => {
       const response = await fetch(href!);
@@ -31,7 +31,7 @@ test.describe('browser and responsive smoke', () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test('Packing Calculator keeps its workshop action usable without horizontal overflow', async ({ page }) => {
+  test('Packing Calculator keeps its primary shipment action usable without horizontal overflow', async ({ page }) => {
     await page.goto('/packing-calculator');
     await page.getByLabel('Quantité demandée en unités').fill('30880');
     await page.getByLabel('Unités par carton').fill('128');
