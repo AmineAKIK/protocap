@@ -38,6 +38,37 @@ textarea {
 }
 
 /*
+ * Packing Calculator visual integrity
+ *
+ * The global emergency wrapping rule is useful for arbitrary content, but it
+ * must never split operational numbers or normal French words inside the
+ * calculator. Packing owns its wrapping rules explicitly so formatted values
+ * remain atomic and prose wraps only at natural boundaries.
+ */
+[aria-label='Référence et résultat exact'],
+[aria-label='Découpage final et suivi manuel'] {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+[aria-label='Référence et résultat exact'] *,
+[aria-label='Découpage final et suivi manuel'] * {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+[aria-label='Référence et résultat exact'] .tabular-nums,
+[aria-label='Découpage final et suivi manuel'] .tabular-nums {
+  white-space: nowrap;
+}
+
+[aria-label='Référence et résultat exact'] [role='radio'] p,
+[aria-label='Découpage final et suivi manuel'] p,
+[aria-label='Découpage final et suivi manuel'] div {
+  hyphens: none;
+}
+
+/*
  * Packing Calculator is designed as an at-a-glance workshop surface. Keep
  * supporting labels comfortably above AA contrast on light surfaces while
  * preserving the lighter-on-dark hierarchy inside the active plan cards.
@@ -59,6 +90,37 @@ textarea {
 [aria-label='Découpage final et suivi manuel'] .bg-slate-950 .text-slate-400,
 [aria-label='Découpage final et suivi manuel'] .bg-slate-950 .text-slate-500 {
   color: #cbd5e1;
+}
+
+@media (max-width: 479px) {
+  /* The theoretical result is clearer stacked than squeezed into one row. */
+  section[aria-labelledby='packing-exact-title'] > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  section[aria-labelledby='packing-exact-title'] > div > p:last-child {
+    text-align: left;
+  }
+
+  /* Large safe integers stay on one line and scale down instead of splitting. */
+  section[aria-label='Découpage final et suivi manuel'] > section:first-child > div:last-child > div:first-child p.tabular-nums {
+    font-size: clamp(1.65rem, 9vw, 2.5rem);
+    letter-spacing: -0.04em;
+  }
+
+  section[aria-labelledby='packing-shipment-title'] p[aria-label*='charge restante'],
+  section[aria-labelledby='packing-shipment-title'] p[aria-label*='charges restantes'] {
+    font-size: clamp(3rem, 16vw, 5rem);
+    letter-spacing: -0.055em;
+    white-space: nowrap;
+  }
+
+  section[aria-labelledby='packing-shipment-title'] .text-xl.tabular-nums {
+    font-size: clamp(0.9rem, 4.6vw, 1.15rem);
+    line-height: 1.4;
+    white-space: nowrap;
+  }
 }
 
 /*
