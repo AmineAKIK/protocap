@@ -12,7 +12,7 @@ import {
   TriangleAlert,
   Truck
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
   calculateExactPacking,
@@ -156,14 +156,14 @@ function StrategyCard({
           : 'border-slate-200 bg-white text-slate-950 hover:border-slate-300 hover:shadow-md'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${active ? 'text-teal-300' : 'text-slate-400'}`}>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+        <div className="min-w-0 pr-1">
+          <p className={`break-words text-[10px] font-black uppercase leading-tight tracking-[0.12em] ${active ? 'text-teal-300' : 'text-slate-400'}`}>
             {policyDescriptions[option.policy]}
           </p>
           <p className="mt-1 text-base font-black">{policyLabels[option.policy]}</p>
         </div>
-        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${active ? 'border-teal-400 bg-teal-400 text-slate-950' : 'border-slate-200 text-transparent'}`}>
+        <span className={`ml-1 grid h-7 w-7 shrink-0 place-items-center rounded-full border ${active ? 'border-teal-400 bg-teal-400 text-slate-950' : 'border-slate-200 text-transparent'}`}>
           <Check size={15} strokeWidth={3} aria-hidden="true" />
         </span>
       </div>
@@ -366,6 +366,7 @@ function ShipmentExecution({
 export function PackingCalculatorPage() {
   const [form, setForm] = useLocalStorage<PackingFormState>('lineops.packing.form.inputs', defaultForm);
   const [tracking, setTracking] = useLocalStorage<PackingTrackingState>('lineops.packing.shipment.progress', defaultTracking);
+  const [selectedPolicy, setSelectedPolicy] = useState<PackingPolicy | null>(null);
   const input = useMemo(() => parsePackingInput(form), [form]);
 
   const calculation = useMemo(() => {
@@ -373,20 +374,20 @@ export function PackingCalculatorPage() {
     const exact = calculateExactPacking(input);
     const options = calculatePackingOptions(input);
     const recommendation = getPackingRecommendation(options);
-    const selected = options.find((option) => option.policy === form.policy) ?? options[0];
+    const selected = selectedPolicy ? options.find((option) => option.policy === selectedPolicy) ?? null : null;
     return { exact, options, recommendation, selected };
-  }, [form.policy, input]);
+  }, [input, selectedPolicy]);
 
   const shipment = useMemo(() => {
-    if (!calculation || !input) return null;
+    if (!calculation?.selected || !input || !selectedPolicy) return null;
 
-    const calculationKey = `${input.quantity}:${input.unitsPerCarton}:${input.cartonsPerPalette}:${form.policy}`;
+    const calculationKey = `${input.quantity}:${input.unitsPerCarton}:${input.cartonsPerPalette}:${selectedPolicy}`;
     const plan = createPackingShipmentPlan(input, calculation.selected);
     const storedCount = getTrackingProgress(tracking)[calculationKey];
     const progress = getPackingShipmentProgress(plan, Number.isSafeInteger(storedCount) ? storedCount : 0);
 
     return { calculationKey, plan, progress };
-  }, [calculation, form.policy, input, tracking]);
+  }, [calculation, input, selectedPolicy, tracking]);
 
   function changeShippedPallets(delta: number) {
     if (!shipment) return;
@@ -432,7 +433,8 @@ export function PackingCalculatorPage() {
     unitsPerCartonState === 'valid' &&
     cartonsPerPaletteState === 'valid' &&
     !input;
-  const neutral = !calculation || !input;
+  const selectedOption = calculation?.selected ?? null;
+  const neutral = !calculation || !input || !selectedOption;
 
   return (
     <div className="relative overflow-hidden">
@@ -529,9 +531,9 @@ export function PackingCalculatorPage() {
                       <StrategyCard
                         key={option.policy}
                         option={option}
-                        active={form.policy === option.policy}
+                        active={selectedPolicy === option.policy}
                         recommended={calculation.recommendation.policy === option.policy}
-                        onSelect={() => updateField('policy', option.policy)}
+                        onSelect={() => setSelectedPolicy(option.policy)}
                       />
                     ))
                   : (Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
@@ -570,7 +572,9 @@ export function PackingCalculatorPage() {
                   <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
                     {combinationInvalid
                       ? 'La combinaison saisie dépasse le domaine de calcul exact.'
-                      : 'Renseignez la quantité et le conditionnement. Le plan de préparation apparaîtra immédiatement.'}
+                      : input && calculation
+                        ? 'Choisissez une stratégie de préparation pour activer le plan et le suivi atelier.'
+                        : 'Renseignez la quantité et le conditionnement. Les trois stratégies seront calculées avant votre choix.'}
                   </p>
                 </div>
               </div>
@@ -585,7 +589,7 @@ export function PackingCalculatorPage() {
                       </div>
                       <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
                         <CheckCircle2 size={14} className="text-teal-300" aria-hidden="true" />
-                        {calculation.selected.label}
+                        {selectedOption.label}
                       </span>
                     </div>
                   </div>
@@ -620,12 +624,12 @@ export function PackingCalculatorPage() {
                       </div>
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Préparé</p>
-                        <p className="mt-1 break-words text-xl font-black tabular-nums">{formatNumber(calculation.selected.totalPrepared)}</p>
+                        <p className="mt-1 break-words text-xl font-black tabular-nums">{formatNumber(selectedOption.totalPrepared)}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Écart</p>
-                        <p className={`mt-1 break-words text-xl font-black tabular-nums ${calculation.selected.variance === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
-                          +{formatNumber(calculation.selected.variance)}
+                        <p className={`mt-1 break-words text-xl font-black tabular-nums ${selectedOption.variance === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                          +{formatNumber(selectedOption.variance)}
                         </p>
                       </div>
                     </div>
