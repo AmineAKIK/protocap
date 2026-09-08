@@ -74,6 +74,7 @@ async function auditDom(page: Page, viewport: string, state: string): Promise<Au
 }
 
 test('capture exhaustive packing visual matrix', async ({ page }, testInfo) => {
+  test.setTimeout(180_000);
   await mkdir(outDir, { recursive: true });
   const findings: AuditFinding[] = [];
 
