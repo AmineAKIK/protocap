@@ -19,6 +19,7 @@ export interface PackingShipmentPlan {
   remainderLoad: Omit<PackingShipmentLoad, 'index'> | null;
   totalLoads: number;
   totalUnits: number;
+  cartonsPerFullLoad: number;
   unitsPerFullLoad: number;
 }
 
@@ -96,6 +97,7 @@ export function createPackingShipmentPlan(
       : null,
     totalLoads,
     totalUnits,
+    cartonsPerFullLoad: input.cartonsPerPalette,
     unitsPerFullLoad,
   };
 }
@@ -110,7 +112,7 @@ export function getPackingShipmentLoad(
     return {
       index,
       kind: 'full-pallet',
-      cartons: plan.unitsPerFullLoad === 0 ? 0 : Math.floor(plan.unitsPerFullLoad / plan.unitsPerFullLoad),
+      cartons: plan.cartonsPerFullLoad,
       looseUnits: 0,
       totalUnits: plan.unitsPerFullLoad,
     };
