@@ -63,11 +63,14 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   assert.match(workflow, /run:\s+npm run test:e2e:a11y/);
   assert.match(accessibility, /new AxeBuilder/);
   assert.match(accessibility, /Packing Calculator filled workshop state/);
+  assert.match(accessibility, /setViewportSize\(\{ width: 1366, height: 768 \}\)/);
   assert.match(accessibility, /violation\.impact === 'critical' \|\| violation\.impact === 'serious'/);
   assert.match(packing, /1366/);
   assert.match(packing, /1920/);
   assert.match(packing, /expectNoHorizontalOverflow/);
-  assert.match(browserSmoke, /Packing Calculator keeps its workshop action usable/);
+  assert.match(packing, /businessNumbers\.count\(\)/);
+  assert.match(packing, /keyboard\.press\('Space'\)/);
+  assert.match(browserSmoke, /Packing Calculator keeps its primary shipment action usable/);
 });
 
 test('scheduled live smoke remains read-only, secret-free and outside AI/auth routes', async () => {
