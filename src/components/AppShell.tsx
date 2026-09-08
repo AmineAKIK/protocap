@@ -1,6 +1,6 @@
 import { Bot, Boxes, Calculator, ClipboardCheck, FileText, FlaskConical, Home, Library, RadioTower } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
@@ -18,6 +18,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const { pathname } = useLocation();
+  const pageClassName = pathname === '/packing-calculator' ? ' packing-calculator-page' : '';
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Top header */}
@@ -58,7 +61,9 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Two compact rows on narrow phones keep every destination legible without clipping. */}
-      <main className="pb-[calc(8.5rem_+_env(safe-area-inset-bottom))] sm:pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0">{children}</main>
+      <main className={`pb-[calc(8.5rem_+_env(safe-area-inset-bottom))] sm:pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0${pageClassName}`}>
+        {children}
+      </main>
 
       {/* Mobile/tablet bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm xl:hidden">
