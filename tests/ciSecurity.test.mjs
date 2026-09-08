@@ -43,9 +43,12 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   const playwright = await read('playwright.config.ts');
   const workflow = await read('.github/workflows/ci.yml');
   const accessibility = await read('e2e/accessibility.spec.ts');
+  const packing = await read('e2e/packing-calculator.spec.ts');
+  const browserSmoke = await read('e2e/browser-smoke.spec.ts');
 
   assert.equal(packageJson.devDependencies['@axe-core/playwright'], '4.13.0');
   assert.match(packageJson.scripts['test:e2e'], /--project=chromium/);
+  assert.match(packageJson.scripts['test:e2e'], /packing-calculator\.spec\.ts/);
   assert.match(packageJson.scripts['test:e2e:browser-smoke'], /--project=chromium-mobile/);
   assert.match(packageJson.scripts['test:e2e:browser-smoke'], /--project=webkit/);
   assert.match(packageJson.scripts['test:e2e:a11y'], /accessibility\.spec\.ts --project=chromium/);
@@ -59,7 +62,15 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   assert.match(workflow, /run:\s+npm run test:e2e:browser-smoke/);
   assert.match(workflow, /run:\s+npm run test:e2e:a11y/);
   assert.match(accessibility, /new AxeBuilder/);
+  assert.match(accessibility, /Packing Calculator filled workshop state/);
+  assert.match(accessibility, /setViewportSize\(\{ width: 1366, height: 768 \}\)/);
   assert.match(accessibility, /violation\.impact === 'critical' \|\| violation\.impact === 'serious'/);
+  assert.match(packing, /1366/);
+  assert.match(packing, /1920/);
+  assert.match(packing, /expectNoHorizontalOverflow/);
+  assert.match(packing, /businessNumbers\.count\(\)/);
+  assert.match(packing, /keyboard\.press\('Space'\)/);
+  assert.match(browserSmoke, /Packing Calculator keeps its primary shipment action usable/);
 });
 
 test('scheduled live smoke remains read-only, secret-free and outside AI/auth routes', async () => {

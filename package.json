@@ -15,7 +15,7 @@
     "test:frontend": "vitest run",
     "test:frontend:coverage": "vitest run --coverage",
     "test:frontend:watch": "vitest",
-    "test:e2e": "npm run build && playwright test e2e/shiftguide-critical.spec.ts --project=chromium",
+    "test:e2e": "npm run build && playwright test e2e/shiftguide-critical.spec.ts e2e/packing-calculator.spec.ts --project=chromium",
     "test:e2e:browser-smoke": "playwright test e2e/browser-smoke.spec.ts --project=chromium-mobile --project=webkit",
     "test:e2e:a11y": "playwright test e2e/accessibility.spec.ts --project=chromium",
     "smoke:live": "node scripts/live-smoke.mjs",
