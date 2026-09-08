@@ -111,8 +111,8 @@ textarea {
 
   section[aria-labelledby='packing-shipment-title'] p[aria-label*='charge restante'],
   section[aria-labelledby='packing-shipment-title'] p[aria-label*='charges restantes'] {
-    font-size: clamp(3rem, 16vw, 5rem);
-    letter-spacing: -0.055em;
+    font-size: clamp(2.6rem, 14vw, 4.75rem);
+    letter-spacing: -0.06em;
     white-space: nowrap;
   }
 
