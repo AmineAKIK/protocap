@@ -19,7 +19,12 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const { pathname } = useLocation();
-  const pageClassName = pathname === '/packing-calculator' ? ' packing-calculator-page' : '';
+  const pageClassName =
+    pathname === '/packing-calculator'
+      ? ' packing-calculator-page'
+      : pathname === '/proposition-pilote'
+        ? ' pilot-proposal-page'
+        : '';
 
   return (
     <div className="min-h-screen bg-slate-50">
