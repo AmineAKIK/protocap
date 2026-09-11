@@ -25,7 +25,7 @@ test.describe('browser and responsive smoke', () => {
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', /manifest/i);
     await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /width=device-width/);
 
-    const manifestHref = await page.locator('link[rel="manifest"]')).getAttribute('href');
+    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
     expect(manifestHref).toBeTruthy();
     const manifest = await page.evaluate(async (href) => {
       const response = await fetch(href!);
