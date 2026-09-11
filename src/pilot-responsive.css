@@ -1,0 +1,89 @@
+/*
+ * Pilot proposal mobile hardening
+ *
+ * The global application stylesheet intentionally allows emergency wrapping.
+ * On the pilot document, however, narrow multi-column cards made normal French
+ * words break at arbitrary characters. These rules keep words intact and make
+ * the dense reminder/context blocks adapt to phone widths without changing the
+ * desktop layout.
+ */
+
+@media (max-width: 639px) {
+  [class~="bg-[#eef2f5]"],
+  [class~="bg-[#eef2f5]"] * {
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  /* Document header: avoid squeezing both metadata blocks onto one tiny row. */
+  [class~="bg-[#eef2f5]"] > div > section > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* Reminder banner: title/subtitle keep their natural words; restored badge
+     drops below when there is not enough horizontal room. */
+  [class~="bg-[#eef2f5]"] [class*="min-h-[78px]"] {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  [class~="bg-[#eef2f5]"] [class*="min-h-[78px]"] > div:first-child {
+    flex: 1 1 15rem;
+  }
+
+  /* Line / event / time context is readable stacked on phones instead of three
+     compressed columns that split labels and values letter by letter. */
+  [class~="bg-[#eef2f5]"] [class~="grid-cols-3"][class~="divide-x"] {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0.25rem 0;
+  }
+
+  [class~="bg-[#eef2f5]"] [class~="grid-cols-3"][class~="divide-x"] > div {
+    min-width: 0;
+    padding: 0.75rem 1rem;
+  }
+
+  [class~="bg-[#eef2f5]"] [class~="grid-cols-3"][class~="divide-x"] > div + div {
+    border-left-width: 0 !important;
+    border-top: 1px solid rgb(226 232 240);
+  }
+
+  /* The introductory flow is clearer vertically than as three narrow pills. */
+  [class~="bg-[#eef2f5]"] .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  [class~="bg-[#eef2f5]"] .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > svg {
+    align-self: center;
+    transform: rotate(90deg);
+  }
+
+  /* Footer metadata may wrap as two clean rows instead of colliding. */
+  [class~="bg-[#eef2f5]"] [class~="border-t"][class~="justify-between"] {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  /* Preserve comfortable gutters on very small phones. */
+  [class~="bg-[#eef2f5]"] {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  [class~="bg-[#eef2f5]"] > div > section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Sampling cards become one-per-row only on the narrowest devices. */
+  [class~="bg-[#eef2f5]"] [class~="grid-cols-2"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
