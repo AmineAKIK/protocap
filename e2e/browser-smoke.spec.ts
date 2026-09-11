@@ -10,6 +10,13 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.innerWidth + 1);
 }
 
+async function expectPilotCriticalContentVisible(page: Page) {
+  await expect(page.getByRole('heading', { name: 'Assistant de rappel des prélèvements en production' })).toBeVisible();
+  await expect(page.getByText('Aujourd’hui')).toBeVisible();
+  await expect(page.getByText('Interprétation de la règle')).toBeVisible();
+  await expect(page.getByText('Prélèvement', { exact: true }).first()).toBeVisible();
+}
+
 test.describe('browser and responsive smoke', () => {
   test('renders the public shell with installable PWA metadata and no horizontal overflow', async ({ page }) => {
     await page.goto('/');
@@ -18,7 +25,7 @@ test.describe('browser and responsive smoke', () => {
     await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', /manifest/i);
     await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', /width=device-width/);
 
-    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
+    const manifestHref = await page.locator('link[rel="manifest"]')).getAttribute('href');
     expect(manifestHref).toBeTruthy();
     const manifest = await page.evaluate(async (href) => {
       const response = await fetch(href!);
@@ -29,6 +36,23 @@ test.describe('browser and responsive smoke', () => {
     expect(manifest.body.short_name).toBe('ProtoCap');
 
     await expectNoHorizontalOverflow(page);
+  });
+
+  test('Pilot proposal is stable on mobile, tablet, small laptop and desktop widths', async ({ page }) => {
+    const viewports = [
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1180, height: 820 },
+      { width: 1366, height: 768 },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await page.goto('/proposition-pilote');
+      await expectPilotCriticalContentVisible(page);
+      await expectNoHorizontalOverflow(page);
+    }
   });
 
   test('Packing Calculator keeps its primary shipment action usable without horizontal overflow', async ({ page }) => {
