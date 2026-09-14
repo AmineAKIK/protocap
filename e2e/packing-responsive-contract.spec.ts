@@ -28,6 +28,8 @@ const PACKING_VIEWPORT_FIT_MATRIX = [
   RESPONSIVE_VIEWPORTS.desktopLarge,
 ] as const;
 
+const PACKING_POLISH_VIEWPORTS = [RESPONSIVE_VIEWPORTS.laptop, RESPONSIVE_VIEWPORTS.desktopLarge] as const;
+
 async function configurePacking(page: Page) {
   await page.goto('/packing-calculator');
   await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
@@ -127,4 +129,44 @@ test('Packing active cockpit fits the target landscape and desktop viewport matr
       expect(scrollState).toEqual({ x: 0, y: 0 });
     });
   }
+});
+
+test('Packing visual hierarchy stays operational at the PR7 reference viewports and respects reduced motion', async ({ page }) => {
+  for (const viewport of PACKING_POLISH_VIEWPORTS) {
+    await test.step(`${viewport.name}: ${viewport.width}x${viewport.height}`, async () => {
+      await useViewport(page, viewport);
+      await configurePacking(page);
+
+      const cockpit = page.getByRole('region', { name: 'État de production' });
+      const actionPanel = page.locator('.packing-primary-action');
+      const progress = page.locator('.packing-progress-fill');
+      const action = page.getByRole('button', { name: 'Déclarer une charge' });
+
+      await expect(cockpit).toBeVisible();
+      await expect(actionPanel).toBeVisible();
+      await expect(progress).toBeVisible();
+      await expect(action).toBeVisible();
+      await expectNoDocumentHorizontalOverflow(page);
+      await expectNoDocumentVerticalOverflow(page);
+
+      const hierarchy = await page.evaluate(() => {
+        const cockpitNode = document.querySelector('.packing-cockpit') as HTMLElement;
+        const actionNode = document.querySelector('.packing-primary-action') as HTMLElement;
+        const primaryMetric = document.querySelector('.packing-cockpit-metric-priority') as HTMLElement;
+        return {
+          cockpitBackground: getComputedStyle(cockpitNode).backgroundColor,
+          actionBackground: getComputedStyle(actionNode).backgroundColor,
+          primaryMetricBackground: getComputedStyle(primaryMetric).backgroundColor,
+        };
+      });
+      expect(hierarchy.cockpitBackground).not.toBe(hierarchy.actionBackground);
+      expect(hierarchy.primaryMetricBackground).not.toBe('rgba(0, 0, 0, 0)');
+    });
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await useViewport(page, RESPONSIVE_VIEWPORTS.laptop);
+  await configurePacking(page);
+  const transitionDuration = await page.locator('.packing-progress-fill').evaluate((node) => getComputedStyle(node).transitionDuration);
+  expect(transitionDuration).toBe('0.01ms');
 });
