@@ -1,11 +1,10 @@
 import { CheckCircle2 } from 'lucide-react';
-import type { PackingInput, PackingOption } from '../../../utils/packing';
-import type { PackingShipmentPlan } from '../../../utils/packingShipment';
+import type { PackingInput, PackingLoadSummary, PackingOption } from '../../../utils/packing';
 
 interface PackingPlanCandidateProps {
   input: PackingInput;
   selected: PackingOption;
-  plan: PackingShipmentPlan;
+  plan: PackingLoadSummary;
 }
 
 const numberFormatter = new Intl.NumberFormat('fr-FR');
@@ -43,7 +42,7 @@ export function PackingPlanCandidate({ input, selected, plan }: PackingPlanCandi
       <div className="packing-plan-body p-5 sm:p-7">
         <div className="packing-plan-metrics grid gap-6 sm:grid-cols-3">
           <PlanMetric value={plan.fullLoadCount} label="Charges complètes" />
-          <PlanMetric value={plan.remainderLoad ? 1 : 0} label="Charge partielle théorique" />
+          <PlanMetric value={plan.partialLoadCount} label="Charge partielle théorique" />
           <PlanMetric value={plan.totalLoads} label="Charges planifiées" />
         </div>
         <div className="mt-7 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
