@@ -23,21 +23,19 @@ test('Packing responsive rules are isolated from the global stylesheet', async (
 test('Packing density targets semantic hooks instead of DOM position discovery', async () => {
   const css = stripCssComments(await read('src/packing-responsive.css'));
   const page = await read('src/pages/PackingCalculatorPage.tsx');
+  const execution = await read('src/features/packing/components/PackingRunExecution.tsx');
 
   assert.doesNotMatch(css, /:has\(/);
   assert.doesNotMatch(css, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
-  assert.doesNotMatch(css, /\.packing-remaining-loads\s*>\s*p\s*\+\s*p/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
-  assert.match(css, /section\[aria-label='Découpage final et suivi manuel'\]/);
-  assert.match(css, /section\[aria-labelledby='packing-shipment-title'\]/);
-  assert.match(css, /\.packing-primary-number/);
-  assert.match(css, /\.packing-shipment-progress/);
+  assert.match(css, /section\[aria-label='Plan actif et déclarations de production'\]/);
+  assert.match(css, /section\[aria-labelledby='packing-run-execution-title'\]/);
   assert.match(css, /\.packing-plan(?:-metric)?/);
-  assert.match(page, /packing-primary-number/);
-  assert.match(page, /packing-shipment-progress/);
   assert.match(page, /packing-plan-metrics/);
   assert.match(page, /packing-primary-input/);
-  assert.match(page, /packing-exact-summary/);
+  assert.match(execution, /packing-run-execution-title/);
+  assert.match(execution, /Déclarer une charge/);
+  assert.match(execution, /Historique des déclarations/);
 });
 
 test('Packing keeps content-driven wide composition and local intrinsic safeguards', async () => {
