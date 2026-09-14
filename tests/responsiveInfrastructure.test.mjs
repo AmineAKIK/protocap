@@ -21,11 +21,11 @@ test('public shell delegates persistent geometry and safe-area compensation to s
   assert.doesNotMatch(shell, /height:\s*'56px'/);
   assert.match(css, /--app-mobile-nav-row-height:\s*3\.5rem/);
   assert.match(css, /--app-mobile-nav-clearance:\s*1\.5rem/);
-  assert.match(css, /--app-mobile-nav-rows:\s*2/);
-  assert.match(css, /--app-mobile-nav-reserve:\s*calc\(/);
+  assert.match(css, /--app-mobile-nav-reserve:\s*calc\([\s\S]*var\(--app-mobile-nav-row-height\)[\s\S]*var\(--app-mobile-nav-row-height\)[\s\S]*var\(--app-mobile-nav-clearance\)[\s\S]*\);/);
   assert.match(css, /min-height:\s*var\(--app-mobile-nav-row-height\)/);
   assert.match(css, /padding-bottom:\s*calc\(var\(--app-mobile-nav-reserve\) \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(css, /@media \(min-width: 640px\)[\s\S]*--app-mobile-nav-rows:\s*1/);
+  assert.match(css, /@media \(min-width: 640px\)[\s\S]*--app-mobile-nav-reserve:\s*calc\(var\(--app-mobile-nav-row-height\) \+ var\(--app-mobile-nav-clearance\)\)/);
+  assert.doesNotMatch(css, /--app-mobile-nav-row-height\)\s*\*/);
   assert.doesNotMatch(css, /padding-bottom:\s*calc\(8\.5rem/);
   assert.doesNotMatch(css, /padding-bottom:\s*calc\(5rem/);
   assert.match(geometry, /APP_HEADER_HEIGHT_PX = 56/);
