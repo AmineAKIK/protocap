@@ -28,12 +28,15 @@
 
 /*
  * Load count and shipped volume intentionally represent different metrics when
- * the final load is partial. Keep percentage display on volume only.
+ * the final load is partial. The first progress card is the load counter, so
+ * keep its percentage label hidden and reserve percentages for shipped volume.
  */
 .packing-calculator-page
   section[aria-labelledby='packing-shipment-title']
-  [aria-label='Avancement des charges expédiées']
-  + span {
+  > div:last-child
+  > div:nth-of-type(2)
+  > div:first-child
+  span {
   display: none;
 }
 
