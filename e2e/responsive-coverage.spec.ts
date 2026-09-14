@@ -78,15 +78,24 @@ test.describe('responsive principal surface coverage', () => {
   });
 
   // responsive-contract:shiftguide-home
-  test('ShiftGuide home is explicitly covered after unlock', async ({ page }) => {
+  test('ShiftGuide home is explicitly covered after unlock', async ({ browser, baseURL }) => {
     for (const viewport of COVERAGE_VIEWPORTS) {
       await test.step(viewport.name, async () => {
-        await useViewport(page, viewport);
-        await unlockShiftGuide(page, '/shiftguide');
-        const celineHomeLink = page.locator('[data-shell-content] a[href="/shiftguide/celine"]').first();
-        await expect(celineHomeLink).toBeVisible();
-        await expectLocatorInsideViewport(page, celineHomeLink);
-        await expectNoDocumentHorizontalOverflow(page);
+        const context = await browser.newContext({
+          baseURL,
+          viewport: { width: viewport.width, height: viewport.height },
+        });
+        const page = await context.newPage();
+
+        try {
+          await unlockShiftGuide(page, '/shiftguide');
+          const celineHomeLink = page.locator('[data-shell-content] a[href="/shiftguide/celine"]').first();
+          await expect(celineHomeLink).toBeVisible();
+          await expectLocatorInsideViewport(page, celineHomeLink);
+          await expectNoDocumentHorizontalOverflow(page);
+        } finally {
+          await context.close();
+        }
       });
     }
   });
