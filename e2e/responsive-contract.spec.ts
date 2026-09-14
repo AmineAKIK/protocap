@@ -122,10 +122,11 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
-  test('ShiftGuide surfaces stay contained across mobile, landscape and desktop-rail onset', async ({ browser }) => {
+  test('ShiftGuide surfaces stay contained across mobile, landscape and desktop-rail onset', async ({ browser, baseURL }) => {
     for (const viewport of SHIFTGUIDE_VIEWPORTS) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
         const context = await browser.newContext({
+          baseURL,
           viewport: { width: viewport.width, height: viewport.height },
         });
         const page = await context.newPage();
