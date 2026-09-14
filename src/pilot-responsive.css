@@ -1,14 +1,10 @@
 /*
  * Pilot proposal responsive contract
  *
- * Three intentional layout regimes:
- *   - mobile:            < 640px
- *   - tablet / laptop:   640px - 1199px
- *   - desktop:           >= 1200px
- *
- * Keep this stylesheet scoped to the AppShell page hook. The global stylesheet
- * permits emergency character wrapping, which is useful elsewhere but is not
- * acceptable for this document-like surface.
+ * The page now expresses its layout regimes explicitly in JSX. This stylesheet
+ * keeps only the small amount of scoped behavior that cannot yet live in normal
+ * utilities while the global `overflow-wrap: anywhere` compatibility rule still
+ * exists (scheduled for removal in the final enforcement PR).
  */
 
 .pilot-proposal-page,
@@ -22,221 +18,46 @@
   min-width: 0;
 }
 
-.pilot-proposal-page table {
-  min-width: 820px;
-}
-
 .pilot-proposal-page .tabular-nums,
 .pilot-proposal-page time {
   white-space: nowrap;
 }
 
-/* Document pages should grow with their content below desktop instead of
-   preserving a pseudo-print height that creates large dead areas. */
-@media (max-width: 1199px) {
-  .pilot-proposal-page [class*="min-h-[1385px]"] {
-    min-height: 0;
+/* The reminder context is intentionally 1 column on phones, 2 + 1 in the
+   intermediate regime, then 3 columns on wide desktop. Border ownership stays
+   here because Tailwind divide utilities cannot represent the 2 + 1 state
+   without coupling to child position. */
+.pilot-reminder-context > div + div {
+  border-top: 1px solid rgb(226 232 240);
+}
+
+@media (min-width: 640px) and (max-width: 1199px) {
+  .pilot-summary-grid > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .pilot-reminder-context > div:nth-child(2) {
+    border-left: 1px solid rgb(226 232 240);
+    border-top: 0;
+  }
+
+  .pilot-reminder-context > div:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
 
-/* ---------- Mobile: < 640px ---------- */
+@media (min-width: 1200px) {
+  .pilot-reminder-context > div + div {
+    border-left: 1px solid rgb(226 232 240);
+    border-top: 0;
+  }
+}
+
+/* The three-step “Aujourd’hui” explanation is vertical only on phones. The
+   arrow rotation is visual semantics for the same flow, not a structural hack. */
 @media (max-width: 639px) {
-  .pilot-proposal-page > div {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  .pilot-proposal-page > div > div > section {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  /* Document metadata */
-  .pilot-proposal-page > div > div > section > div:first-child {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  /* Headings */
-  .pilot-proposal-page h2 {
-    font-size: clamp(1.75rem, 8vw, 2.25rem);
-    line-height: 1.08;
-  }
-
-  /* Never force the generic 3-card summaries into cramped columns. */
-  .pilot-proposal-page .grid.sm\:grid-cols-3,
-  .pilot-proposal-page .grid.md\:grid-cols-2,
-  .pilot-proposal-page .grid.sm\:grid-cols-2,
-  .pilot-proposal-page .grid.lg\:grid-cols-2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Reminder header */
-  .pilot-proposal-page [class*="min-h-[78px]"] {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .pilot-proposal-page [class*="min-h-[78px]"] > div:first-child {
-    flex: 1 1 100%;
-  }
-
-  /* Line / event / time become a readable vertical list. */
-  .pilot-proposal-page .grid.grid-cols-3.divide-x {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 0.25rem 0;
-  }
-
-  .pilot-proposal-page .grid.grid-cols-3.divide-x > div {
-    padding: 0.75rem 1rem;
-  }
-
-  .pilot-proposal-page .grid.grid-cols-3.divide-x > div + div {
-    border-left-width: 0 !important;
-    border-top: 1px solid rgb(226 232 240);
-  }
-
-  /* Sample cards: one card per row. */
-  .pilot-proposal-page .grid.grid-cols-2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* "Aujourd'hui" flow: vertical, arrows point down. */
-  .pilot-proposal-page .pilot-flow-row,
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .pilot-proposal-page .pilot-flow-row > svg,
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > svg {
+  .pilot-inline-flow > svg {
     align-self: center;
     transform: rotate(90deg);
-  }
-
-  /* Footer metadata wraps cleanly. */
-  .pilot-proposal-page [class~="border-t"][class~="justify-between"] {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-  }
-
-  .pilot-proposal-page [class~="border-t"][class~="justify-between"] > span {
-    flex: 1 1 100%;
-  }
-}
-
-/* ---------- Tablet / small laptop: 640px - 1199px ---------- */
-@media (min-width: 640px) and (max-width: 1199px) {
-  /* Keep the document visually centered but give content room. */
-  .pilot-proposal-page > div {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .pilot-proposal-page > div > div > section {
-    padding-left: clamp(1.5rem, 4vw, 2.5rem);
-    padding-right: clamp(1.5rem, 4vw, 2.5rem);
-  }
-
-  /* Summary cards: two columns in the intermediate regime. */
-  .pilot-proposal-page .grid.sm\:grid-cols-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pilot-proposal-page .grid.sm\:grid-cols-3 > :last-child {
-    grid-column: 1 / -1;
-  }
-
-  /* Do not activate the dense desktop compositions before 1200px. */
-  .pilot-proposal-page .grid.lg\:grid-cols-2,
-  .pilot-proposal-page .grid[class*="lg:grid-cols-["] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Page 6 was especially fragile at md because each reminder contains its own
-     three-column context. Keep these scenarios stacked until desktop. */
-  .pilot-proposal-page .grid.md\:grid-cols-2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Criteria cards can use two columns once there is enough room. */
-  .pilot-proposal-page .grid.sm\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* Reminder context: three columns only if each cell has meaningful width.
-     Two rows (2 + 1) is more robust in the intermediate state. */
-  .pilot-proposal-page .grid.grid-cols-3.divide-x {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 0.5rem;
-    row-gap: 0.5rem;
-  }
-
-  .pilot-proposal-page .grid.grid-cols-3.divide-x > div {
-    padding: 0.75rem 1rem;
-  }
-
-  .pilot-proposal-page .grid.grid-cols-3.divide-x > div:nth-child(3) {
-    grid-column: 1 / -1;
-    border-left-width: 0 !important;
-    border-top: 1px solid rgb(226 232 240);
-    padding-top: 1rem;
-  }
-
-  /* Reminder headers may wrap badge below the title instead of compressing text. */
-  .pilot-proposal-page [class*="min-h-[78px]"] {
-    flex-wrap: wrap;
-  }
-
-  .pilot-proposal-page [class*="min-h-[78px]"] > div:first-child {
-    flex: 1 1 20rem;
-  }
-
-  /* "Aujourd'hui" flow stays horizontal only when it owns the full row.
-     With the desktop side card intentionally stacked in this regime, it now has
-     enough width to remain readable. */
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 {
-    gap: clamp(0.5rem, 1.5vw, 1rem);
-  }
-
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > div {
-    flex: 1 1 0;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-
-  /* Sample cards stay side-by-side where there is adequate room. */
-  .pilot-proposal-page .grid.grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* Table remains horizontally scrollable by design; ensure the scroller itself
-     cannot force page-level overflow. */
-  .pilot-proposal-page .overflow-x-auto {
-    max-width: 100%;
-  }
-}
-
-/* ---------- Desktop: >= 1200px ---------- */
-@media (min-width: 1200px) {
-  /* Desktop keeps the authored composition, but words must still remain intact. */
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > div {
-    min-width: 0;
-  }
-
-  /* The intro flow was the remaining desktop defect: give each node a flexible
-     basis and let the center node absorb more space instead of crushing the last
-     word into character wrapping. */
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > div:first-of-type,
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > div:last-of-type {
-    flex: 1 1 8.5rem;
-  }
-
-  .pilot-proposal-page .rounded-xl.border.border-slate-200.p-6 > .mt-4.flex.items-center.gap-4 > div:nth-of-type(2) {
-    flex: 1.25 1 10rem;
   }
 }
