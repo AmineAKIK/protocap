@@ -7,6 +7,7 @@ import {
 
 const KEYBOARD_THRESHOLD_PX = 120;
 const MIN_CELINE_VIEWPORT_PX = 240;
+const SHIFTGUIDE_CONTENT_SELECTOR = '[data-shiftguide-shell] [data-shell-content]';
 
 export function computeCelineViewportHeight(
   layoutHeight: number,
@@ -22,7 +23,11 @@ function resetShiftGuideScroll() {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
 
-  document.querySelectorAll<HTMLElement>('.shiftguide-shell *').forEach((element) => {
+  const content = document.querySelector<HTMLElement>(SHIFTGUIDE_CONTENT_SELECTOR);
+  if (!content) return;
+
+  const scrollableElements = [content, ...content.querySelectorAll<HTMLElement>('*')];
+  scrollableElements.forEach((element) => {
     const { overflowY } = window.getComputedStyle(element);
     if ((overflowY === 'auto' || overflowY === 'scroll') && element.scrollTop !== 0) {
       element.scrollTop = 0;
@@ -49,7 +54,7 @@ function useShiftGuideRouteReset(pathname: string, isCelineRoute: boolean) {
 
       if (isCelineRoute && window.matchMedia(SHIFTGUIDE_DESKTOP_MEDIA_QUERY).matches) {
         const input = document.querySelector<HTMLInputElement>(
-          '.shiftguide-shell input[type="text"]'
+          `${SHIFTGUIDE_CONTENT_SELECTOR} input[type="text"]`
         );
         input?.focus({ preventScroll: true });
       }
