@@ -53,7 +53,7 @@ function LogoutButton({
 
 export function ShiftGuideDesktopNavigation({ loggingOut, onLogout }: ShiftGuideNavigationProps) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-24 border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
+    <aside className="fixed inset-y-0 left-0 z-50 hidden w-[var(--shiftguide-desktop-nav-width)] border-r border-zinc-800 bg-zinc-950 lg:flex lg:flex-col">
       <div className="flex h-20 items-center justify-center border-b border-white/10">
         <NavLink
           to="/shiftguide"
@@ -98,7 +98,7 @@ export function ShiftGuideDesktopNavigation({ loggingOut, onLogout }: ShiftGuide
 export function ShiftGuideMobileNavigation({ loggingOut, onLogout }: ShiftGuideNavigationProps) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="shiftguide-mobile-nav fixed inset-x-0 bottom-0 z-50 border-t border-zinc-800 bg-zinc-950 lg:hidden"
       aria-label="Navigation ShiftGuide"
     >
       <div className="flex overflow-x-auto px-1 py-1.5" style={{ scrollbarWidth: 'none' }}>
