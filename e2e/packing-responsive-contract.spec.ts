@@ -26,7 +26,7 @@ async function configurePacking(page: Page) {
   await page.getByRole('radio', { name: /Carton/i }).click();
   await page.getByLabel('Cadence de référence en unités par minute').fill('60');
   await page.getByRole('button', { name: 'Activer ce run' }).click();
-  await expect(page.getByRole('heading', { name: 'Découpage final sélectionné' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'État de production' })).toBeVisible();
 }
 
 async function expectAtomicVisibleNumber(locator: Locator) {
