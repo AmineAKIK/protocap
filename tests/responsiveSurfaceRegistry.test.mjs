@@ -10,15 +10,16 @@ function registeredRoutes(registry) {
   return [...registry.matchAll(/route:\s*'([^']+)'/g)].map((match) => match[1]);
 }
 
+function literalRoutePaths(source) {
+  return [...source.matchAll(/<Route\b[^>]*\bpath=(['"])(.*?)\1/g)].map((match) => match[2]);
+}
+
 function appPrincipalRoutes(app) {
-  return [...app.matchAll(/<Route\s+path="([^"]+)"/g)]
-    .map((match) => match[1])
-    .filter((route) => route !== '*' && route !== '/shiftguide/*');
+  return literalRoutePaths(app).filter((route) => route !== '*' && route !== '/shiftguide/*');
 }
 
 function shiftGuidePrincipalRoutes(app) {
-  return [...app.matchAll(/<Route\s+path="([^"]+)"/g)]
-    .map((match) => match[1])
+  return literalRoutePaths(app)
     .filter((route) => !['*', 'home', 'modules'].includes(route))
     .map((route) => `/shiftguide/${route}`);
 }
