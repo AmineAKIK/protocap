@@ -9,6 +9,12 @@ import {
 } from './responsive-harness';
 
 const ACCESS_CODE = 'e2e-access-code';
+const OPERATIONAL_VIEWPORTS = [
+  RESPONSIVE_VIEWPORTS.phoneMin,
+  RESPONSIVE_VIEWPORTS.phoneLandscape,
+  RESPONSIVE_VIEWPORTS.tabletLandscape,
+  RESPONSIVE_VIEWPORTS.laptopSmall,
+] as const;
 
 test.describe('responsive architecture contract', () => {
   test('public shell keeps the root document contained across the core viewport matrix', async ({ page }) => {
@@ -31,6 +37,40 @@ test.describe('responsive architecture contract', () => {
         await expect(page.getByRole('heading', { name: 'Assistant de rappel des prélèvements en production' })).toBeVisible();
         await expect(page.getByText('Interprétation de la règle')).toBeVisible();
         await expectNoDocumentHorizontalOverflow(page);
+      });
+    }
+  });
+
+  test('operational surfaces keep primary workflows reachable without root overflow', async ({ page }) => {
+    for (const viewport of OPERATIONAL_VIEWPORTS) {
+      await test.step(`Expiry Check — ${viewport.name}`, async () => {
+        await useViewport(page, viewport);
+        await page.goto('/expiry-check');
+
+        await expect(page.getByRole('heading', { name: 'Expiry Check' })).toBeVisible();
+        await expectNoDocumentHorizontalOverflow(page);
+        await expectPrimaryActionUsable(page, page.getByRole('button', { name: 'Déclarer un remplacement' }));
+
+        if (viewport.width < 1024) {
+          await page.getByRole('button', { name: 'Tournée' }).click();
+          await expect(page.getByRole('heading', { name: 'Board de tournée' })).toBeVisible();
+          await expectNoDocumentHorizontalOverflow(page);
+        }
+      });
+
+      await test.step(`Logistics Call — ${viewport.name}`, async () => {
+        await useViewport(page, viewport);
+        await page.goto('/logistics-call');
+
+        await expect(page.getByRole('heading', { name: 'Logistics Call' })).toBeVisible();
+        await expectNoDocumentHorizontalOverflow(page);
+        await expectPrimaryActionUsable(page, page.getByRole('button', { name: "Envoyer l'appel logistique" }));
+
+        if (viewport.width < 1280) {
+          await page.getByRole('button', { name: /Board logistique/ }).click();
+          await expect(page.getByRole('heading', { name: 'Board de traitement' })).toBeVisible();
+          await expectNoDocumentHorizontalOverflow(page);
+        }
       });
     }
   });
