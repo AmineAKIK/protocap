@@ -26,20 +26,26 @@ async function expectInsideVisualViewport(locator: Locator) {
   const bounds = await locator.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
     return {
       top: rect.top,
       left: rect.left,
       right: rect.right,
       bottom: rect.bottom,
-      viewportWidth: viewport?.width ?? window.innerWidth,
-      viewportHeight: viewport?.height ?? window.innerHeight,
+      viewportLeft,
+      viewportTop,
+      viewportRight: viewportLeft + viewportWidth,
+      viewportBottom: viewportTop + viewportHeight,
     };
   });
 
-  expect(bounds.top).toBeGreaterThanOrEqual(0);
-  expect(bounds.left).toBeGreaterThanOrEqual(0);
-  expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth + 1);
-  expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight + 1);
+  expect(bounds.top).toBeGreaterThanOrEqual(bounds.viewportTop - 1);
+  expect(bounds.left).toBeGreaterThanOrEqual(bounds.viewportLeft - 1);
+  expect(bounds.right).toBeLessThanOrEqual(bounds.viewportRight + 1);
+  expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportBottom + 1);
 }
 
 test.describe('responsive principal surface coverage', () => {
@@ -101,29 +107,32 @@ test.describe('responsive principal surface coverage', () => {
   });
 
   // responsive-contract:shiftguide-celine
-  test('Céline reacts to a reduced visual viewport without hiding the composer', async ({ browser, baseURL }) => {
+  test('Céline follows a panned visual viewport while keeping header and composer usable', async ({ browser, baseURL }) => {
     const viewport = RESPONSIVE_VIEWPORTS.phone;
     const context = await browser.newContext({ baseURL, viewport: { width: viewport.width, height: viewport.height } });
     await context.addInitScript(() => {
       const events = new EventTarget();
       let visibleHeight = window.innerHeight;
+      let visibleOffsetTop = 0;
       const mockViewport = {
         get height() { return visibleHeight; },
         get width() { return window.innerWidth; },
+        get offsetTop() { return visibleOffsetTop; },
         offsetLeft: 0,
-        offsetTop: 0,
         pageLeft: 0,
-        pageTop: 0,
+        get pageTop() { return visibleOffsetTop; },
         scale: 1,
         addEventListener: events.addEventListener.bind(events),
         removeEventListener: events.removeEventListener.bind(events),
       };
       Object.defineProperty(window, 'visualViewport', { configurable: true, value: mockViewport });
-      Object.defineProperty(window, '__setResponsiveTestVisualViewportHeight', {
+      Object.defineProperty(window, '__setResponsiveTestVisualViewportGeometry', {
         configurable: true,
-        value: (height: number) => {
+        value: (height: number, offsetTop: number) => {
           visibleHeight = height;
+          visibleOffsetTop = offsetTop;
           events.dispatchEvent(new Event('resize'));
+          events.dispatchEvent(new Event('scroll'));
         },
       });
     });
@@ -131,17 +140,23 @@ test.describe('responsive principal surface coverage', () => {
     const page = await context.newPage();
     try {
       await unlockShiftGuide(page, '/shiftguide/celine');
+      const back = page.getByRole('button', { name: 'Accueil' });
       const input = page.getByPlaceholder('Décris ta situation…');
       const send = page.getByRole('button', { name: 'Envoyer' });
+      await expect(back).toBeVisible();
+      await expect(back).toHaveCSS('white-space', 'nowrap');
       await expect(input).toBeVisible();
 
       await page.evaluate(() => {
-        (window as Window & { __setResponsiveTestVisualViewportHeight: (height: number) => void })
-          .__setResponsiveTestVisualViewportHeight(520);
+        (window as Window & {
+          __setResponsiveTestVisualViewportGeometry: (height: number, offsetTop: number) => void;
+        }).__setResponsiveTestVisualViewportGeometry(520, 168);
       });
 
       const shellContent = page.locator('[data-shiftguide-shell] [data-shell-content]');
       await expect.poll(async () => Math.round((await shellContent.boundingBox())?.height ?? 0)).toBe(520);
+      await expect.poll(async () => Math.round((await shellContent.boundingBox())?.y ?? 0)).toBe(168);
+      await expectInsideVisualViewport(back);
       await expectInsideVisualViewport(input);
       await expectInsideVisualViewport(send);
       await expectNoDocumentHorizontalOverflow(page);
