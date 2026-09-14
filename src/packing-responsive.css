@@ -179,11 +179,11 @@
 
 /*
  * Before the xl rail rules take over, the viewport-fit preparation rail is too
- * narrow for three strategy cards side by side. Stack them so their atomic
- * business values remain readable instead of clipping inside ~16.5rem.
+ * narrow for three strategy cards side by side. Stack the semantic radiogroup
+ * itself so atomic strategy totals remain readable inside the narrow rail.
  */
 @media (min-width: 1024px) and (max-width: 1279px) and (min-height: 700px) {
-  .packing-calculator-page .packing-strategies {
+  .packing-calculator-page .packing-strategies [role='radiogroup'] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
