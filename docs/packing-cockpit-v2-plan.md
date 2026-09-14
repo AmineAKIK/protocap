@@ -80,7 +80,7 @@ These invariants are mandatory and must be locked by unit tests before the new c
 14. Removing/correcting a declaration deterministically recomputes declared units, progress, remaining units, and duration estimates.
 15. `progressRatio = declaredUnits / plannedUnits` and remains in `[0, 1]`.
 16. Raw duration arithmetic retains full numeric precision in **minutes as a finite number**: `plannedUnits / referenceCadenceUnitsPerMinute` and `remainingUnits / referenceCadenceUnitsPerMinute`.
-17. Display duration uses a single explicit policy: **round to the nearest whole minute, half-up**, implemented as `Math.round(minutes)` for non-negative durations, then format as hours/minutes. Business arithmetic never mutates source quantities to satisfy display rounding.
+17. Display duration uses a single explicit policy: **round any positive fractional minute upward**, implemented as `Math.ceil(minutes)` for non-negative durations, then format as hours/minutes. This prevents the displayed estimate from understating production duration. Business arithmetic never mutates source quantities to satisfy display rounding.
 18. No wall-clock countdown is allowed in V2.
 19. No KPI may be labelled measured/live/actual unless derived from recorded operator declarations or a real external source.
 
@@ -134,22 +134,18 @@ The current parameter-derived progress key is unsuitable as a production-run ide
 PR2 must therefore use packing-specific schema/versioning, for example a new logical key such as:
 
 ```text
-lineops.packing.runs.v1
+lineops.packing.active-run.v1
 ```
 
 or a dedicated packing storage adapter that owns its own version marker. The final choice must isolate Packing migrations from unrelated features.
 
-### Run history
+### Active-run identity and history scope
 
-Persistence must support more than one run. A single `active-run` slot is insufficient because identical production parameters must still produce independent durable histories.
+V2 guarantees that the currently persisted production run has its own unique identity. A new run with exactly the same calculation parameters must never recover progress from a previous run merely because the parameters match.
 
-The persisted packing state must therefore contain:
+PR2 may persist a single active run (or an equivalent active-run record keyed by its unique run ID). Replacing/completing that run may replace the previously active persisted record.
 
-- `activeRunId: string | null`;
-- a bounded collection of run records keyed by unique run ID;
-- explicit status/archival semantics sufficient to reopen the active run and retain recently completed runs.
-
-PR2 must define a retention policy rather than allowing unbounded localStorage growth. Baseline: retain the active run plus a bounded recent history; exact bound is selected and tested in PR2.
+The declarations attached to the active run are its correction/history source of truth. **A durable archive of multiple completed/replaced runs is not a V2 requirement.** If a cross-run journal is needed later, it belongs in a separate feature/PR rather than expanding PR2.
 
 ### Legacy state
 
@@ -302,7 +298,7 @@ Scope:
 - derive declaration totals, run progress, and cadence estimates;
 - reject zero, negative/invalid, unsafe, and over-plan declarations deterministically;
 - keep raw duration precision separate from display rounding;
-- provide duration formatting with nearest-minute half-up policy;
+- provide duration formatting with upward whole-minute display rounding;
 - add exhaustive unit tests;
 - document terminology in code.
 
@@ -316,30 +312,31 @@ Acceptance:
 - removing a declaration restores exact prior progress;
 - `400,320 / 60 = 6,672 min = 111 h 12 min`;
 - `232,320 / 60 = 3,872 min = 64 h 32 min`;
-- fractional raw minutes retain precision while display formatting applies the defined rounding rule;
+- fractional raw minutes retain precision while display formatting rounds upward to avoid understatement;
 - existing packing arithmetic remains green.
 
 **No UI or persistence changes.**
 
 ### PR2 — Run persistence and migration boundary
 
-**Goal:** give every run an independent durable identity without disturbing unrelated browser data.
+**Goal:** give the active run an independent durable identity without disturbing unrelated browser data.
 
 Scope:
 
 - packing-specific versioned storage schema;
-- unique run IDs and timestamps;
-- active-run pointer plus bounded recent run history;
+- unique run ID and timestamps;
+- one independently identified active persisted run;
 - runtime validation that recomputes all derived totals rather than trusting persisted duplicates;
-- independent runs for identical parameters;
+- a new run with identical parameters must not reuse old progress;
 - legacy sequential state ignored, not fabricated into declarations;
 - explicit storage degraded state or removal of persistence-success copy;
 - corruption and write-failure tests.
 
 Acceptance:
 
-- two identical plans can coexist as different durable runs;
-- completed/replaced run history remains reloadable within retention policy;
+- starting a second run with identical plan parameters creates a new identity and starts with no inherited declarations;
+- the active run reloads with its own declaration history;
+- durable multi-run archive/history is explicitly out of scope for V2;
 - no global `DATA_VERSION` bump;
 - corrupt state fails closed;
 - write failure does not crash and never claims successful persistence.
@@ -474,7 +471,7 @@ Must cover at minimum:
 - declaration removal/correction;
 - progress at zero / intermediate / complete;
 - fractional raw duration precision;
-- display rounding boundaries (`x.49`, `x.50` minutes);
+- display rounding for exact minutes and positive fractional minutes;
 - long-duration formatting.
 
 ### Integration/component
@@ -486,7 +483,7 @@ Must cover:
 - full declaration fast path;
 - partial declaration preview/confirmation;
 - correction;
-- independent identical runs;
+- a new identical run does not inherit prior progress;
 - corrupted storage recovery;
 - storage degraded state.
 
@@ -515,6 +512,7 @@ V2 does not add:
 - backend synchronization;
 - multi-user concurrency;
 - ERP/MES integration;
+- durable multi-run archive/history;
 - invented operational telemetry.
 
 Architecture should leave room for a future measured-data source without pretending that it exists today.
@@ -527,10 +525,10 @@ Packing Cockpit V2 is complete only when:
 2. units are the canonical progress quantity;
 3. partial loads match real carton + partial-carton workflow;
 4. active run parameters cannot change silently;
-5. identical plans can exist as independent persisted runs;
-6. recent run history has an explicit bounded retention policy;
+5. the active persisted run has a unique identity independent of its calculation parameters;
+6. starting a new run never reuses old progress solely because its parameters are identical;
 7. storage failures cannot masquerade as successful persistence;
-8. cadence/time estimates are manual, truthful, deterministic, and consistently rounded for display;
+8. cadence/time estimates are manual, truthful, deterministic, and rounded upward for display when fractional;
 9. manager KPIs and operator actions share one underlying state;
 10. mandatory landscape work screens require no document scroll;
 11. mobile remains usable rather than artificially compressed;
