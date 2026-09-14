@@ -139,12 +139,15 @@ test('Packing visual hierarchy stays operational at the PR7 reference viewports 
 
       const cockpit = page.getByRole('region', { name: 'État de production' });
       const actionPanel = page.locator('.packing-primary-action');
-      const progress = page.locator('.packing-progress-fill');
+      const progressbar = page.getByRole('progressbar', { name: 'Avancement conditionné' });
+      const progressFill = progressbar.locator('.packing-progress-fill');
       const action = page.getByRole('button', { name: 'Déclarer une charge' });
 
       await expect(cockpit).toBeVisible();
       await expect(actionPanel).toBeVisible();
-      await expect(progress).toBeVisible();
+      await expect(progressbar).toBeVisible();
+      await expect(progressbar).toHaveAttribute('aria-valuenow', '0');
+      await expect(progressFill).toHaveCount(1);
       await expect(action).toBeVisible();
       await expectNoDocumentHorizontalOverflow(page);
       await expectNoDocumentVerticalOverflow(page);
