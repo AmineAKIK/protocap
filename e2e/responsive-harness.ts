@@ -18,6 +18,7 @@ export const RESPONSIVE_VIEWPORTS = {
   laptopCompact: { name: 'laptop-compact', width: 1280, height: 720, intent: 'compact laptop / short desktop' },
   laptop: { name: 'laptop', width: 1366, height: 768, intent: 'common laptop' },
   desktop: { name: 'desktop', width: 1440, height: 900, intent: 'desktop' },
+  desktopLarge: { name: 'desktop-large', width: 1920, height: 1080, intent: 'large desktop' },
 } as const satisfies Record<string, ResponsiveViewport>;
 
 export const CORE_RESPONSIVE_MATRIX: readonly ResponsiveViewport[] = [
@@ -59,6 +60,20 @@ export async function expectNoDocumentHorizontalOverflow(page: Page, tolerancePx
     scrollWidth,
     `document horizontal overflow: scrollWidth=${scrollWidth}px, viewport=${geometry.innerWidth}px`,
   ).toBeLessThanOrEqual(geometry.innerWidth + tolerancePx);
+}
+
+export async function expectNoDocumentVerticalOverflow(page: Page, tolerancePx = 1) {
+  const geometry = await page.evaluate(() => ({
+    innerHeight: window.innerHeight,
+    documentElementScrollHeight: document.documentElement.scrollHeight,
+    bodyScrollHeight: document.body?.scrollHeight ?? 0,
+  }));
+
+  const scrollHeight = Math.max(geometry.documentElementScrollHeight, geometry.bodyScrollHeight);
+  expect(
+    scrollHeight,
+    `document vertical overflow: scrollHeight=${scrollHeight}px, viewport=${geometry.innerHeight}px`,
+  ).toBeLessThanOrEqual(geometry.innerHeight + tolerancePx);
 }
 
 export async function expectLocatorInsideViewport(page: Page, locator: Locator) {

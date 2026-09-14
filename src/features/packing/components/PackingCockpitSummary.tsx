@@ -70,7 +70,7 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
           <CockpitMetric label="Restant" value={formatNumber(progress.remainingUnits)} detail="unités à conditionner" />
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+        <div className="packing-cockpit-secondary mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           <CockpitMetric compact label="Cadence de référence" value={`${formatNumber(run.referenceCadenceUnitsPerMinute)} u/min`} />
           <CockpitMetric compact label="Temps total estimé" value={formatPackingDuration(progress.estimatedTotalMinutes)} />
           <CockpitMetric compact label="Temps restant estimé" value={formatPackingDuration(progress.estimatedRemainingMinutes)} />

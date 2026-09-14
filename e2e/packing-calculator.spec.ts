@@ -90,7 +90,7 @@ test.describe('Packing Calculator operator declaration flow', () => {
   for (const viewport of [
     { name: 'mobile', width: 390, height: 844, split: false },
     { name: 'tablet', width: 768, height: 1024, split: false },
-    { name: 'small-desktop', width: 1024, height: 768, split: false },
+    { name: 'small-desktop', width: 1024, height: 768, split: true },
     { name: 'workshop', width: 1366, height: 768, split: true },
     { name: 'large-workshop', width: 1920, height: 1080, split: true },
   ]) {

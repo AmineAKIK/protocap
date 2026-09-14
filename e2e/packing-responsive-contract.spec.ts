@@ -1,7 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   RESPONSIVE_VIEWPORTS,
+  expectLocatorInsideViewport,
   expectNoDocumentHorizontalOverflow,
+  expectNoDocumentVerticalOverflow,
   expectPrimaryActionUsable,
   useViewport,
 } from './responsive-harness';
@@ -12,8 +14,18 @@ const PACKING_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phoneMin,
   RESPONSIVE_VIEWPORTS.phoneLandscape,
   RESPONSIVE_VIEWPORTS.tabletLandscape,
+  RESPONSIVE_VIEWPORTS.laptopSmall,
   RESPONSIVE_VIEWPORTS.laptopCompact,
   RESPONSIVE_VIEWPORTS.laptop,
+] as const;
+
+const PACKING_VIEWPORT_FIT_MATRIX = [
+  RESPONSIVE_VIEWPORTS.tabletLandscape,
+  RESPONSIVE_VIEWPORTS.laptopSmall,
+  RESPONSIVE_VIEWPORTS.laptopCompact,
+  RESPONSIVE_VIEWPORTS.laptop,
+  RESPONSIVE_VIEWPORTS.desktop,
+  RESPONSIVE_VIEWPORTS.desktopLarge,
 ] as const;
 
 async function configurePacking(page: Page) {
@@ -44,7 +56,7 @@ async function expectAtomicVisibleNumber(locator: Locator) {
 }
 
 // responsive-contract:packing-responsive-contract
-test('Packing dense surface stays contained and changes composition only in the wide regime', async ({ page }) => {
+test('Packing dense surface stays contained and changes composition only in supported regimes', async ({ page }) => {
   for (const viewport of PACKING_VIEWPORTS) {
     await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
       await useViewport(page, viewport);
@@ -76,7 +88,7 @@ test('Packing dense surface stays contained and changes composition only in the 
         await expectAtomicVisibleNumber(declarations.locator('.tabular-nums').first());
       });
 
-      await test.step('stacked and wide compositions switch at xl', async () => {
+      await test.step('stacked and cockpit-fit compositions switch by available width and height', async () => {
         const reference = page.getByRole('region', { name: 'Référence et résultat exact' });
         const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
         const referenceBox = await reference.boundingBox();
@@ -84,7 +96,8 @@ test('Packing dense surface stays contained and changes composition only in the 
         expect(referenceBox).not.toBeNull();
         expect(executionBox).not.toBeNull();
 
-        if (viewport.width >= 1280) {
+        const usesCockpitFit = viewport.width >= 1024 && viewport.height >= 700;
+        if (usesCockpitFit) {
           expect(executionBox!.x).toBeGreaterThan(referenceBox!.x + referenceBox!.width - 2);
           expect(Math.abs(executionBox!.y - referenceBox!.y)).toBeLessThan(8);
         } else {
@@ -92,6 +105,26 @@ test('Packing dense surface stays contained and changes composition only in the 
           expect(executionBox!.y).toBeGreaterThan(referenceBox!.y + referenceBox!.height - 2);
         }
       });
+    });
+  }
+});
+
+test('Packing active cockpit fits the target landscape and desktop viewport matrix without document scrolling', async ({ page }) => {
+  for (const viewport of PACKING_VIEWPORT_FIT_MATRIX) {
+    await test.step(`${viewport.name}: ${viewport.width}x${viewport.height}`, async () => {
+      await useViewport(page, viewport);
+      await configurePacking(page);
+
+      const cockpit = page.getByRole('region', { name: 'État de production' });
+      const primaryAction = page.getByRole('button', { name: 'Déclarer une charge' });
+
+      await expectNoDocumentHorizontalOverflow(page);
+      await expectNoDocumentVerticalOverflow(page);
+      await expectLocatorInsideViewport(page, cockpit);
+      await expectLocatorInsideViewport(page, primaryAction);
+
+      const scrollState = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+      expect(scrollState).toEqual({ x: 0, y: 0 });
     });
   }
 });
