@@ -25,7 +25,7 @@ export function ShiftGuideLayout() {
   const {
     isCelineRoute,
     isMobileViewport,
-    celineViewportHeight,
+    celineViewportGeometry,
   } = useShiftGuideShell(pathname);
 
   const handleLogout = async () => {
@@ -49,6 +49,14 @@ export function ShiftGuideLayout() {
       ? 'Protection multi-onglets indisponible. Évite de modifier ShiftGuide dans plusieurs onglets en même temps.'
       : null;
 
+  const celineViewportStyle =
+    isCelineRoute && isMobileViewport && celineViewportGeometry !== null
+      ? {
+          height: `${celineViewportGeometry.height}px`,
+          transform: `translateY(${celineViewportGeometry.offsetTop}px)`,
+        }
+      : undefined;
+
   return (
     <div className={shellClass} style={shellGeometry} data-shiftguide-shell>
       <ShiftGuideDesktopNavigation loggingOut={loggingOut} onLogout={handleLogout} />
@@ -69,11 +77,7 @@ export function ShiftGuideLayout() {
             ? 'shiftguide-celine-content [&>div]:h-full [&>div]:min-h-0 [&>div]:overflow-hidden lg:[&>div]:h-[100dvh] lg:[&>div]:overflow-visible'
             : 'shiftguide-standard-content'
         }
-        style={
-          isCelineRoute && isMobileViewport && celineViewportHeight !== null
-            ? { height: `${celineViewportHeight}px` }
-            : undefined
-        }
+        style={celineViewportStyle}
       >
         <Outlet />
       </div>
