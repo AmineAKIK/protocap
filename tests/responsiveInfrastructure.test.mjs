@@ -42,6 +42,18 @@ test('ShiftGuide shares one navigation geometry contract across CSS and keyboard
   assert.match(geometry, /SHIFTGUIDE_DESKTOP_NAV_WIDTH_PX = 96/);
 });
 
+test('shell geometry numeric values have a single runtime source of truth', async () => {
+  const css = await read('src/responsive-shell.css');
+  const geometry = await read('src/layout/responsiveGeometry.ts');
+
+  assert.doesNotMatch(css, /--app-header-height:\s*56px/);
+  assert.doesNotMatch(css, /--shiftguide-mobile-nav-reserve:\s*80px/);
+  assert.doesNotMatch(css, /--shiftguide-desktop-nav-width:\s*96px/);
+  assert.match(geometry, /APP_HEADER_HEIGHT_PX = 56/);
+  assert.match(geometry, /SHIFTGUIDE_MOBILE_NAV_RESERVE_PX = 80/);
+  assert.match(geometry, /SHIFTGUIDE_DESKTOP_NAV_WIDTH_PX = 96/);
+});
+
 test('PR2 keeps global overflow compatibility debt explicit for later migration', async () => {
   const globalCss = await read('src/index.css');
 
