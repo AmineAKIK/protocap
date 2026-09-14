@@ -36,15 +36,15 @@ Some shallow structural selectors remain inside already semantic regions for pur
 
 ## Intrinsic sizing and business numbers
 
-Packing opts out of the global emergency `overflow-wrap: anywhere` compatibility rule. Ordinary French copy wraps naturally, while `.tabular-nums` remains atomic with `white-space: nowrap`.
+Ordinary French copy uses normal browser wrapping. Packing does not carry a route-wide `overflow-wrap` or `word-break` reset; PR10 removed the global compatibility rule that previously made such an opt-out necessary.
 
-The narrow-phone regime keeps large shipment/progress numbers scaled down rather than character-breaking. The theoretical result stacks below 480 px instead of squeezing both sides of the row.
+Atomic business values remain explicit with `.tabular-nums { white-space: nowrap; }`, and the surrounding layout is responsible for giving those values enough room. The narrow-phone regime scales large shipment/progress numbers down rather than character-breaking them. The theoretical result stacks below 480 px instead of squeezing both sides of the row.
 
 The load-progress counter and shipped-volume percentage remain intentionally distinct: the first answers “how many loads?”, while the second answers “how much volume?”. The load percentage stays visually suppressed.
 
 ## Validation
 
-Packing remains covered by its workflow E2E suite and is now also part of the responsive architecture CI gate. The dedicated responsive contract exercises:
+Packing remains covered by its workflow E2E suite and is part of the responsive architecture CI gate. The dedicated responsive contract exercises:
 
 - 320×568 minimum phone;
 - 844×390 mobile landscape / low height;
@@ -54,10 +54,10 @@ Packing remains covered by its workflow E2E suite and is now also part of the re
 
 For every profile the test checks document horizontal containment, primary shipment-action reachability, atomic business numbers and whether the page is stacked or split in the intended regime.
 
-Static tests additionally prevent Packing rules from returning to `index.css` or reintroducing `:has()` tree discovery.
+Static tests additionally prevent Packing rules from returning to `index.css`, reintroducing `:has()` tree discovery, or depending on route-wide wrapping overrides.
 
-## Deliberate non-goals
+## Final enforcement state
 
-PR9 does not remove the repository-wide `overflow-x: hidden` or `overflow-wrap: anywhere` compatibility debt. That remains PR10 scope, where the migration can be enforced globally after the exceptional surfaces are explicitly protected.
+PR10 removes the repository-wide `overflow-x: hidden` and `overflow-wrap: anywhere` safety wheels. Packing must therefore pass the same root-overflow contract as ordinary surfaces while keeping its intentional local density rules.
 
-PR9 also does not change packing mathematics, persistence, shipment semantics, AppShell geometry or navigation behavior.
+Packing remains exceptional only in presentation density; it does not own an alternative shell, scrolling model, or global responsive policy.
