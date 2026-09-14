@@ -81,32 +81,34 @@ export function AccessibleDialog({
         event.preventDefault();
         onClose();
       }}
-      className={`m-auto max-h-[calc(100dvh_-_1.5rem)] w-[calc(100%_-_1.5rem)] max-w-xl overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-sm ${className}`}
+      className={`m-auto w-[calc(100%_-_1.5rem)] max-w-xl overflow-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl backdrop:bg-slate-950/45 backdrop:backdrop-blur-sm ${className}`}
     >
-      <div className={`flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 ${headerClassName}`}>
-        <div className="min-w-0">
-          <h2 id={titleId} className={`text-lg font-bold text-slate-950 ${titleClassName}`}>
-            {title}
-          </h2>
-          {description ? (
-            <p id={descriptionId} className="mt-1 text-sm leading-6 text-slate-500">
-              {description}
-            </p>
+      <div className="grid max-h-[calc(100dvh_-_1.5rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+        <div className={`flex min-w-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:items-center ${headerClassName}`}>
+          <div className="min-w-0">
+            <h2 id={titleId} className={`break-normal text-lg font-bold text-slate-950 ${titleClassName}`}>
+              {title}
+            </h2>
+            {description ? (
+              <p id={descriptionId} className="mt-1 break-normal text-sm leading-6 text-slate-500">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {!hideCloseButton ? (
+            <button
+              type="button"
+              className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
+              onClick={onClose}
+              aria-label={closeLabel}
+            >
+              <X size={20} />
+            </button>
           ) : null}
         </div>
-        {!hideCloseButton ? (
-          <button
-            type="button"
-            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
-            onClick={onClose}
-            aria-label={closeLabel}
-          >
-            <X size={20} />
-          </button>
-        ) : null}
-      </div>
-      <div className={`max-h-[calc(100dvh_-_6rem)] overflow-y-auto ${contentClassName}`}>
-        {children}
+        <div className={`min-h-0 overflow-y-auto overscroll-contain ${contentClassName}`}>
+          {children}
+        </div>
       </div>
     </dialog>
   );

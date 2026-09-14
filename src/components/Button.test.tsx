@@ -16,6 +16,17 @@ describe('Button primitives', () => {
     expect((screen.getByRole('button', { name: 'Envoyer' }) as HTMLButtonElement).type).toBe('submit');
   });
 
+  it('keeps long labels shrinkable without changing the accessible name', () => {
+    render(<Button>Action de validation exceptionnellement longue</Button>);
+
+    const button = screen.getByRole('button', { name: 'Action de validation exceptionnellement longue' });
+    const label = button.querySelector('span');
+
+    expect(button.className).toContain('max-w-full');
+    expect(button.className).toContain('min-w-0');
+    expect(label?.className).toContain('break-normal');
+  });
+
   it('renders navigation actions as a single link control', () => {
     render(
       <MemoryRouter>

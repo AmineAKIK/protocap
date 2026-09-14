@@ -10,9 +10,9 @@ export function DemoBoundaryNotice({ title, children, content }: DemoBoundaryNot
   return (
     <>
       <div className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-amber-950 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-baseline sm:gap-2">
-          <strong className="shrink-0 font-black uppercase tracking-wide">{title}</strong>
-          <span className="font-medium">{content}</span>
+        <div className="mx-auto flex max-w-7xl min-w-0 flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-baseline sm:gap-2">
+          <strong className="break-normal font-black uppercase tracking-wide sm:shrink-0">{title}</strong>
+          <span className="min-w-0 break-normal font-medium">{content}</span>
         </div>
       </div>
       {children}
