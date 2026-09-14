@@ -175,6 +175,33 @@ describe('packing run validation and progress', () => {
     expectDomainError(() => removePackingDeclaration(overDeclared, 'd-2'), 'OVER_DECLARATION');
   });
 
+  it('classifies an over-declaration before cumulative safe-integer overflow', () => {
+    const overDeclared = createRun({
+      requestedUnits: 1,
+      unitsPerCarton: 1,
+      cartonsPerLoad: 1,
+      selectedPolicy: 'no-overrun',
+      plannedUnits: 1,
+      varianceUnits: 0,
+      declarations: [
+        {
+          id: 'd-1',
+          createdAt: '2026-09-14T18:10:00.000Z',
+          completeCartons: 1,
+          partialCartonUnits: 0,
+        },
+        {
+          id: 'd-2',
+          createdAt: '2026-09-14T18:11:00.000Z',
+          completeCartons: Number.MAX_SAFE_INTEGER,
+          partialCartonUnits: 0,
+        },
+      ],
+    });
+
+    expectDomainError(() => validatePackingRun(overDeclared), 'OVER_DECLARATION');
+  });
+
   it('reaches exact completion without exceeding one', () => {
     const completed = addPackingDeclaration(createRun(), {
       id: 'complete',
