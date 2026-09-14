@@ -10,13 +10,13 @@ const MOBILE_FORM_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phone,
 ] as const;
 
-const CONTROL_LABELS = [
-  'Ligne de conditionnement',
-  'Zone de ligne',
-  'Palettes',
-  'Priorité',
-  'Nature',
-  'Commentaire',
+const CONTROLS = [
+  { name: 'line', label: 'Ligne de conditionnement' },
+  { name: 'zone', label: 'Zone de ligne' },
+  { name: 'palletCount', label: 'Palettes' },
+  { name: 'priority', label: 'Priorité' },
+  { name: 'nature', label: 'Nature' },
+  { name: 'comment', label: 'Commentaire' },
 ] as const;
 
 test.describe('Logistics Call mobile form contract', () => {
@@ -29,24 +29,29 @@ test.describe('Logistics Call mobile form contract', () => {
         await expect(page.getByRole('heading', { name: 'Logistics Call' })).toBeVisible();
         await expectNoDocumentHorizontalOverflow(page);
 
-        for (const label of CONTROL_LABELS) {
-          const control = page.getByLabel(label, { exact: true });
+        for (const { name, label } of CONTROLS) {
+          const control = page.locator(`[name="${name}"]`);
           await expect(control).toBeVisible();
+          await expect(control).toHaveClass(/\bfield\b/);
           await expect(control).toHaveCSS('display', 'block');
 
           const geometry = await control.evaluate((element) => {
             const controlRect = element.getBoundingClientRect();
-            const labelRect = element.parentElement?.getBoundingClientRect();
-            const labelText = element.parentElement?.querySelector('.label')?.getBoundingClientRect();
+            const labelElement = element.closest('label');
+            const labelRect = labelElement?.getBoundingClientRect();
+            const labelText = labelElement?.querySelector('.label');
+            const labelTextRect = labelText?.getBoundingClientRect();
             return {
               width: controlRect.width,
               height: controlRect.height,
               parentWidth: labelRect?.width ?? 0,
               top: controlRect.top,
-              labelBottom: labelText?.bottom ?? 0,
+              labelBottom: labelTextRect?.bottom ?? 0,
+              labelText: labelText?.textContent?.trim() ?? '',
             };
           });
 
+          expect(geometry.labelText, `${name} must retain its visible field label`).toBe(label);
           expect(geometry.height, `${label} must preserve a 44px minimum touch target`).toBeGreaterThanOrEqual(44);
           expect(geometry.width, `${label} must fill its mobile field column`).toBeGreaterThanOrEqual(220);
           expect(Math.abs(geometry.parentWidth - geometry.width), `${label} must own the full available label width`).toBeLessThanOrEqual(1);
