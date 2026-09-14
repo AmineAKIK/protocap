@@ -34,6 +34,11 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
+.packing-calculator-page .packing-cockpit-complete .text-slate-400,
+.packing-calculator-page .packing-cockpit-complete .text-slate-500 {
+  color: #cbd5e1;
+}
+
 .packing-calculator-page .packing-operator-panel:not(.packing-operator-complete) .packing-operator-header {
   box-shadow: inset 3px 0 0 rgb(13 148 136 / 0.5);
 }
@@ -52,11 +57,11 @@
     margin-top: 0.38rem;
   }
 
-  .packing-calculator-page .packing-progress > :first-child {
+  .packing-calculator-page .packing-progress-label {
     display: none;
   }
 
-  .packing-calculator-page .packing-progress > :last-child {
+  .packing-calculator-page .packing-progress-track {
     height: 0.3rem;
   }
 
