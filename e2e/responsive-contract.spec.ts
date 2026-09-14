@@ -99,17 +99,17 @@ test.describe('responsive architecture contract', () => {
         await page.getByRole('button', { name: 'Lancer la présentation' }).click();
 
         const dialog = page.getByRole('dialog', { name: 'Présentation du rapport opérationnel' });
-        const next = page.getByRole('button', { name: /Suivant|→/ });
-        const close = page.getByRole('button', { name: 'Quitter la présentation' });
+        const next = dialog.getByRole('button', { name: /Suivant|→/ });
+        const close = dialog.getByRole('button', { name: 'Quitter la présentation' });
 
         await expect(dialog).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Du terrain au prototype' })).toBeVisible();
+        await expect(dialog.getByRole('heading', { name: 'Du terrain au prototype' })).toBeVisible();
         await expectLocatorInsideViewport(page, close);
         await expectLocatorInsideViewport(page, next);
         await expectNoDocumentHorizontalOverflow(page);
 
         for (let i = 0; i < 4; i += 1) await next.click();
-        await expect(page.getByRole('heading', { name: 'Impact opérationnel attendu' })).toBeVisible();
+        await expect(dialog.getByRole('heading', { name: 'Impact opérationnel attendu' })).toBeVisible();
         await expectLocatorInsideViewport(page, close);
         await expectLocatorInsideViewport(page, next);
       });
