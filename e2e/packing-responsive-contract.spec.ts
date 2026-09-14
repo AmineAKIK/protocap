@@ -20,6 +20,8 @@ async function configurePacking(page: Page) {
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
   await page.getByRole('radio', { name: /Carton/i }).click();
+  await page.getByLabel('Cadence de référence en unités par minute').fill('60');
+  await page.getByRole('button', { name: 'Activer ce run' }).click();
   await expect(page.getByRole('heading', { name: 'Découpage final sélectionné' })).toBeVisible();
 }
 
@@ -33,7 +35,6 @@ async function expectAtomicVisibleNumber(locator: Locator) {
       whiteSpace: getComputedStyle(element).whiteSpace,
     };
   });
-
   expect(state.scrollWidth).toBeLessThanOrEqual(state.width + 1);
   expect(state.whiteSpace).toBe('nowrap');
 }
@@ -47,10 +48,7 @@ test('Packing dense surface stays contained and changes composition only in the 
 
       await test.step('document containment and primary action', async () => {
         await expectNoDocumentHorizontalOverflow(page);
-        await expectPrimaryActionUsable(
-          page,
-          page.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }),
-        );
+        await expectPrimaryActionUsable(page, page.getByRole('button', { name: 'Déclarer une charge' }));
       });
 
       await test.step('business numbers remain readable and critical outputs stay atomic', async () => {
@@ -68,18 +66,17 @@ test('Packing dense surface stays contained and changes composition only in the 
         );
         expect(clippedNumbers).toEqual([]);
 
-        const execution = page.getByRole('region', { name: 'Découpage final et suivi manuel' });
-        const shipment = page.getByRole('region', { name: 'Charges à expédier' });
+        const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
+        const declarations = page.getByRole('region', { name: 'Déclarations de production' });
         await expectAtomicVisibleNumber(execution.locator('.tabular-nums').first());
-        await expectAtomicVisibleNumber(shipment.locator('.tabular-nums').first());
+        await expectAtomicVisibleNumber(declarations.locator('.tabular-nums').first());
       });
 
       await test.step('stacked and wide compositions switch at xl', async () => {
         const reference = page.getByRole('region', { name: 'Référence et résultat exact' });
-        const execution = page.getByRole('region', { name: 'Découpage final et suivi manuel' });
+        const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
         const referenceBox = await reference.boundingBox();
         const executionBox = await execution.boundingBox();
-
         expect(referenceBox).not.toBeNull();
         expect(executionBox).not.toBeNull();
 
