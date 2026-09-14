@@ -2,7 +2,6 @@ import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lu
 import { useMemo, useState, type FormEvent } from 'react';
 import {
   addPackingDeclaration,
-  formatPackingDuration,
   getPackingDeclarationUnits,
   getPackingRunProgress,
   normalizePackingDeclaration,
@@ -86,9 +85,6 @@ export function PackingRunExecution({
   const fullLoadUnits = run.unitsPerCarton * run.cartonsPerLoad;
   const canDeclareFullLoad = progress.remainingUnits >= fullLoadUnits;
   const isComplete = progress.remainingUnits === 0;
-  const progressPercent = isComplete ? 100 : Math.floor(progress.progressRatio * 100);
-  const estimatedTotalDuration = formatPackingDuration(progress.estimatedTotalMinutes);
-  const estimatedRemainingDuration = formatPackingDuration(progress.estimatedRemainingMinutes);
 
   const preview = useMemo(() => {
     const input = getDraftInput(draft);
@@ -187,15 +183,16 @@ export function PackingRunExecution({
   return (
     <section
       aria-labelledby="packing-run-execution-title"
-      className={`overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}
+      className={`packing-operator-panel overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}
     >
       <div className={`border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Exécution atelier · run actif</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Agir · opérateur</p>
             <h2 id="packing-run-execution-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">
               Déclarations de production
             </h2>
+            <p className="mt-1 text-xs font-semibold text-slate-500">Déclarer, corriger ou retirer uniquement ce qui a réellement été conditionné.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${persistenceStatus === 'persisted' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>
@@ -214,49 +211,10 @@ export function PackingRunExecution({
       </div>
 
       <div className="p-5 sm:p-6">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Déclaré</p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(progress.declaredUnits)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Restant</p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(progress.remainingUnits)}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Progression</p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(progressPercent)} %</p>
-          </div>
-        </div>
-
-        <section aria-labelledby="packing-production-estimates-title" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Repères de production</p>
-              <h3 id="packing-production-estimates-title" className="mt-1 text-sm font-black text-slate-950">Cadence et durées estimées</h3>
-            </div>
-            <p className="text-xs font-semibold text-slate-500">Estimation recalculée quand les données du run changent.</p>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Cadence de référence</p>
-              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Durée totale estimée</p>
-              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{estimatedTotalDuration}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Durée restante estimée</p>
-              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{estimatedRemainingDuration}</p>
-            </div>
-          </div>
-        </section>
-
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Chemin rapide</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Action principale</p>
               <p className="mt-1 text-sm font-bold text-slate-700">
                 Charge complète · {formatNumber(run.cartonsPerLoad)} cartons · {formatNumber(fullLoadUnits)} unités
               </p>

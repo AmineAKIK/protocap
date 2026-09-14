@@ -38,6 +38,7 @@ describe('PackingCalculatorPage operator run flow', () => {
     expect(screen.getByRole('heading', { name: 'Activer le run' })).toBeTruthy();
     await activateRun(user);
 
+    expect(screen.getByRole('heading', { name: 'État de production' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
     const operations = screen.getByRole('region', { name: 'Plan actif et déclarations de production' });
     expect(within(operations).getByText(/Run actif/)).toBeTruthy();
@@ -57,7 +58,7 @@ describe('PackingCalculatorPage operator run flow', () => {
     storePackingForm();
     render(<PackingCalculatorPage />);
 
-    expect(screen.getByRole('heading', { name: 'Plan en attente' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Cockpit en attente' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Activer le run' })).toBeNull();
 
     await chooseCartonStrategy(user);
@@ -94,10 +95,10 @@ describe('PackingCalculatorPage operator run flow', () => {
     await activateRun(user);
     await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
 
-    const execution = screen.getByRole('region', { name: 'Déclarations de production' });
-    expect(within(execution).getByText('1', { selector: '.tabular-nums' })).toBeTruthy();
-    expect(within(execution).getByText('99 %')).toBeTruthy();
-    expect(within(execution).queryByText('100 %')).toBeNull();
+    const cockpit = screen.getByRole('region', { name: 'État de production' });
+    expect(within(cockpit).getByText('1', { selector: '.tabular-nums' })).toBeTruthy();
+    expect(within(cockpit).getByText('99 %')).toBeTruthy();
+    expect(within(cockpit).queryByText('100 %')).toBeNull();
   });
 
   it('declares a complete load in one click and reloads it from the active-run history', async () => {
@@ -120,6 +121,7 @@ describe('PackingCalculatorPage operator run flow', () => {
 
     view.unmount();
     render(<PackingCalculatorPage />);
+    expect(screen.getByRole('heading', { name: 'État de production' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
     expect(screen.getByText('1 déclaration')).toBeTruthy();
     const reloadedHistory = screen.getByRole('list', { name: 'Historique des déclarations' });
