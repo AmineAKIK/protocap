@@ -1,6 +1,6 @@
 # Packing and dense-surface responsive contract
 
-Packing Calculator is an intentional dense-surface exception without creating a second responsive architecture.
+Packing Cockpit is an intentional dense-surface exception without creating a second responsive architecture.
 
 ## Why Packing is exceptional
 
@@ -29,23 +29,36 @@ The strategy cards keep their existing content-driven behavior: three columns at
 
 ## Local CSS ownership
 
-Packing-specific overrides live in `src/packing-responsive.css`, not `src/index.css`.
+Packing-specific viewport rules live in `src/packing-responsive.css`; visual cockpit polish lives in `src/packing-polish.css`. Neither belongs in `src/index.css`.
 
-The stylesheet is route-scoped by `.packing-calculator-page`. Business regions keep their accessible ARIA boundaries, while compaction uses stable hooks such as:
+The stylesheets are route-scoped by `.packing-calculator-page`. Business regions keep their accessible ARIA boundaries, while compaction uses stable hooks such as:
 
 - `.packing-primary-input`;
 - `.packing-plan-metrics` and `.packing-plan-metric`;
 - `.packing-cockpit-primary` and `.packing-cockpit-secondary`;
 - `.packing-cockpit-metric`;
-- `.packing-operator-panel`.
+- `.packing-progress-label`, `.packing-progress-track` and `.packing-progress-fill`;
+- `.packing-primary-action` and `.packing-operator-panel`.
 
-The responsive stylesheet must not rediscover meaning through JSX tree order. `:has()`, `first-child`, `last-child`, `first-of-type`, `last-of-type` and `nth-*` selectors remain excluded from the Packing responsive contract.
+The responsive and polish stylesheets must not rediscover meaning through JSX tree order. `:has()`, `first-child`, `last-child`, `first-of-type`, `last-of-type` and `nth-*` selectors remain excluded from the Packing responsive contract.
 
 ## Intrinsic sizing and business numbers
 
 Ordinary French copy uses normal browser wrapping. Packing does not carry a route-wide `overflow-wrap` or `word-break` reset.
 
 Atomic business values remain explicit with `.tabular-nums { white-space: nowrap; }`, and the surrounding layout is responsible for giving those values enough room. In viewport-fit mode the manager summary uses a compact 4+4 metric grid so large operational values stay readable without forcing document overflow.
+
+## Execution truth after V2 closure
+
+Responsive presentation never owns production progress. The authoritative active state is the declaration-based Packing run domain:
+
+- operator declarations carry identity, carton count and final partial-carton units;
+- declared, remaining and progress values are derived from declaration history;
+- the previous sequential `shippedLoads` / `nextLoad` execution model is retired;
+- `summarizePackingLoads` is presentation-only metadata for planned complete/partial load counts and cannot mutate or advance production state;
+- the editable planning form persists only quantity and conditioning inputs. Strategy remains an explicit current-screen decision until activation and is captured in the immutable active run snapshot.
+
+This boundary prevents responsive or visual code from reintroducing a second execution truth.
 
 ## Validation
 
@@ -71,10 +84,12 @@ For every viewport-fit profile, the test verifies:
 - `Déclarer une charge` visible in the viewport;
 - document scroll position remains at the origin after activation.
 
-Static tests additionally prevent Packing rules from returning to `index.css`, reintroducing DOM-discovery selectors, duplicating shell geometry, or abandoning local scroll ownership.
+PR7 visual validation additionally locks the hierarchy at 1366×768 and 1920×1080 and verifies reduced-motion behavior.
+
+Static tests prevent Packing rules from returning to `index.css`, reintroducing DOM-discovery selectors, duplicating shell geometry, abandoning local scroll ownership, restoring the retired sequential shipment module, or repersisting the superseded planning `policy` field.
 
 ## Final enforcement state
 
 Packing does not use a global overflow-hiding safety wheel. The route earns no-scroll behavior by consuming the exact shell content height and by assigning overflow only to the dense subregions that can legitimately grow.
 
-Packing remains exceptional only in presentation density and cockpit fit; it does not own an alternative shell or global responsive policy.
+Packing remains exceptional only in presentation density and cockpit fit; it does not own an alternative shell, global responsive policy, or execution-state model.

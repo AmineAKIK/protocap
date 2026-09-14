@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateExactPacking,
   calculatePackingOptions,
-  getShipmentPalletCount,
   isPositiveInteger,
   isValidPackingInput,
   parsePositiveIntegerInput,
+  summarizePackingLoads,
 } from './packing';
 
 describe('packing exact integer domain', () => {
@@ -21,17 +21,80 @@ describe('packing exact integer domain', () => {
     });
     const options = calculatePackingOptions(input);
     expect(options.map((option) => option.totalPrepared)).toEqual([30_880, 30_976, 35_840]);
-    expect(options.map(getShipmentPalletCount)).toEqual([7, 7, 7]);
+    expect(options.map((option) => summarizePackingLoads(input, option).totalLoads)).toEqual([7, 7, 7]);
   });
 
-  it('does not add a remainder pallet when the selected result uses complete pallets only', () => {
-    const options = calculatePackingOptions({
+  it('does not add a partial load when the selected result uses complete pallets only', () => {
+    const input = {
       quantity: 30_720,
       unitsPerCarton: 128,
       cartonsPerPalette: 40,
-    });
+    };
+    const options = calculatePackingOptions(input);
 
-    expect(options.map(getShipmentPalletCount)).toEqual([6, 6, 6]);
+    expect(options.map((option) => summarizePackingLoads(input, option))).toEqual([
+      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
+      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
+      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
+    ]);
+  });
+
+  it('summarizes partial preparation without implying sequential execution', () => {
+    const input = { quantity: 30_880, unitsPerCarton: 128, cartonsPerPalette: 40 };
+    const [exact, roundCarton, roundPallet] = calculatePackingOptions(input);
+
+    expect(summarizePackingLoads(input, exact)).toEqual({
+      fullLoadCount: 6,
+      partialLoadCount: 1,
+      totalLoads: 7,
+    });
+    expect(summarizePackingLoads(input, roundCarton)).toEqual({
+      fullLoadCount: 6,
+      partialLoadCount: 1,
+      totalLoads: 7,
+    });
+    expect(summarizePackingLoads(input, roundPallet)).toEqual({
+      fullLoadCount: 7,
+      partialLoadCount: 0,
+      totalLoads: 7,
+    });
+  });
+
+  it('promotes a carton remainder that fills a pallet into a complete load summary', () => {
+    const input = { quantity: 5_000, unitsPerCarton: 128, cartonsPerPalette: 40 };
+    const selected = calculatePackingOptions(input).find((option) => option.policy === 'round-carton');
+    if (!selected) throw new Error('Missing round-carton option');
+
+    expect(summarizePackingLoads(input, selected)).toEqual({
+      fullLoadCount: 1,
+      partialLoadCount: 0,
+      totalLoads: 1,
+    });
+  });
+
+  it('keeps large valid load summaries constant-size', () => {
+    const input = {
+      quantity: 5_120_000_000,
+      unitsPerCarton: 128,
+      cartonsPerPalette: 40,
+    };
+    const selected = calculatePackingOptions(input)[0];
+
+    expect(summarizePackingLoads(input, selected)).toEqual({
+      fullLoadCount: 1_000_000,
+      partialLoadCount: 0,
+      totalLoads: 1_000_000,
+    });
+  });
+
+  it('fails closed when a load summary cannot represent the selected prepared total', () => {
+    const input = { quantity: 30_880, unitsPerCarton: 128, cartonsPerPalette: 40 };
+    const selected = calculatePackingOptions(input).find((option) => option.policy === 'round-carton');
+    if (!selected) throw new Error('Missing round-carton option');
+
+    expect(() => summarizePackingLoads(input, { ...selected, totalPrepared: 30_975 })).toThrow(
+      'Packing option cannot be summarized into physical loads exactly.',
+    );
   });
 
   it('rejects integers that JavaScript cannot represent exactly', () => {

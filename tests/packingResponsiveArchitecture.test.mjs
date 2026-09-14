@@ -82,3 +82,22 @@ test('Packing viewport fit is height-aware, shell-owned and locally scrollable',
   assert.match(polishCss, /\.packing-progress/);
   assert.match(shell, /padding-bottom: calc\(var\(--app-mobile-nav-reserve\)/);
 });
+
+test('Packing V2 closure keeps declaration history authoritative and legacy execution debt retired', async () => {
+  const page = await read('src/pages/PackingCalculatorPage.tsx');
+  const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
+  const packing = await read('src/utils/packing.ts');
+  const publicStorage = await read('src/utils/publicStorageValidation.ts');
+
+  await assert.rejects(read('src/utils/packingShipment.ts'), /ENOENT/);
+  await assert.rejects(read('src/utils/packingShipment.test.ts'), /ENOENT/);
+  assert.doesNotMatch(page, /packingShipment|getPackingShipmentProgress|getPackingShipmentLoad/);
+  assert.match(page, /summarizePackingLoads/);
+  const planningForm = planning.match(/export interface PackingPlanningFormState \{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.notEqual(planningForm, '');
+  assert.doesNotMatch(planningForm, /\bpolicy\s*:/);
+  assert.match(packing, /summarizePackingLoads/);
+  assert.doesNotMatch(packing, /getPackingShipmentProgress|getPackingShipmentLoad|nextLoad|shippedLoads/);
+  assert.doesNotMatch(publicStorage, /lineops\.packing\.shipment\.progress/);
+  assert.doesNotMatch(publicStorage, /PersistedPackingTrackingState/);
+});

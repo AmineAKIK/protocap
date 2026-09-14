@@ -24,6 +24,12 @@ export interface PackingOption {
   variance: number;
 }
 
+export interface PackingLoadSummary {
+  fullLoadCount: number;
+  partialLoadCount: 0 | 1;
+  totalLoads: number;
+}
+
 export function isPositiveInteger(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0;
 }
@@ -88,6 +94,18 @@ function assertValidPackingInput(input: PackingInput): void {
   }
 }
 
+function assertValidPackingOption(option: PackingOption): void {
+  if (
+    !Number.isSafeInteger(option.palettes) || option.palettes < 0 ||
+    !Number.isSafeInteger(option.cartons) || option.cartons < 0 ||
+    !Number.isSafeInteger(option.units) || option.units < 0 ||
+    !Number.isSafeInteger(option.totalPrepared) || option.totalPrepared < 0 ||
+    !Number.isSafeInteger(option.variance) || option.variance < 0
+  ) {
+    throw new RangeError('Packing option must contain non-negative safe integer totals.');
+  }
+}
+
 export function calculateExactPacking(input: PackingInput): PackingExactResult {
   assertValidPackingInput(input);
   return calculateExactPackingUnchecked(input);
@@ -141,7 +159,38 @@ export function getPackingRecommendation(options: PackingOption[]): PackingOptio
   return carton;
 }
 
-export function getShipmentPalletCount(option: PackingOption): number {
-  const hasRemainderLoad = option.cartons > 0 || option.units > 0;
-  return option.palettes + (hasRemainderLoad ? 1 : 0);
+/**
+ * Summarize the selected preparation option into physical loads without creating
+ * or implying a sequential execution order. Runtime production progress is owned
+ * exclusively by declaration history in the Packing run domain.
+ */
+export function summarizePackingLoads(input: PackingInput, option: PackingOption): PackingLoadSummary {
+  assertValidPackingInput(input);
+  assertValidPackingOption(option);
+
+  if (option.units >= input.unitsPerCarton) {
+    throw new RangeError('Packing option units must fit inside one partial carton.');
+  }
+
+  const unitsPerFullLoad = input.unitsPerCarton * input.cartonsPerPalette;
+  const extraFullLoads = Math.floor(option.cartons / input.cartonsPerPalette);
+  const remainderCartons = option.cartons % input.cartonsPerPalette;
+  const fullLoadCount = option.palettes + extraFullLoads;
+  const remainderUnits = remainderCartons * input.unitsPerCarton + option.units;
+  const partialLoadCount: 0 | 1 = remainderUnits > 0 ? 1 : 0;
+  const totalLoads = fullLoadCount + partialLoadCount;
+  const representedUnits = fullLoadCount * unitsPerFullLoad + remainderUnits;
+
+  if (
+    !Number.isSafeInteger(extraFullLoads) ||
+    !Number.isSafeInteger(fullLoadCount) ||
+    !Number.isSafeInteger(remainderUnits) ||
+    !Number.isSafeInteger(totalLoads) ||
+    !Number.isSafeInteger(representedUnits) ||
+    representedUnits !== option.totalPrepared
+  ) {
+    throw new RangeError('Packing option cannot be summarized into physical loads exactly.');
+  }
+
+  return { fullLoadCount, partialLoadCount, totalLoads };
 }

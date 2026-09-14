@@ -1,6 +1,5 @@
 import { CheckCircle2 } from 'lucide-react';
-import { calculatePackingOptions, type PackingInput } from '../../../utils/packing';
-import { createPackingShipmentPlan } from '../../../utils/packingShipment';
+import { calculatePackingOptions, summarizePackingLoads, type PackingInput } from '../../../utils/packing';
 import { formatPackingDuration, getPackingRunProgress, type PackingRun } from '../domain/packingRun';
 
 interface PackingCockpitSummaryProps {
@@ -44,7 +43,7 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
   const selected = calculatePackingOptions(input).find((option) => option.policy === run.selectedPolicy);
   if (!selected) return null;
 
-  const shipmentPlan = createPackingShipmentPlan(input, selected);
+  const loadSummary = summarizePackingLoads(input, selected);
   const progress = getPackingRunProgress(run);
   const isComplete = progress.remainingUnits === 0;
   const progressPercent = isComplete ? 100 : Math.floor(progress.progressRatio * 100);
@@ -90,7 +89,7 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
           <CockpitMetric compact label="Cadence de référence" value={`${formatNumber(run.referenceCadenceUnitsPerMinute)} u/min`} />
           <CockpitMetric compact label="Temps total estimé" value={formatPackingDuration(progress.estimatedTotalMinutes)} />
           <CockpitMetric compact label="Temps restant estimé" value={formatPackingDuration(progress.estimatedRemainingMinutes)} />
-          <CockpitMetric compact label="Écart plan / demande" value={run.varianceUnits === 0 ? '0' : `+${formatNumber(run.varianceUnits)}`} detail={`${formatNumber(shipmentPlan.totalLoads)} charge${shipmentPlan.totalLoads > 1 ? 's' : ''} planifiée${shipmentPlan.totalLoads > 1 ? 's' : ''}`} />
+          <CockpitMetric compact label="Écart plan / demande" value={run.varianceUnits === 0 ? '0' : `+${formatNumber(run.varianceUnits)}`} detail={`${formatNumber(loadSummary.totalLoads)} charge${loadSummary.totalLoads > 1 ? 's' : ''} planifiée${loadSummary.totalLoads > 1 ? 's' : ''}`} />
         </div>
       </div>
     </section>

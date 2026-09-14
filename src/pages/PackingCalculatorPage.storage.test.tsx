@@ -19,7 +19,29 @@ describe('PackingCalculatorPage persisted-state recovery', () => {
         quantity: '',
         unitsPerCarton: '',
         cartonsPerPalette: '',
-        policy: 'no-overrun',
+      });
+    });
+  });
+
+  it('keeps legacy input values while removing the superseded persisted policy', async () => {
+    localStorage.setItem(formStorageKey, JSON.stringify({
+      quantity: '30880',
+      unitsPerCarton: '128',
+      cartonsPerPalette: '40',
+      policy: 'round-carton',
+    }));
+
+    render(<PackingCalculatorPage />);
+
+    expect((screen.getByLabelText('Quantité demandée en unités') as HTMLInputElement).value).toBe('30880');
+    expect((screen.getByLabelText('Unités par carton') as HTMLInputElement).value).toBe('128');
+    expect((screen.getByLabelText('Cartons par palette') as HTMLInputElement).value).toBe('40');
+
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
+        quantity: '30880',
+        unitsPerCarton: '128',
+        cartonsPerPalette: '40',
       });
     });
   });

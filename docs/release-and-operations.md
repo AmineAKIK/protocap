@@ -70,6 +70,23 @@ For every runtime-affecting merge to `main`:
 
 Do not continue a release from a broken `main` or from a Railway deployment whose commit does not match the intended release commit.
 
+### Packing Cockpit V2 closure proof
+
+Packing Cockpit V2 has one additional closure requirement because its eight-PR delivery sequence intentionally separates implementation from production proof.
+
+After the final PR is squash-merged:
+
+1. re-read `main` and record the exact resulting commit SHA;
+2. confirm the final merged SHA still has successful CodeQL and Quality Gate evidence from the validated PR head/merge policy;
+3. deploy or confirm Railway deploys that exact `main` SHA to the production `protocap` service;
+4. require Railway deployment status `SUCCESS` before claiming completion;
+5. request `GET /api/ready` on the canonical production hostname and require HTTP `200`;
+6. record only deployment identifiers, commit SHA, status and readiness result — never environment-variable values or secret material.
+
+The Packing closure proof is invalid if Railway is serving an older commit, even when `/api/ready` is healthy. Health proves runtime readiness; the commit match proves that the validated cockpit revision is the code actually running.
+
+The final Packing architecture is declaration-based. Legacy parameter-keyed shipment progress is ignored and no longer part of the public storage registry; planning inputs persist independently from the explicitly selected active-run strategy. Production verification must not fabricate or migrate old shipment counters into declaration history.
+
 ## `v0.1.0-demo` release procedure
 
 The first public release is intentionally named `v0.1.0-demo` to communicate maturity accurately.

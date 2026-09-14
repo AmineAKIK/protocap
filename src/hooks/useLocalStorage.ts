@@ -7,7 +7,11 @@ function versionedKey(key: string) {
   return `${key}.${DATA_VERSION}`;
 }
 
-export function useLocalStorage<T>(key: string, initialValue: T) {
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  normalize?: (value: T) => T,
+) {
   const vkey = versionedKey(key);
 
   const [value, setValue] = useState<T>(() => {
@@ -15,7 +19,9 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       const stored = window.localStorage.getItem(vkey);
       if (!stored) return initialValue;
       const parsed: unknown = JSON.parse(stored);
-      return isValidPublicStorageValue(key, parsed) ? (parsed as T) : initialValue;
+      if (!isValidPublicStorageValue(key, parsed)) return initialValue;
+      const validated = parsed as T;
+      return normalize ? normalize(validated) : validated;
     } catch {
       return initialValue;
     }
