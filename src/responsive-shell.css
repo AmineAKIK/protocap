@@ -12,9 +12,8 @@
 .app-shell {
   --app-mobile-nav-row-height: 3.5rem;
   --app-mobile-nav-clearance: 1.5rem;
-  --app-mobile-nav-rows: 2;
   --app-mobile-nav-reserve: calc(
-    var(--app-mobile-nav-row-height) * var(--app-mobile-nav-rows) + var(--app-mobile-nav-clearance)
+    var(--app-mobile-nav-row-height) + var(--app-mobile-nav-row-height) + var(--app-mobile-nav-clearance)
   );
 }
 
@@ -53,7 +52,7 @@
 
 @media (min-width: 640px) {
   .app-shell {
-    --app-mobile-nav-rows: 1;
+    --app-mobile-nav-reserve: calc(var(--app-mobile-nav-row-height) + var(--app-mobile-nav-clearance));
   }
 }
 
