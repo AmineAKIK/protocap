@@ -35,7 +35,7 @@ async function configurePacking(page: Page) {
   await page.getByRole('radio', { name: /Carton/i }).click();
   await page.getByLabel('Cadence de référence en unités par minute').fill('60');
   await page.getByRole('button', { name: 'Activer ce run' }).click();
-  await expect(page.getByRole('region', { name: 'Déclarations de production' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Déclarations de production', exact: true })).toBeVisible();
 }
 
 test.describe('critical accessibility smoke', () => {
