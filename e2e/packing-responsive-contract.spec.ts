@@ -6,6 +6,8 @@ import {
   useViewport,
 } from './responsive-harness';
 
+const PACKING_ACTIVE_RUN_STORAGE_KEY = 'lineops.packing.active-run.v1';
+
 const PACKING_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phoneMin,
   RESPONSIVE_VIEWPORTS.phoneLandscape,
@@ -16,6 +18,8 @@ const PACKING_VIEWPORTS = [
 
 async function configurePacking(page: Page) {
   await page.goto('/packing-calculator');
+  await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
+  await page.reload();
   await page.getByLabel('Quantité demandée en unités').fill('5120000000');
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
@@ -67,7 +71,7 @@ test('Packing dense surface stays contained and changes composition only in the 
         expect(clippedNumbers).toEqual([]);
 
         const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
-        const declarations = page.getByRole('region', { name: 'Déclarations de production' });
+        const declarations = page.getByRole('region', { name: 'Déclarations de production', exact: true });
         await expectAtomicVisibleNumber(execution.locator('.tabular-nums').first());
         await expectAtomicVisibleNumber(declarations.locator('.tabular-nums').first());
       });
