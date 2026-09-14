@@ -38,9 +38,14 @@ test.describe('responsive architecture contract', () => {
   test('protected ShiftGuide primary action stays reachable on minimum phone and phone landscape', async ({ page }) => {
     for (const viewport of [RESPONSIVE_VIEWPORTS.phoneMin, RESPONSIVE_VIEWPORTS.phoneLandscape]) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
+        // Each viewport is an independent protected-route scenario. Do not let
+        // the authenticated session created by the previous iteration leak into
+        // the next one and turn a responsive assertion into an auth-state test.
+        await page.context().clearCookies();
         await useViewport(page, viewport);
         await page.goto('/shiftguide/module/module_standard');
 
+        await expect(page.getByText('Accès restreint')).toBeVisible();
         await page.getByLabel("Code d'accès").fill(ACCESS_CODE);
         await page.getByRole('button', { name: 'Déverrouiller' }).click();
 
