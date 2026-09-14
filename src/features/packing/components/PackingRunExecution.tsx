@@ -2,6 +2,7 @@ import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lu
 import { useMemo, useState, type FormEvent } from 'react';
 import {
   addPackingDeclaration,
+  formatPackingDuration,
   getPackingDeclarationUnits,
   getPackingRunProgress,
   normalizePackingDeclaration,
@@ -86,6 +87,8 @@ export function PackingRunExecution({
   const canDeclareFullLoad = progress.remainingUnits >= fullLoadUnits;
   const isComplete = progress.remainingUnits === 0;
   const progressPercent = isComplete ? 100 : Math.floor(progress.progressRatio * 100);
+  const estimatedTotalDuration = formatPackingDuration(progress.estimatedTotalMinutes);
+  const estimatedRemainingDuration = formatPackingDuration(progress.estimatedRemainingMinutes);
 
   const preview = useMemo(() => {
     const input = getDraftInput(draft);
@@ -225,6 +228,30 @@ export function PackingRunExecution({
             <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(progressPercent)} %</p>
           </div>
         </div>
+
+        <section aria-labelledby="packing-production-estimates-title" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Repères de production</p>
+              <h3 id="packing-production-estimates-title" className="mt-1 text-sm font-black text-slate-950">Cadence et durées estimées</h3>
+            </div>
+            <p className="text-xs font-semibold text-slate-500">Estimation recalculée quand les données du run changent.</p>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Cadence de référence</p>
+              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Durée totale estimée</p>
+              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{estimatedTotalDuration}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Durée restante estimée</p>
+              <p className="mt-1 text-lg font-black tabular-nums text-slate-950">{estimatedRemainingDuration}</p>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
