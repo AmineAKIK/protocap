@@ -39,13 +39,13 @@ describe('PackingCalculatorPage operator run flow', () => {
     await activateRun(user);
 
     expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
-    expect(screen.getByText('Run actif')).toBeTruthy();
+    const operations = screen.getByRole('region', { name: 'Plan actif et déclarations de production' });
+    expect(within(operations).getByText(/Run actif/)).toBeTruthy();
 
     const quantity = screen.getByLabelText('Quantité demandée en unités');
     await user.clear(quantity);
     await user.type(quantity, '40000');
 
-    const operations = screen.getByRole('region', { name: 'Plan actif et déclarations de production' });
     expect(within(operations).getByText(/30\s976/)).toBeTruthy();
     expect(within(operations).queryByText(/40\s064/)).toBeNull();
   });
@@ -74,8 +74,9 @@ describe('PackingCalculatorPage operator run flow', () => {
     await activateRun(user);
 
     await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
-    expect(screen.getByText(/5\s120 unités déclarées produites/)).toBeTruthy();
-    expect(screen.getByText(/5\s120/)).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/5\s120 unités déclarées produites/);
+    const history = screen.getByRole('list', { name: 'Historique des déclarations' });
+    expect(within(history).getByText(/#1 · 5\s120 unités/)).toBeTruthy();
     expect(screen.getByText('1 déclaration')).toBeTruthy();
 
     await waitFor(() => {
@@ -87,11 +88,12 @@ describe('PackingCalculatorPage operator run flow', () => {
     render(<PackingCalculatorPage />);
     expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
     expect(screen.getByText('1 déclaration')).toBeTruthy();
+    const reloadedHistory = screen.getByRole('list', { name: 'Historique des déclarations' });
+    expect(within(reloadedHistory).getByText(/#1 · 5\s120 unités/)).toBeTruthy();
   });
 
   it('accepts partial cartons and units with an exact preview', async () => {
     const user = userEvent.setup();
-    storePackingForm('400000');
     localStorage.setItem(formStorageKey, JSON.stringify({
       quantity: '400000',
       unitsPerCarton: '480',
@@ -107,13 +109,14 @@ describe('PackingCalculatorPage operator run flow', () => {
     expect(screen.getByText(/Aperçu :/).parentElement?.textContent).toContain('4 920 unités');
 
     await user.click(screen.getByRole('button', { name: 'Déclarer ce volume' }));
-    expect(screen.getByText(/4\s920 unités déclarées produites/)).toBeTruthy();
-    expect(screen.getByText(/10 cartons \+ 120 unités partielles/)).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toMatch(/4\s920 unités déclarées produites/);
+    const history = screen.getByRole('list', { name: 'Historique des déclarations' });
+    expect(within(history).getByText(/#1 · 4\s920 unités/)).toBeTruthy();
+    expect(within(history).getByText(/10 cartons \+ 120 unités partielles/)).toBeTruthy();
   });
 
   it('visibly rejects a declaration above the remaining run volume', async () => {
     const user = userEvent.setup();
-    storePackingForm('100');
     localStorage.setItem(formStorageKey, JSON.stringify({
       quantity: '100',
       unitsPerCarton: '10',
@@ -146,10 +149,12 @@ describe('PackingCalculatorPage operator run flow', () => {
     await user.type(cartons, '10');
     await user.click(screen.getByRole('button', { name: 'Enregistrer la correction' }));
 
-    expect(screen.getByText(/1\s280 unités/)).toBeTruthy();
-    expect(screen.getByText('Déclaration corrigée.')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toBe('Déclaration corrigée.');
+    const history = screen.getByRole('list', { name: 'Historique des déclarations' });
+    expect(within(history).getByText(/#1 · 1\s280 unités/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Supprimer la déclaration 1' }));
+    expect(screen.getByRole('status').textContent).toBe('Déclaration supprimée et progression recalculée.');
     expect(screen.getByText('0 déclaration')).toBeTruthy();
     expect(screen.getByText('Aucune production déclarée pour ce run.')).toBeTruthy();
   });
