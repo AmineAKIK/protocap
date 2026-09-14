@@ -41,13 +41,15 @@ describe('PackingCalculatorPage operator run flow', () => {
     expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
     const operations = screen.getByRole('region', { name: 'Plan actif et déclarations de production' });
     expect(within(operations).getByText(/Run actif/)).toBeTruthy();
+    const plannedMetric = within(operations).getByText('Planifié').parentElement;
+    expect(plannedMetric?.textContent).toMatch(/30\s976/);
 
     const quantity = screen.getByLabelText('Quantité demandée en unités');
     await user.clear(quantity);
     await user.type(quantity, '40000');
 
-    expect(within(operations).getByText(/30\s976/)).toBeTruthy();
-    expect(within(operations).queryByText(/40\s064/)).toBeNull();
+    expect(plannedMetric?.textContent).toMatch(/30\s976/);
+    expect(plannedMetric?.textContent).not.toMatch(/40\s064/);
   });
 
   it('requires an explicit operator strategy and cadence before run activation', async () => {
