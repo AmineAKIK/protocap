@@ -8,6 +8,7 @@ import {
   normalizePackingDeclaration,
   removePackingDeclaration,
   replacePackingDeclaration,
+  validatePackingRun,
   type PackingRun,
 } from './packingRun';
 
@@ -96,7 +97,7 @@ describe('packing declaration normalization', () => {
   });
 });
 
-describe('packing run progress', () => {
+describe('packing run validation and progress', () => {
   it('derives total and remaining time from planned units and reference cadence', () => {
     const run = createRun();
     const progress = getPackingRunProgress(run);
@@ -152,6 +153,55 @@ describe('packing run progress', () => {
     );
   });
 
+  it('rejects a pre-existing over-declared run during validation', () => {
+    const overDeclared = createRun({
+      declarations: [
+        {
+          id: 'd-1',
+          createdAt: '2026-09-14T18:10:00.000Z',
+          completeCartons: 834,
+          partialCartonUnits: 0,
+        },
+        {
+          id: 'd-2',
+          createdAt: '2026-09-14T18:11:00.000Z',
+          completeCartons: 0,
+          partialCartonUnits: 1,
+        },
+      ],
+    });
+
+    expectDomainError(() => validatePackingRun(overDeclared), 'OVER_DECLARATION');
+    expectDomainError(() => removePackingDeclaration(overDeclared, 'd-2'), 'OVER_DECLARATION');
+  });
+
+  it('classifies an over-declaration before cumulative safe-integer overflow', () => {
+    const overDeclared = createRun({
+      requestedUnits: 1,
+      unitsPerCarton: 1,
+      cartonsPerLoad: 1,
+      selectedPolicy: 'no-overrun',
+      plannedUnits: 1,
+      varianceUnits: 0,
+      declarations: [
+        {
+          id: 'd-1',
+          createdAt: '2026-09-14T18:10:00.000Z',
+          completeCartons: 1,
+          partialCartonUnits: 0,
+        },
+        {
+          id: 'd-2',
+          createdAt: '2026-09-14T18:11:00.000Z',
+          completeCartons: Number.MAX_SAFE_INTEGER,
+          partialCartonUnits: 0,
+        },
+      ],
+    });
+
+    expectDomainError(() => validatePackingRun(overDeclared), 'OVER_DECLARATION');
+  });
+
   it('reaches exact completion without exceeding one', () => {
     const completed = addPackingDeclaration(createRun(), {
       id: 'complete',
@@ -171,6 +221,39 @@ describe('packing run progress', () => {
   it('rejects inconsistent run plan totals', () => {
     expectDomainError(
       () => getPackingRunProgress(createRun({ varianceUnits: 319 })),
+      'INVALID_RUN',
+    );
+  });
+
+  it('rejects a plan that does not match its selected strategy', () => {
+    expectDomainError(
+      () => getPackingRunProgress(createRun({ selectedPolicy: 'no-overrun' })),
+      'INVALID_RUN',
+    );
+
+    expectDomainError(
+      () => getPackingRunProgress(createRun({ selectedPolicy: 'round-pallet' })),
+      'INVALID_RUN',
+    );
+  });
+
+  it('accepts the exact plan for no-overrun strategy', () => {
+    const exactRun = createRun({
+      selectedPolicy: 'no-overrun',
+      plannedUnits: 400_000,
+      varianceUnits: 0,
+    });
+
+    expect(getPackingRunProgress(exactRun)).toMatchObject({
+      declaredUnits: 0,
+      remainingUnits: 400_000,
+      progressRatio: 0,
+    });
+  });
+
+  it('rejects packing inputs whose derived plan is not exactly representable', () => {
+    expectDomainError(
+      () => validatePackingRun(createRun({ cartonsPerLoad: Number.MAX_SAFE_INTEGER })),
       'INVALID_RUN',
     );
   });
@@ -229,6 +312,23 @@ describe('packing declaration correction', () => {
     expect(getPackingRunProgress(corrected).declaredUnits).toBe(4_080);
   });
 
+  it('rejects a correction that would over-declare the run', () => {
+    const run = addPackingDeclaration(createRun(), {
+      id: 'd-1',
+      createdAt: '2026-09-14T18:10:00.000Z',
+      completeCartons: 1,
+      partialCartonUnits: 0,
+    });
+
+    expectDomainError(
+      () => replacePackingDeclaration(run, 'd-1', {
+        completeCartons: 834,
+        partialCartonUnits: 1,
+      }),
+      'OVER_DECLARATION',
+    );
+  });
+
   it('rejects correction or removal of an unknown declaration', () => {
     const run = createRun();
     expectDomainError(
@@ -241,15 +341,29 @@ describe('packing declaration correction', () => {
 
 describe('packing duration presentation', () => {
   it('keeps fractional-minute precision in domain arithmetic', () => {
-    const progress = getPackingRunProgress(createRun({ plannedUnits: 100, requestedUnits: 99, varianceUnits: 1, referenceCadenceUnitsPerMinute: 3 }));
+    const progress = getPackingRunProgress(createRun({
+      requestedUnits: 100,
+      selectedPolicy: 'no-overrun',
+      plannedUnits: 100,
+      varianceUnits: 0,
+      unitsPerCarton: 10,
+      cartonsPerLoad: 10,
+      referenceCadenceUnitsPerMinute: 3,
+    }));
     expect(progress.estimatedTotalMinutes).toBeCloseTo(100 / 3, 12);
   });
 
-  it('rounds display duration to the nearest whole minute, half-up', () => {
-    expect(formatPackingDuration(10.49)).toBe('10 min');
+  it('rounds any positive fractional display duration upward', () => {
+    expect(formatPackingDuration(10.01)).toBe('11 min');
+    expect(formatPackingDuration(10.49)).toBe('11 min');
     expect(formatPackingDuration(10.5)).toBe('11 min');
-    expect(formatPackingDuration(59.5)).toBe('1 h');
-    expect(formatPackingDuration(60.5)).toBe('1 h 1 min');
+    expect(formatPackingDuration(59.01)).toBe('1 h');
+    expect(formatPackingDuration(60.01)).toBe('1 h 1 min');
+  });
+
+  it('does not round an exact whole-minute duration upward', () => {
+    expect(formatPackingDuration(10)).toBe('10 min');
+    expect(formatPackingDuration(60)).toBe('1 h');
   });
 
   it('formats zero and long durations without a wall-clock dependency', () => {
