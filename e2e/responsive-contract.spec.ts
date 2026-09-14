@@ -41,6 +41,7 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
+  // responsive-contract:pilot
   test('pilot reference keeps critical content contained across representative width and height regimes', async ({ page }) => {
     for (const viewport of REPRESENTATIVE_RESPONSIVE_MATRIX) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
@@ -54,6 +55,8 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
+  // responsive-contract:expiry
+  // responsive-contract:logistics
   test('operational surfaces keep primary workflows reachable without root overflow', async ({ page }) => {
     for (const viewport of OPERATIONAL_VIEWPORTS) {
       await test.step(`Expiry Check — ${viewport.name}`, async () => {
@@ -88,6 +91,7 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
+  // responsive-contract:report
   test('editorial report and presentation remain readable across width and low-height regimes', async ({ page }) => {
     for (const viewport of EDITORIAL_VIEWPORTS) {
       await test.step(`Operational Report — ${viewport.name}`, async () => {
@@ -122,6 +126,11 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
+  // responsive-contract:shiftguide-module
+  // responsive-contract:shiftguide-lexique
+  // responsive-contract:shiftguide-urgences
+  // responsive-contract:shiftguide-linepulse
+  // responsive-contract:shiftguide-analysis
   test('ShiftGuide surfaces stay contained across mobile, landscape and desktop-rail onset', async ({ browser, baseURL }) => {
     for (const viewport of SHIFTGUIDE_VIEWPORTS) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
