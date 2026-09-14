@@ -248,17 +248,20 @@ export function validatePackingRun(run: PackingRun): void {
     }
     seenIds.add(declaration.id);
 
-    declaredUnits = safeAdd(
-      declaredUnits,
-      getPackingDeclarationUnits(declaration, run.unitsPerCarton),
-      'Cumulative declared production',
-    );
-    if (declaredUnits > run.plannedUnits) {
+    const declarationUnits = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
+    const remainingCapacity = run.plannedUnits - declaredUnits;
+    if (declarationUnits > remainingCapacity) {
       throw new PackingRunDomainError(
         'OVER_DECLARATION',
         'Declared production cannot exceed the active run plan.',
       );
     }
+
+    declaredUnits = safeAdd(
+      declaredUnits,
+      declarationUnits,
+      'Cumulative declared production',
+    );
   }
 }
 
