@@ -38,7 +38,6 @@ describe('PackingRunExecution production estimates', () => {
 
     const estimates = screen.getByRole('region', { name: 'Cadence et durées estimées' });
     expect(within(estimates).getByText('60 u/min')).toBeTruthy();
-    expect(within(estimates).getByText('111 h 12 min')).toBeTruthy();
     expect(within(estimates).getAllByText('111 h 12 min')).toHaveLength(2);
   });
 
