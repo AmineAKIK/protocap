@@ -38,6 +38,8 @@ test('Packing keeps content-driven wide composition and local intrinsic safeguar
   assert.match(page, /sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3/);
   assert.match(page, /className="min-w-0 space-y-5"/);
   assert.match(css, /\.packing-calculator-page \.tabular-nums \{\s*white-space: nowrap;/s);
+  assert.doesNotMatch(css, /overflow-wrap:/);
+  assert.doesNotMatch(css, /word-break:/);
   assert.match(css, /@media \(max-width: 479px\)/);
   assert.match(css, /@media \(min-width: 1280px\)/);
 });
