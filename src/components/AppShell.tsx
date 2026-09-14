@@ -2,6 +2,7 @@ import { Bot, Boxes, Calculator, ClipboardCheck, FileText, FlaskConical, Home, L
 import type { CSSProperties, ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { APP_HEADER_HEIGHT_PX, RESPONSIVE_SHELL_CSS_VARS } from '../layout/responsiveGeometry';
+import { PageFrame } from './PageFrame';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
@@ -26,7 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-slate-50" style={shellGeometry} data-app-shell>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-        <div className="app-shell-header-inner mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)] items-center gap-6 px-4 sm:px-6 lg:px-8">
+        <PageFrame className="app-shell-header-inner grid grid-cols-[auto_minmax(0,1fr)] items-center gap-6">
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
               <Boxes size={18} />
@@ -53,7 +54,7 @@ export function AppShell({ children }: AppShellProps) {
               </NavLink>
             ))}
           </nav>
-        </div>
+        </PageFrame>
       </header>
 
       <main className="app-shell-content" data-shell-content>
