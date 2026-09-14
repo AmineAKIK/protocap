@@ -40,15 +40,17 @@ test('Packing density targets semantic hooks instead of DOM position discovery',
   assert.match(planning, /packing-primary-input/);
   assert.match(candidate, /packing-plan-metrics/);
   assert.match(cockpit, /packing-cockpit-primary/);
+  assert.match(cockpit, /packing-cockpit-secondary/);
   assert.match(execution, /packing-run-execution-title/);
   assert.match(execution, /Déclarer une charge/);
   assert.match(execution, /Historique des déclarations/);
 });
 
-test('Packing keeps content-driven wide composition and local intrinsic safeguards', async () => {
+test('Packing viewport fit is height-aware, shell-owned and locally scrollable', async () => {
   const page = await read('src/pages/PackingCalculatorPage.tsx');
   const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
-  const css = await read('src/packing-responsive.css');
+  const css = stripCssComments(await read('src/packing-responsive.css'));
+  const shell = await read('src/responsive-shell.css');
 
   assert.match(page, /xl:grid-cols-\[minmax\(22rem,0\.78fr\)_minmax\(0,1\.22fr\)\]/);
   assert.match(planning, /sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3/);
@@ -56,5 +58,11 @@ test('Packing keeps content-driven wide composition and local intrinsic safeguar
   assert.doesNotMatch(css, /overflow-wrap:/);
   assert.doesNotMatch(css, /word-break:/);
   assert.match(css, /@media \(max-width: 479px\)/);
-  assert.match(css, /@media \(min-width: 1280px\)/);
+  assert.match(css, /@media \(min-width: 1024px\) and \(min-height: 700px\)/);
+  assert.match(css, /100dvh - var\(--app-header-height\) - var\(--packing-shell-bottom-reserve\)/);
+  assert.match(css, /--packing-shell-bottom-reserve: var\(--app-mobile-nav-reserve\)/);
+  assert.match(css, /--packing-shell-bottom-reserve: 0px/);
+  assert.match(css, /overflow-y: auto/);
+  assert.match(css, /overscroll-behavior: contain/);
+  assert.match(shell, /padding-bottom: calc\(var\(--app-mobile-nav-reserve\)/);
 });
