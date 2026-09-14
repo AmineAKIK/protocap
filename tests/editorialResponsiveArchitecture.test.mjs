@@ -15,6 +15,11 @@ test('Operational Report delays dense editorial splits until wide layouts', () =
   assert.doesNotMatch(report, /lg:grid-cols-2/);
 });
 
+test('Operational Report preserves narrative content while compositions stack', () => {
+  assert.match(report, /hidden min-w-0 basis-full text-left sm:block xl:max-w-sm xl:basis-auto xl:text-right/);
+  assert.match(report, /\{proto\.subject\}/);
+});
+
 test('Operational Report is intrinsically shrinkable without compatibility wrapping hacks', () => {
   assert.match(report, /<div className="min-w-0 bg-slate-50 text-slate-900">/);
   assert.match(report, /break-normal/);
@@ -23,11 +28,13 @@ test('Operational Report is intrinsically shrinkable without compatibility wrapp
 });
 
 test('Presentation Mode owns dynamic viewport height and isolates vertical scrolling to slide content', () => {
+  assert.match(presentation, /<dialog/);
+  assert.match(presentation, /dialog\.showModal\(\)/);
+  assert.match(presentation, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(presentation, /previousFocusRef\.current\?\.focus\(\)/);
   assert.match(presentation, /h-\[100dvh\]/);
   assert.match(presentation, /grid-rows-\[auto_auto_minmax\(0,1fr\)_auto\]/);
   assert.match(presentation, /min-h-0 overflow-y-auto overscroll-contain/);
-  assert.match(presentation, /role="dialog"/);
-  assert.match(presentation, /aria-modal="true"/);
 
   assert.doesNotMatch(presentation, /flex flex-1 flex-col justify-center overflow-y-auto/);
 });
