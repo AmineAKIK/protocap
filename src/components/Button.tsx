@@ -23,7 +23,11 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 function buttonClassName(variant: ButtonVariant, className: string) {
-  return `inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`;
+  return `inline-flex min-h-11 max-w-full min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${className}`;
+}
+
+function ButtonLabel({ children }: { children: ReactNode }) {
+  return <span className="min-w-0 whitespace-normal break-normal">{children}</span>;
 }
 
 export function Button({
@@ -41,7 +45,7 @@ export function Button({
       {...props}
     >
       {icon ? <span className="shrink-0" aria-hidden="true">{icon}</span> : null}
-      {children}
+      <ButtonLabel>{children}</ButtonLabel>
     </button>
   );
 }
@@ -56,7 +60,7 @@ export function ButtonLink({
   return (
     <Link className={buttonClassName(variant, className)} {...props}>
       {icon ? <span className="shrink-0" aria-hidden="true">{icon}</span> : null}
-      {children}
+      <ButtonLabel>{children}</ButtonLabel>
     </Link>
   );
 }
