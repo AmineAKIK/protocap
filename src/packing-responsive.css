@@ -116,7 +116,8 @@
   }
 
   .packing-calculator-page .packing-reference-card,
-  .packing-calculator-page .packing-strategies {
+  .packing-calculator-page .packing-strategies,
+  .packing-calculator-page section[aria-labelledby='packing-exact-title'] {
     border-radius: 1.05rem;
   }
 
@@ -216,7 +217,7 @@
     padding: 1.05rem;
   }
 
-  .packing-calculator-page .packing-plan-metric .tabular-nums {
+  .packing-calculator-page .packing-plan .tabular-nums {
     font-size: clamp(2rem, 2.68vw, 2.89rem);
     line-height: 0.95;
   }
@@ -248,7 +249,7 @@
     line-height: 0.9;
   }
 
-  .packing-calculator-page .packing-remaining-loads > p + p {
+  .packing-calculator-page .packing-remaining-loads > .uppercase {
     margin-top: 0.47rem;
     font-size: 0.67rem;
   }
