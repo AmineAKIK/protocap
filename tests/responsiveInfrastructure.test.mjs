@@ -11,13 +11,23 @@ test('public shell delegates persistent geometry and safe-area compensation to s
   const css = await read('src/responsive-shell.css');
   const geometry = await read('src/layout/responsiveGeometry.ts');
 
+  assert.match(shell, /className="app-shell min-h-screen/);
   assert.match(shell, /app-shell-header-inner/);
   assert.match(shell, /app-shell-content/);
   assert.match(shell, /app-shell-mobile-nav/);
+  assert.match(shell, /app-shell-mobile-nav-item/);
+  assert.doesNotMatch(shell, /min-h-14/);
   assert.doesNotMatch(shell, /pb-\[calc\(8\.5rem/);
   assert.doesNotMatch(shell, /height:\s*'56px'/);
-  assert.match(css, /\.app-shell-content/);
-  assert.match(css, /env\(safe-area-inset-bottom\)/);
+  assert.match(css, /--app-mobile-nav-row-height:\s*3\.5rem/);
+  assert.match(css, /--app-mobile-nav-clearance:\s*1\.5rem/);
+  assert.match(css, /--app-mobile-nav-rows:\s*2/);
+  assert.match(css, /--app-mobile-nav-reserve:\s*calc\(/);
+  assert.match(css, /min-height:\s*var\(--app-mobile-nav-row-height\)/);
+  assert.match(css, /padding-bottom:\s*calc\(var\(--app-mobile-nav-reserve\) \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(css, /@media \(min-width: 640px\)[\s\S]*--app-mobile-nav-rows:\s*1/);
+  assert.doesNotMatch(css, /padding-bottom:\s*calc\(8\.5rem/);
+  assert.doesNotMatch(css, /padding-bottom:\s*calc\(5rem/);
   assert.match(geometry, /APP_HEADER_HEIGHT_PX = 56/);
 });
 
