@@ -150,8 +150,9 @@ test.describe('responsive architecture contract', () => {
           await expectNoDocumentHorizontalOverflow(page);
 
           await page.goto('/shiftguide/lexique');
-          await expect(page.getByText('Lexique', { exact: true })).toBeVisible();
-          await expect(page.getByPlaceholder('Rechercher un sigle ou une définition…')).toBeVisible();
+          const lexiconSearch = page.getByPlaceholder('Rechercher un sigle ou une définition…');
+          await expect(lexiconSearch).toBeVisible();
+          await expectLocatorInsideViewport(page, lexiconSearch);
           await expectNoDocumentHorizontalOverflow(page);
 
           await page.goto('/shiftguide/urgences');
