@@ -60,7 +60,9 @@ test.describe('responsive principal surface coverage', () => {
       await test.step(viewport.name, async () => {
         await useViewport(page, viewport);
         await unlockShiftGuide(page, '/shiftguide');
-        await expect(page.locator('a[href="/shiftguide/celine"]').first()).toBeVisible();
+        const celineHomeLink = page.locator('[data-shell-content] a[href="/shiftguide/celine"]').first();
+        await expect(celineHomeLink).toBeVisible();
+        await expectLocatorInsideViewport(page, celineHomeLink);
         await expectNoDocumentHorizontalOverflow(page);
       });
     }
