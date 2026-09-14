@@ -1,6 +1,17 @@
 # WS-05 — Persistence and local-data integrity evidence
 
-**Status: COMPLETE — browser-state contracts, tests, lifecycle boundaries, and exact production deployment verified**
+**Status: COMPLETE — historical WS-05 evidence, with current Packing V2 supersession noted below**
+
+## Evidence status
+
+This document records the persistence contracts that were verified when WS-05 closed. Later product work may intentionally supersede individual public-demo contracts. In particular, Packing Cockpit V2 PR8 retires the old parameter-keyed shipment-progress dataset and removes the persisted planning `policy` field. Those historical WS-05 statements are preserved here only as evidence of what was verified at that time; they are **not** the current Packing contract.
+
+Current Packing V2 persistence truth:
+
+- generic public storage validates Packing planning inputs containing `quantity`, `unitsPerCarton`, and `cartonsPerPalette`;
+- legacy v8 form objects that also contain `policy` remain readable, then normalize and re-persist without that superseded field;
+- `lineops.packing.shipment.progress` is no longer registered or authoritative;
+- active production truth lives in the independently versioned `lineops.packing.active-run.v1` boundary and is reconstructed from declaration source facts rather than a sequential shipment counter.
 
 ## Scope
 
@@ -16,7 +27,7 @@ PR #101, merged as `fae2f1a02f593cb07a31e41b1222fc65cb66d9b2`, closed a generic 
 
 Previously, syntactically valid JSON was accepted through a TypeScript cast even when its runtime shape was incompatible with the page. A persisted Packing object such as `{ "quantity": 30880 }` could therefore reach code that expects string fields and fail during render.
 
-The public persistence boundary now registers runtime validators for all five datasets that use the generic hook:
+At WS-05 closure, the public persistence boundary registered runtime validators for five datasets that used the generic hook:
 
 - Expiry lines;
 - Expiry history;
@@ -24,7 +35,9 @@ The public persistence boundary now registers runtime validators for all five da
 - Packing form inputs;
 - Packing shipment progress.
 
-Malformed JSON, structurally invalid JSON, or an unregistered key falls back to the existing safe initial value. The normal persistence effect then rewrites a valid document. Existing `.v8` storage keys remain unchanged because valid data did not require a schema migration.
+That five-dataset list is historical evidence for PR #101. Packing Cockpit V2 later removed shipment-progress registration; the current generic registry contains the first four categories above, while active Packing run persistence is owned by its dedicated versioned adapter.
+
+Malformed JSON, structurally invalid JSON, or an unregistered key falls back to the existing safe initial value. The normal persistence effect then rewrites a valid document. Existing `.v8` storage keys remain unchanged because valid data did not require a global schema-version migration.
 
 ### 2. Céline persisted history validates the same response authority shape used at runtime
 
@@ -76,7 +89,7 @@ This matches the UI statement that a Céline conversation remains available **du
 
 ShiftGuide procedure-progress mutations use Web Locks where available so same-origin tabs do not silently overwrite independent read-mutate-write transactions. The fallback is an in-page FIFO queue and explicitly does not claim a cross-tab guarantee when Web Locks are unavailable.
 
-Public demonstrator datasets do not pretend to be collaborative or shared state. The public product boundary states that local prototypes do not simulate nonexistent multi-user synchronization; Logistics explicitly describes its board as browser-local and Packing identifies its tracking as stored on the current device.
+Public demonstrator datasets do not pretend to be collaborative or shared state. The public product boundary states that local prototypes do not simulate nonexistent multi-user synchronization; Logistics explicitly describes its board as browser-local and Packing identifies its active run as local device state.
 
 No database, distributed lock, shared cache, or cross-device synchronization was introduced because those would exceed the demonstrated product boundary rather than repair a current defect.
 
@@ -84,12 +97,12 @@ No database, distributed lock, shared cache, or cross-device synchronization was
 
 | Audit item | Result | Evidence |
 | --- | --- | --- |
-| localStorage key naming and ownership | PASS | Public datasets use named `.v8` keys through `useLocalStorage`; ShiftGuide uses named shared persistence constants and a dedicated storage adapter. |
-| Schema/version compatibility | PASS | Public datasets have runtime validators; ShiftGuide progress is V4 and revision-bound; V3 migration is explicit. |
-| JSON parse failure handling | PASS | Generic public hydration, Céline history, and shared ShiftGuide progress all catch malformed JSON and return safe state. |
-| Invalid/partial persisted state | PASS | PR #101 validates all five public documents; PR #102 validates Céline history; ShiftGuide progress sanitizes nested fields. |
-| Bounds and numeric validation | PASS | Packing numeric state is validated; shipment progress requires non-negative safe integers; Céline content/checklists/history counts and ShiftGuide workflow runs are bounded. |
-| Reset/clear behavior | PASS | Invalid public documents self-heal to defaults; Packing exposes tracking reset; ShiftGuide provides module resets, revision resets, logout cleanup, and fresh Céline history on unlock. |
+| localStorage key naming and ownership | PASS | Generic public datasets use named `.v8` keys through `useLocalStorage`; Packing active-run state uses its dedicated `lineops.packing.active-run.v1` adapter; ShiftGuide uses named shared persistence constants and a dedicated storage adapter. |
+| Schema/version compatibility | PASS | Public datasets have runtime validators; Packing V2 keeps legacy form inputs readable while normalizing away obsolete `policy`; active-run persistence has an independent schema version; ShiftGuide progress is V4 and revision-bound. |
+| JSON parse failure handling | PASS | Generic public hydration, Packing active-run hydration, Céline history, and shared ShiftGuide progress all catch malformed JSON and return safe state. |
+| Invalid/partial persisted state | PASS | PR #101 established public-document validation; Packing V2 adds dedicated active-run validation; PR #102 validates Céline history; ShiftGuide progress sanitizes nested fields. |
+| Bounds and numeric validation | PASS | Packing numeric inputs and active-run declaration facts are validated in safe-integer bounds; Céline content/checklists/history counts and ShiftGuide workflow runs are bounded. |
+| Reset/clear behavior | PASS | Invalid public documents self-heal to defaults; Packing can start/clear an independently identified active run; ShiftGuide provides module resets, revision resets, logout cleanup, and fresh Céline history on unlock. |
 | Cross-tab expectations | PASS with documented demo boundary | ShiftGuide progress uses Web Locks with a documented single-page fallback; public demo state is explicitly not collaborative. |
 | Protected/local separation | PASS | Credentials/config live in fail-closed session storage; non-sensitive progress/history use resilient persistent storage. |
 | Secret/token persistence | PASS | ShiftGuide token remains session-scoped and is cleared locally on lock/logout; no public localStorage dataset contains protected credentials. |
@@ -109,12 +122,14 @@ Verified deployment evidence:
 
 Earlier WS-05 runtime slices were also promoted successfully: PR #101 as Railway deployment `79a594bf-2204-478a-b668-d88a3a0489c9` and PR #102 as deployment `07704d06-1fb7-47f1-ad50-d16bac189a43`.
 
+These deployment identifiers prove the historical WS-05 release only. Packing V2 PR8 has its own exact-main production proof and must not reuse this older evidence.
+
 The final independent public `/api/health` and release-candidate smoke remain WS-18 responsibilities; this workstream does not claim that final release gate has already run.
 
 ## Exit criteria
 
-- **Corrupted local persistence cannot break the application irrecoverably:** CLOSED. Public datasets and Céline history reject malformed/incompatible persisted state; ShiftGuide progress normalizes or resets incompatible documents; storage failures have non-throwing/fail-closed policies appropriate to their trust class.
-- **Every persisted dataset has an explicit lifecycle and user-visible semantics:** CLOSED. Public prototype state is versioned browser-local demo state; ShiftGuide progress is revision-bound; Céline history is session-scoped, revision-aware, structurally bounded, and cleared at session transitions; protected credentials remain session-only.
+- **Corrupted local persistence cannot break the application irrecoverably:** CLOSED. Public datasets and Céline history reject malformed/incompatible persisted state; Packing active-run persistence validates and fails closed; ShiftGuide progress normalizes or resets incompatible documents; storage failures have non-throwing/fail-closed policies appropriate to their trust class.
+- **Every persisted dataset has an explicit lifecycle and user-visible semantics:** CLOSED. Public prototype state is versioned browser-local demo state; Packing V2 owns active-run state through its dedicated schema; ShiftGuide progress is revision-bound; Céline history is session-scoped, revision-aware, structurally bounded, and cleared at session transitions; protected credentials remain session-only.
 
 ## Residual boundaries — not WS-05 blockers
 
@@ -124,4 +139,4 @@ The final independent public `/api/health` and release-candidate smoke remain WS
 - The 100-message Céline persistence window intentionally bounds visible-history restoration; the current page may display more messages until it is reloaded or reopened.
 - Final external health/smoke verification belongs to WS-18.
 
-**WS-05 release decision: CLOSED.**
+**WS-05 release decision: CLOSED. Historical Packing shipment-progress evidence is superseded by the Packing Cockpit V2 active-run/declaration contract.**
