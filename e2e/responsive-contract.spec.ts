@@ -35,24 +35,31 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
-  test('protected ShiftGuide primary action stays reachable on minimum phone and phone landscape', async ({ page }) => {
+  test('protected ShiftGuide primary action stays reachable on minimum phone and phone landscape', async ({ browser }) => {
     for (const viewport of [RESPONSIVE_VIEWPORTS.phoneMin, RESPONSIVE_VIEWPORTS.phoneLandscape]) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
-        // Each viewport is an independent protected-route scenario. Do not let
-        // the authenticated session created by the previous iteration leak into
-        // the next one and turn a responsive assertion into an auth-state test.
-        await page.context().clearCookies();
-        await useViewport(page, viewport);
-        await page.goto('/shiftguide/module/module_standard');
+        // Protected-route scenarios must be isolated at browser-context level.
+        // This prevents cookies, local/session storage or other auth state from
+        // leaking between viewport cases and obscuring responsive regressions.
+        const context = await browser.newContext({
+          viewport: { width: viewport.width, height: viewport.height },
+        });
+        const page = await context.newPage();
 
-        await expect(page.getByText('Accès restreint')).toBeVisible();
-        await page.getByLabel("Code d'accès").fill(ACCESS_CODE);
-        await page.getByRole('button', { name: 'Déverrouiller' }).click();
+        try {
+          await page.goto('/shiftguide/module/module_standard');
 
-        const primaryAction = page.getByRole('button', { name: 'Valider' });
-        await expect(page.getByText('Valider le contrôle E2E')).toBeVisible();
-        await expectPrimaryActionUsable(page, primaryAction);
-        await expectNoDocumentHorizontalOverflow(page);
+          await expect(page.getByText('Accès restreint')).toBeVisible();
+          await page.getByLabel("Code d'accès").fill(ACCESS_CODE);
+          await page.getByRole('button', { name: 'Déverrouiller' }).click();
+
+          const primaryAction = page.getByRole('button', { name: 'Valider' });
+          await expect(page.getByText('Valider le contrôle E2E')).toBeVisible();
+          await expectPrimaryActionUsable(page, primaryAction);
+          await expectNoDocumentHorizontalOverflow(page);
+        } finally {
+          await context.close();
+        }
       });
     }
   });
