@@ -20,14 +20,23 @@ test('Packing responsive rules are isolated from the global stylesheet', async (
   assert.match(packingCss, /\.packing-calculator-page/);
 });
 
-test('Packing density targets semantic boundaries instead of :has tree discovery', async () => {
+test('Packing density targets semantic hooks instead of DOM position discovery', async () => {
   const css = stripCssComments(await read('src/packing-responsive.css'));
+  const page = await read('src/pages/PackingCalculatorPage.tsx');
 
   assert.doesNotMatch(css, /:has\(/);
+  assert.doesNotMatch(css, /:(?:first|last|nth)-(?:child|of-type)/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
   assert.match(css, /section\[aria-label='Découpage final et suivi manuel'\]/);
   assert.match(css, /section\[aria-labelledby='packing-shipment-title'\]/);
-  assert.match(css, /section\[aria-labelledby='packing-exact-title'\]/);
+  assert.match(css, /\.packing-primary-number/);
+  assert.match(css, /\.packing-shipment-progress/);
+  assert.match(css, /\.packing-plan-metrics/);
+  assert.match(page, /packing-primary-number/);
+  assert.match(page, /packing-shipment-progress/);
+  assert.match(page, /packing-plan-metrics/);
+  assert.match(page, /packing-primary-input/);
+  assert.match(page, /packing-exact-summary/);
 });
 
 test('Packing keeps content-driven wide composition and local intrinsic safeguards', async () => {
