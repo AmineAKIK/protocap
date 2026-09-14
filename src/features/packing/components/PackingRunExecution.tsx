@@ -210,8 +210,6 @@ export function PackingRunExecution({
       </div>
 
       <div className="p-5 sm:p-6">
-        <p className="sr-only" role="status" aria-live="polite">{feedback}</p>
-
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Déclaré</p>
@@ -313,7 +311,11 @@ export function PackingRunExecution({
             {errorMessage}
           </div>
         ) : null}
-        {feedback ? <p className="mt-4 text-sm font-bold text-emerald-800">{feedback}</p> : null}
+        {feedback ? (
+          <p role="status" aria-live="polite" className="mt-4 text-sm font-bold text-emerald-800">
+            {feedback}
+          </p>
+        ) : null}
 
         <div className="mt-6 border-t border-slate-200 pt-5">
           <div className="flex items-center justify-between gap-3">
