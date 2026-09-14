@@ -93,7 +93,9 @@ test('Packing V2 closure keeps declaration history authoritative and legacy exec
   await assert.rejects(read('src/utils/packingShipment.test.ts'), /ENOENT/);
   assert.doesNotMatch(page, /packingShipment|getPackingShipmentProgress|getPackingShipmentLoad/);
   assert.match(page, /summarizePackingLoads/);
-  assert.doesNotMatch(planning, /PackingPlanningFormState[\s\S]*?policy:\s*PackingPolicy/);
+  const planningForm = planning.match(/export interface PackingPlanningFormState \{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.notEqual(planningForm, '');
+  assert.doesNotMatch(planningForm, /\bpolicy\s*:/);
   assert.match(packing, /summarizePackingLoads/);
   assert.doesNotMatch(packing, /getPackingShipmentProgress|getPackingShipmentLoad|nextLoad|shippedLoads/);
   assert.doesNotMatch(publicStorage, /lineops\.packing\.shipment\.progress/);
