@@ -112,7 +112,7 @@ function PackingField({
       <span className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
       <input
         className={`w-full rounded-2xl border bg-white font-black tabular-nums text-slate-950 outline-none transition focus:ring-4 ${
-          prominent ? 'min-h-16 px-4 text-2xl sm:text-3xl' : 'min-h-14 px-4 text-lg'
+          prominent ? 'packing-primary-input min-h-16 px-4 text-2xl sm:text-3xl' : 'min-h-14 px-4 text-lg'
         } ${
           invalid
             ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10'
@@ -156,7 +156,7 @@ function StrategyCard({
           : 'border-slate-200 bg-white text-slate-950 hover:border-slate-300 hover:shadow-md'
       }`}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+      <div className="packing-strategy-heading grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
         <div className="min-w-0 pr-1">
           <p className={`break-words text-[10px] font-black uppercase leading-tight tracking-[0.12em] ${active ? 'text-teal-300' : 'text-slate-400'}`}>
             {policyDescriptions[option.policy]}
@@ -173,7 +173,7 @@ function StrategyCard({
         {varianceLabel}
       </p>
 
-      <div className={`mt-4 flex min-h-6 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+      <div className={`packing-strategy-recommendation mt-4 flex min-h-6 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide ${active ? 'text-slate-300' : 'text-slate-500'}`}>
         {recommended ? (
           <>
             <Sparkles size={13} aria-hidden="true" />
@@ -187,7 +187,7 @@ function StrategyCard({
 
 function PlanMetric({ value, label }: { value: number; label: string }) {
   return (
-    <div className="min-w-0">
+    <div className="packing-plan-metric min-w-0">
       <p className="break-words text-[clamp(2rem,5vw,4.25rem)] font-black leading-none tracking-[-0.05em] tabular-nums text-white">
         {formatNumber(value)}
       </p>
@@ -230,7 +230,7 @@ function ShipmentExecution({
       aria-labelledby="packing-shipment-title"
       className={`overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}
     >
-      <div className={`border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-white'}`}>
+      <div className={`packing-shipment-header border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className={`grid h-10 w-10 place-items-center rounded-xl ${isComplete ? 'bg-emerald-700 text-white' : 'bg-slate-950 text-white'}`}>
@@ -245,15 +245,15 @@ function ShipmentExecution({
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
+      <div className="packing-shipment-body p-5 sm:p-6">
         <p className="sr-only" role="status" aria-live="polite">
           {formatNumber(progress.remainingLoads)} {progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}, {formatNumber(progress.shippedLoads)} {progress.shippedLoads === 1 ? 'charge expédiée' : 'charges expédiées'} sur {formatNumber(plan.totalLoads)}.
         </p>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-end">
-          <div className="min-w-0">
+        <div className="packing-shipment-summary grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-end">
+          <div className="packing-remaining-loads min-w-0">
             <p
-              className={`text-[clamp(3.5rem,8vw,6.5rem)] font-black leading-[0.85] tracking-[-0.07em] tabular-nums ${isComplete ? 'text-emerald-700' : 'text-slate-950'}`}
+              className={`packing-primary-number text-[clamp(3.5rem,8vw,6.5rem)] font-black leading-[0.85] tracking-[-0.07em] tabular-nums ${isComplete ? 'text-emerald-700' : 'text-slate-950'}`}
               aria-label={`${formatNumber(progress.remainingLoads)} ${progress.remainingLoads === 1 ? 'charge restante' : 'charges restantes'}`}
             >
               {formatNumber(progress.remainingLoads)}
@@ -268,7 +268,7 @@ function ShipmentExecution({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <div className="packing-next-load rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{isComplete ? 'Statut' : 'Prochaine charge'}</p>
             <p className="mt-2 text-lg font-black text-slate-950">
               {isComplete ? 'Expédition terminée' : progress.nextLoad?.kind === 'remainder' ? 'Charge reliquat' : `Palette ${formatNumber((progress.nextLoad?.index ?? 0) + 1)}`}
@@ -279,14 +279,14 @@ function ShipmentExecution({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 p-4">
+        <div className="packing-shipment-progress mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="packing-load-progress rounded-2xl border border-slate-200 p-4">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Avancement des charges</p>
                 <p className="mt-1 text-xl font-black tabular-nums text-slate-950">{formatNumber(progress.shippedLoads)} / {formatNumber(plan.totalLoads)}</p>
               </div>
-              <span className="text-sm font-black tabular-nums text-slate-500">{loadPercent} %</span>
+              <span className="packing-load-percent text-sm font-black tabular-nums text-slate-500">{loadPercent} %</span>
             </div>
             <div
               role="progressbar"
@@ -303,7 +303,7 @@ function ShipmentExecution({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="packing-volume-progress rounded-2xl border border-slate-200 p-4">
             <div className="flex items-end justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Volume expédié</p>
@@ -327,7 +327,7 @@ function ShipmentExecution({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+        <div className="packing-shipment-actions mt-6 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
           <button
             type="button"
             aria-label="Corriger la dernière charge expédiée"
@@ -437,9 +437,9 @@ export function PackingCalculatorPage() {
   const neutral = !calculation || !input || !selectedOption;
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="packing-calculator-page relative overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-slate-100/80 to-transparent" aria-hidden="true" />
-      <div className="relative mx-auto max-w-[1480px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8 xl:py-8">
+      <div className="packing-page-frame relative mx-auto max-w-[1480px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8 xl:py-8">
         <header className="mb-5 flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-teal-700">
@@ -457,9 +457,9 @@ export function PackingCalculatorPage() {
           </div>
         </header>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(22rem,0.78fr)_minmax(0,1.22fr)] xl:items-start">
+        <div className="packing-columns grid gap-5 xl:grid-cols-[minmax(22rem,0.78fr)_minmax(0,1.22fr)] xl:items-start">
           <section aria-label="Référence et résultat exact" className="min-w-0 space-y-5">
-            <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-6">
+            <section className="packing-reference-card rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-6">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">01 · Référence</p>
@@ -518,7 +518,7 @@ export function PackingCalculatorPage() {
               </div>
             </section>
 
-            <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)] sm:p-6">
+            <section className="packing-strategies rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)] sm:p-6">
               <div className="mb-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">02 · Décision</p>
                 <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Stratégie de préparation</h2>
@@ -548,12 +548,12 @@ export function PackingCalculatorPage() {
 
             {calculation && input ? (
               <section aria-labelledby="packing-exact-title" className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="packing-exact-summary flex items-center justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Référence théorique</p>
                     <h2 id="packing-exact-title" className="mt-1 text-sm font-black text-slate-950">Résultat exact</h2>
                   </div>
-                  <p className="text-right text-sm font-bold tabular-nums text-slate-600">
+                  <p className="packing-exact-value text-right text-sm font-bold tabular-nums text-slate-600">
                     {formatNumber(calculation.exact.palettesCompletes)} P · {formatNumber(calculation.exact.cartonsComplets)} C · {formatNumber(calculation.exact.unitesRestantes)} U
                   </p>
                 </div>
@@ -580,8 +580,8 @@ export function PackingCalculatorPage() {
               </div>
             ) : (
               <>
-                <section className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
-                  <div className="border-b border-white/10 px-5 py-4 sm:px-7">
+                <section className="packing-plan overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+                  <div className="packing-plan-header border-b border-white/10 px-5 py-4 sm:px-7">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">03 · Plan actif</p>
@@ -594,8 +594,8 @@ export function PackingCalculatorPage() {
                     </div>
                   </div>
 
-                  <div className="p-5 sm:p-7">
-                    <div className="grid gap-6 sm:grid-cols-3">
+                  <div className="packing-plan-body p-5 sm:p-7">
+                    <div className="packing-plan-metrics grid gap-6 sm:grid-cols-3">
                       <PlanMetric value={shipment!.plan.fullLoadCount} label="Palettes complètes" />
                       <PlanMetric value={shipment!.plan.remainderLoad ? 1 : 0} label="Charge reliquat" />
                       <PlanMetric value={shipment!.plan.totalLoads} label="Charges à expédier" />
