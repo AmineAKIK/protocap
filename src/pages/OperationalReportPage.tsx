@@ -660,7 +660,7 @@ export function OperationalReportPage() {
                     <h3 className="break-normal text-2xl font-black tracking-tight text-white sm:text-3xl">{proto.title}</h3>
                     <p className="mt-1 break-normal text-sm text-slate-400">{proto.subtitle}</p>
                   </div>
-                  <div className="hidden max-w-sm min-w-0 text-right xl:block">
+                  <div className="hidden min-w-0 basis-full text-left sm:block xl:max-w-sm xl:basis-auto xl:text-right">
                     <span className="inline-flex max-w-full min-w-0 items-center break-normal rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur-sm">
                       {proto.subject}
                     </span>
