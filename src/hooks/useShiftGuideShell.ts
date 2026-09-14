@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import {
+  SHIFTGUIDE_DESKTOP_MEDIA_QUERY,
+  SHIFTGUIDE_MOBILE_MEDIA_QUERY,
+  SHIFTGUIDE_MOBILE_NAV_RESERVE_PX,
+} from '../layout/responsiveGeometry';
 
-const CELINE_MOBILE_BREAKPOINT = '(max-width: 1023px)';
-const CELINE_DESKTOP_BREAKPOINT = '(min-width: 1024px)';
 const KEYBOARD_THRESHOLD_PX = 120;
-const MOBILE_NAV_RESERVE_PX = 80;
 const MIN_CELINE_VIEWPORT_PX = 240;
 
 export function computeCelineViewportHeight(
@@ -11,7 +13,7 @@ export function computeCelineViewportHeight(
   visibleHeight: number
 ): number {
   const keyboardOpen = visibleHeight < layoutHeight - KEYBOARD_THRESHOLD_PX;
-  const mobileNavReserve = keyboardOpen ? 0 : MOBILE_NAV_RESERVE_PX;
+  const mobileNavReserve = keyboardOpen ? 0 : SHIFTGUIDE_MOBILE_NAV_RESERVE_PX;
   return Math.max(MIN_CELINE_VIEWPORT_PX, Math.floor(visibleHeight - mobileNavReserve));
 }
 
@@ -45,7 +47,7 @@ function useShiftGuideRouteReset(pathname: string, isCelineRoute: boolean) {
     const frame = window.requestAnimationFrame(() => {
       resetShiftGuideScroll();
 
-      if (isCelineRoute && window.matchMedia(CELINE_DESKTOP_BREAKPOINT).matches) {
+      if (isCelineRoute && window.matchMedia(SHIFTGUIDE_DESKTOP_MEDIA_QUERY).matches) {
         const input = document.querySelector<HTMLInputElement>(
           '.shiftguide-shell input[type="text"]'
         );
@@ -61,7 +63,7 @@ function useCelineDocumentLock(isCelineRoute: boolean) {
   useEffect(() => {
     if (!isCelineRoute) return;
 
-    const media = window.matchMedia(CELINE_MOBILE_BREAKPOINT);
+    const media = window.matchMedia(SHIFTGUIDE_MOBILE_MEDIA_QUERY);
     const html = document.documentElement;
     const body = document.body;
     const previousHtmlOverflow = html.style.overflow;
@@ -103,7 +105,7 @@ function useCelineViewportHeight(isCelineRoute: boolean) {
   useEffect(() => {
     if (!isCelineRoute) return;
 
-    const media = window.matchMedia(CELINE_MOBILE_BREAKPOINT);
+    const media = window.matchMedia(SHIFTGUIDE_MOBILE_MEDIA_QUERY);
     const viewport = window.visualViewport;
 
     const updateViewportHeight = () => {
@@ -137,7 +139,7 @@ function useCelineViewportHeight(isCelineRoute: boolean) {
 
 export function useShiftGuideShell(pathname: string) {
   const isCelineRoute = pathname === '/shiftguide/celine';
-  const isMobileViewport = window.matchMedia(CELINE_MOBILE_BREAKPOINT).matches;
+  const isMobileViewport = window.matchMedia(SHIFTGUIDE_MOBILE_MEDIA_QUERY).matches;
 
   useManualScrollRestoration();
   useShiftGuideRouteReset(pathname, isCelineRoute);
