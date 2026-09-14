@@ -50,6 +50,11 @@
   overflow: hidden;
 }
 
+.shiftguide-celine-content header button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 @media (min-width: 640px) {
   .app-shell {
     --app-mobile-nav-reserve: calc(var(--app-mobile-nav-row-height) + var(--app-mobile-nav-clearance));
