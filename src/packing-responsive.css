@@ -178,6 +178,17 @@
 }
 
 /*
+ * Before the xl rail rules take over, the viewport-fit preparation rail is too
+ * narrow for three strategy cards side by side. Stack them so their atomic
+ * business values remain readable instead of clipping inside ~16.5rem.
+ */
+@media (min-width: 1024px) and (max-width: 1279px) and (min-height: 700px) {
+  .packing-calculator-page .packing-strategies {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
  * Wide workshop density. At xl, the reference rail stays deliberately narrow
  * so the execution surface receives the width needed by atomic operational
  * numbers. The existing 1480px page cap remains authoritative instead of
