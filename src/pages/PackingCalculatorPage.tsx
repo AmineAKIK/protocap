@@ -15,17 +15,24 @@ import {
   getPackingRecommendation,
   isValidPackingInput,
   parsePositiveIntegerInput,
+  summarizePackingLoads,
   type PackingInput,
   type PackingPolicy,
 } from '../utils/packing';
-import { createPackingShipmentPlan } from '../utils/packingShipment';
 
 const defaultForm: PackingPlanningFormState = {
   quantity: '',
   unitsPerCarton: '',
   cartonsPerPalette: '',
-  policy: 'no-overrun',
 };
+
+function normalizePackingPlanningForm(form: PackingPlanningFormState): PackingPlanningFormState {
+  return {
+    quantity: form.quantity,
+    unitsPerCarton: form.unitsPerCarton,
+    cartonsPerPalette: form.cartonsPerPalette,
+  };
+}
 
 function parsePackingInput(form: PackingPlanningFormState): PackingInput | null {
   const quantity = parsePositiveIntegerInput(form.quantity);
@@ -87,7 +94,11 @@ function RunActivation({
 }
 
 export function PackingCalculatorPage() {
-  const [form, setForm] = useLocalStorage<PackingPlanningFormState>('lineops.packing.form.inputs', defaultForm);
+  const [form, setForm] = useLocalStorage<PackingPlanningFormState>(
+    'lineops.packing.form.inputs',
+    defaultForm,
+    normalizePackingPlanningForm,
+  );
   const [selectedPolicy, setSelectedPolicy] = useState<PackingPolicy | null>(null);
   const [referenceCadence, setReferenceCadence] = useState('');
   const {
@@ -113,12 +124,12 @@ export function PackingCalculatorPage() {
     return {
       input,
       selected: calculation.selected,
-      plan: createPackingShipmentPlan(input, calculation.selected),
+      plan: summarizePackingLoads(input, calculation.selected),
     };
   })();
 
   function updateField(field: keyof PackingPlanningFormState, value: string) {
-    const nextValue = field === 'policy' ? value : value.replace(/\D/g, '');
+    const nextValue = value.replace(/\D/g, '');
     setForm((current) => ({ ...current, [field]: nextValue }));
   }
 
