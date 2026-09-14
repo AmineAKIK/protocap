@@ -1,16 +1,10 @@
 import type { ChangeHistoryEntry, ConditioningLine, ContactElement } from '../types/expiry';
 import type { LogisticsRequest, LogisticsStatus, Priority } from '../types/logistics';
-import type { PackingPolicy } from './packing';
 
 export interface PersistedPackingFormState {
   quantity: string;
   unitsPerCarton: string;
   cartonsPerPalette: string;
-  policy: PackingPolicy;
-}
-
-export interface PersistedPackingTrackingState {
-  progressByCalculation: Record<string, number>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -31,10 +25,6 @@ function isDateString(value: unknown): value is string {
 
 function isPositiveSafeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
-}
-
-function isNonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0;
 }
 
 function isLogisticsStatus(value: unknown): value is LogisticsStatus {
@@ -115,23 +105,13 @@ function isChangeHistoryList(value: unknown): value is ChangeHistoryEntry[] {
   return Array.isArray(value) && value.every(isChangeHistoryEntry);
 }
 
-function isPackingPolicy(value: unknown): value is PackingPolicy {
-  return value === 'no-overrun' || value === 'round-carton' || value === 'round-pallet';
-}
-
 function isPackingFormState(value: unknown): value is PersistedPackingFormState {
   if (!isRecord(value)) return false;
   return (
     isString(value.quantity) &&
     isString(value.unitsPerCarton) &&
-    isString(value.cartonsPerPalette) &&
-    isPackingPolicy(value.policy)
+    isString(value.cartonsPerPalette)
   );
-}
-
-function isPackingTrackingState(value: unknown): value is PersistedPackingTrackingState {
-  if (!isRecord(value) || !isRecord(value.progressByCalculation)) return false;
-  return Object.values(value.progressByCalculation).every(isNonNegativeSafeInteger);
 }
 
 type Validator = (value: unknown) => boolean;
@@ -141,7 +121,6 @@ const validators: Readonly<Record<string, Validator>> = {
   'lineops.expiry.history': isChangeHistoryList,
   'lineops.logistics.requests': isLogisticsRequestList,
   'lineops.packing.form.inputs': isPackingFormState,
-  'lineops.packing.shipment.progress': isPackingTrackingState,
 };
 
 export function isValidPublicStorageValue(key: string, value: unknown): boolean {
