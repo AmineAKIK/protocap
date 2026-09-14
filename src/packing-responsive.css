@@ -181,10 +181,27 @@
  * Before the xl rail rules take over, the viewport-fit preparation rail is too
  * narrow for three strategy cards side by side. Stack the semantic radiogroup
  * itself so atomic strategy totals remain readable inside the narrow rail.
+ * The manager grid also gives its long atomic values more usable width while
+ * preserving the compact 4+4 cockpit composition required by viewport fit.
  */
 @media (min-width: 1024px) and (max-width: 1279px) and (min-height: 700px) {
   .packing-calculator-page .packing-strategies [role='radiogroup'] {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .packing-calculator-page .packing-cockpit-metric {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+
+  .packing-calculator-page .packing-cockpit-metric .text-2xl {
+    font-size: 0.95rem;
+    line-height: 1.18rem;
+  }
+
+  .packing-calculator-page .packing-cockpit-metric .text-lg {
+    font-size: 0.72rem;
+    line-height: 0.96rem;
   }
 }
 
