@@ -193,6 +193,7 @@ export function LogisticsCallPage() {
 
       <div
         className="sticky top-[var(--app-header-height)] z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 p-2 backdrop-blur xl:hidden"
+        role="group"
         aria-label="Vue Logistics Call"
       >
         <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
