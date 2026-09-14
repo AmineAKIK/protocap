@@ -1,0 +1,291 @@
+/*
+ * Packing Calculator responsive exception
+ *
+ * Packing is intentionally denser than ordinary application pages because it
+ * is an at-a-glance workshop surface. Keep that exception local to the route
+ * scope and target stable semantic boundaries (ARIA regions/IDs/roles) rather
+ * than discovering meaning through JSX tree depth or :has() selectors.
+ */
+
+.packing-calculator-page,
+.packing-calculator-page * {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.packing-calculator-page .tabular-nums {
+  white-space: nowrap;
+}
+
+.packing-calculator-page p,
+.packing-calculator-page div {
+  hyphens: none;
+}
+
+.packing-calculator-page [role='radio'] > div:first-child {
+  gap: 0.75rem;
+}
+
+/*
+ * Load count and shipped volume intentionally represent different metrics when
+ * the final load is partial. Keep percentage display on volume only.
+ */
+.packing-calculator-page
+  section[aria-labelledby='packing-shipment-title']
+  [aria-label='Avancement des charges expédiées']
+  + span {
+  display: none;
+}
+
+/* Stronger workshop contrast on light surfaces. */
+.packing-calculator-page .text-slate-400 {
+  color: #475569;
+}
+
+.packing-calculator-page .text-slate-500 {
+  color: #334155;
+}
+
+.packing-calculator-page .bg-slate-950 .text-slate-400,
+.packing-calculator-page .bg-slate-950 .text-slate-500 {
+  color: #cbd5e1;
+}
+
+@media (max-width: 479px) {
+  .packing-calculator-page section[aria-labelledby='packing-exact-title'] > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-exact-title'] > div > p:last-child {
+    text-align: left;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type > div:first-child > p:first-child {
+    font-size: clamp(2.6rem, 14vw, 4.75rem);
+    letter-spacing: -0.06em;
+    white-space: nowrap;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] .text-xl.tabular-nums {
+    font-size: clamp(0.9rem, 4.6vw, 1.15rem);
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+}
+
+/*
+ * Wide workshop density. The page composition already waits until xl before
+ * splitting into reference and execution columns. These rules only compact
+ * visual rhythm inside that wide regime; they do not create another layout
+ * breakpoint or change application behavior.
+ */
+@media (min-width: 1280px) {
+  .packing-calculator-page > div > div.relative {
+    max-width: 1240px;
+    padding: 1.05rem 1.6rem 1.18rem;
+  }
+
+  .packing-calculator-page header {
+    margin-bottom: 0.79rem;
+    padding-bottom: 0.79rem;
+    gap: 0.66rem;
+  }
+
+  .packing-calculator-page header h1 {
+    margin-top: 0.4rem;
+    font-size: 1.78rem;
+    line-height: 2.05rem;
+  }
+
+  .packing-calculator-page header p {
+    margin-top: 0.4rem;
+    font-size: 0.79rem;
+    line-height: 1.18rem;
+  }
+
+  .packing-calculator-page header + div.grid {
+    gap: 0.79rem;
+    grid-template-columns: minmax(21rem, 0.74fr) minmax(0, 1.26fr);
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'],
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] {
+    --tw-space-y-reverse: 0;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] > :not([hidden]) ~ :not([hidden]),
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.79rem;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] > section {
+    border-radius: 1.05rem;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] > section:not([aria-labelledby='packing-exact-title']) {
+    padding: 0.84rem;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] h2,
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] h2 {
+    font-size: 1rem;
+    line-height: 1.26rem;
+  }
+
+  .packing-calculator-page .text-\[10px\],
+  .packing-calculator-page .text-\[11px\] {
+    font-size: 0.59rem;
+  }
+
+  .packing-calculator-page .text-xs {
+    font-size: 0.67rem;
+    line-height: 0.95rem;
+  }
+
+  .packing-calculator-page .text-sm {
+    font-size: 0.79rem;
+    line-height: 1.1rem;
+  }
+
+  .packing-calculator-page .text-base {
+    font-size: 0.89rem;
+    line-height: 1.16rem;
+  }
+
+  .packing-calculator-page .text-lg {
+    font-size: 1rem;
+    line-height: 1.26rem;
+  }
+
+  .packing-calculator-page .text-xl {
+    font-size: 1.1rem;
+    line-height: 1.37rem;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] input {
+    min-height: 2.68rem;
+    border-radius: 0.79rem;
+    padding-left: 0.79rem;
+    padding-right: 0.79rem;
+    font-size: 0.92rem;
+    line-height: 1.31rem;
+  }
+
+  .packing-calculator-page section[aria-label='Référence et résultat exact'] > section:first-child label:first-child input {
+    min-height: 2.94rem;
+    font-size: 1.31rem;
+    line-height: 1.68rem;
+  }
+
+  .packing-calculator-page [role='radiogroup'] {
+    gap: 0.53rem;
+  }
+
+  .packing-calculator-page [role='radio'] {
+    padding: 0.66rem;
+    border-radius: 0.84rem;
+  }
+
+  .packing-calculator-page [role='radio'] > div:first-child {
+    gap: 0.8rem;
+  }
+
+  .packing-calculator-page [role='radio'] > div:first-child > span {
+    width: 1.52rem;
+    height: 1.52rem;
+  }
+
+  .packing-calculator-page [role='radio'] p.tabular-nums {
+    margin-top: 0.66rem;
+    font-size: 1.21rem;
+    line-height: 1.47rem;
+  }
+
+  .packing-calculator-page [role='radio'] > div:last-child {
+    min-height: 1.16rem;
+    margin-top: 0.53rem;
+  }
+
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > section.bg-slate-950 {
+    border-radius: 1.26rem;
+  }
+
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > section.bg-slate-950 > div:first-child {
+    padding: 0.74rem 1.05rem;
+  }
+
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > section.bg-slate-950 > div:last-child {
+    padding: 1.05rem;
+  }
+
+  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > section.bg-slate-950 .tabular-nums {
+    font-size: clamp(2rem, 2.68vw, 2.89rem);
+    line-height: 0.95;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] {
+    border-radius: 1.26rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:first-child {
+    padding: 0.66rem 1.05rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:first-child .h-10,
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:first-child .w-10 {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child {
+    padding: 1.05rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type {
+    gap: 0.79rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type > div:first-child > p:first-child {
+    font-size: clamp(2.68rem, 3.99vw, 3.99rem);
+    line-height: 0.9;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type > div:first-child > p:first-child + p {
+    margin-top: 0.47rem;
+    font-size: 0.67rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div.mt-6 {
+    margin-top: 0.79rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div.mt-6 > div,
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type > div:last-child {
+    padding: 0.79rem;
+    border-radius: 0.84rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] .text-xl.tabular-nums {
+    font-size: 1rem;
+    line-height: 1.31rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button {
+    min-height: 2.68rem;
+    border-radius: 0.84rem;
+    padding-left: 1.05rem;
+    padding-right: 1.05rem;
+    gap: 0.53rem;
+  }
+
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button[aria-label='Déclarer la prochaine charge expédiée'],
+  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button[aria-label='Expédition terminée'] {
+    min-height: 3.5rem;
+  }
+
+  .packing-calculator-page svg {
+    max-width: 90%;
+    max-height: 90%;
+  }
+}
