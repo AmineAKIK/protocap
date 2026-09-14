@@ -70,7 +70,7 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   assert.match(packing, /expectNoHorizontalOverflow/);
   assert.match(packing, /businessNumbers\.count\(\)/);
   assert.match(packing, /keyboard\.press\('Space'\)/);
-  assert.match(browserSmoke, /Packing Calculator keeps its primary shipment action usable/);
+  assert.match(browserSmoke, /Packing Calculator keeps its primary declaration action usable/);
 });
 
 test('responsive architecture contract is a named CI quality gate backed by a shared viewport harness', async () => {
