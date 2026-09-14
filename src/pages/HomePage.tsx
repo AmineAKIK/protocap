@@ -1,6 +1,7 @@
 import { ArrowRight, Calculator, ClipboardCheck, FileText, Library, ListChecks, Maximize2, RadioTower, Wifi } from 'lucide-react';
 import { useState } from 'react';
 import { ButtonLink } from '../components/Button';
+import { PageFrame } from '../components/PageFrame';
 import { PresentationMode } from '../components/PresentationMode';
 
 const modules = [
@@ -54,7 +55,7 @@ export function HomePage() {
     <div>
       {presenting && <PresentationMode onClose={() => setPresenting(false)} />}
       <section className="industrial-grid border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-16 lg:px-8">
+        <PageFrame className="py-8 sm:py-16">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-16">
             <div className="min-w-0 flex-1">
               <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
@@ -106,10 +107,10 @@ export function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </PageFrame>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      <PageFrame className="py-10 sm:py-12">
         <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-600">Rapport</p>
         <article className="panel group mb-10 grid gap-5 p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
           <div className="min-w-0">
@@ -157,10 +158,10 @@ export function HomePage() {
             </article>
           ))}
         </div>
-      </section>
+      </PageFrame>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <PageFrame className="flex flex-col gap-2 py-5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <p>Données publiques de démonstration fictives.</p>
           <a
             className="font-semibold text-teal-700 transition hover:text-teal-900 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20"
@@ -170,7 +171,7 @@ export function HomePage() {
           >
             www.akiksystems.com
           </a>
-        </div>
+        </PageFrame>
       </footer>
     </div>
   );
