@@ -59,7 +59,7 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-100">
             <CheckCircle2 size={14} className="text-teal-300" aria-hidden="true" />
-            {isComplete ? 'Run terminé' : selected.label}
+            {selected.label}
           </span>
         </div>
       </div>
@@ -72,11 +72,15 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
           <CockpitMetric label="Restant" value={formatNumber(progress.remainingUnits)} detail="unités à conditionner" />
         </div>
 
-        <div className="packing-progress mt-4" aria-label={`Progression du run : ${progressPercent} %`}>
-          <div className="mb-1.5 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-            <span>Avancement conditionné</span>
-            <span className="tabular-nums text-slate-200">{formatNumber(progressPercent)} %</span>
-          </div>
+        <div
+          className="packing-progress mt-4"
+          role="progressbar"
+          aria-label="Avancement conditionné"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercent}
+        >
+          <div className="mb-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Avancement conditionné</div>
           <div className="h-2 overflow-hidden rounded-full bg-white/10">
             <div className="packing-progress-fill h-full rounded-full bg-teal-300" style={{ width: `${progressPercent}%` }} />
           </div>
