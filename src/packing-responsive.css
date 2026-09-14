@@ -20,15 +20,6 @@
   gap: 0.75rem;
 }
 
-/*
- * Load count and shipped volume intentionally represent different metrics when
- * the final load is partial. Percentages remain visible for shipped volume,
- * while the load card keeps the ratio itself as the primary value.
- */
-.packing-calculator-page .packing-load-percent {
-  display: none;
-}
-
 /* Stronger workshop contrast on light surfaces. */
 .packing-calculator-page .text-slate-400 {
   color: #475569;
@@ -44,30 +35,14 @@
 }
 
 @media (max-width: 479px) {
-  .packing-calculator-page .packing-exact-summary {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .packing-calculator-page .packing-exact-value {
-    text-align: left;
-  }
-
   .packing-calculator-page .packing-plan-metric .tabular-nums {
     font-size: clamp(1.65rem, 9vw, 2.5rem);
     letter-spacing: -0.04em;
   }
 
-  .packing-calculator-page .packing-primary-number {
-    font-size: clamp(2.6rem, 14vw, 4.75rem);
-    letter-spacing: -0.06em;
-    white-space: nowrap;
-  }
-
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] .text-xl.tabular-nums {
-    font-size: clamp(0.9rem, 4.6vw, 1.15rem);
-    line-height: 1.4;
-    white-space: nowrap;
+  .packing-calculator-page section[aria-labelledby='packing-run-execution-title'] .text-2xl.tabular-nums {
+    font-size: clamp(1.15rem, 7vw, 1.6rem);
+    line-height: 1.3;
   }
 }
 
@@ -106,18 +81,19 @@
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'],
-  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] {
+  .packing-calculator-page section[aria-label='Plan actif et déclarations de production'] {
     --tw-space-y-reverse: 0;
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'] > :not([hidden]) ~ :not([hidden]),
-  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] > :not([hidden]) ~ :not([hidden]) {
+  .packing-calculator-page section[aria-label='Plan actif et déclarations de production'] > :not([hidden]) ~ :not([hidden]) {
     margin-top: 0.79rem;
   }
 
   .packing-calculator-page .packing-reference-card,
   .packing-calculator-page .packing-strategies,
-  .packing-calculator-page section[aria-labelledby='packing-exact-title'] {
+  .packing-calculator-page section[aria-labelledby='packing-run-activation-title'],
+  .packing-calculator-page section[aria-labelledby='packing-run-execution-title'] {
     border-radius: 1.05rem;
   }
 
@@ -127,7 +103,7 @@
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'] h2,
-  .packing-calculator-page section[aria-label='Découpage final et suivi manuel'] h2 {
+  .packing-calculator-page section[aria-label='Plan actif et déclarations de production'] h2 {
     font-size: 1rem;
     line-height: 1.26rem;
   }
@@ -195,12 +171,6 @@
     height: 1.52rem;
   }
 
-  .packing-calculator-page [role='radio'] p.tabular-nums {
-    margin-top: 0.66rem;
-    font-size: 1.21rem;
-    line-height: 1.47rem;
-  }
-
   .packing-calculator-page .packing-strategy-recommendation {
     min-height: 1.16rem;
     margin-top: 0.53rem;
@@ -223,66 +193,13 @@
     line-height: 0.95;
   }
 
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] {
-    border-radius: 1.26rem;
-  }
-
-  .packing-calculator-page .packing-shipment-header {
-    padding: 0.66rem 1.05rem;
-  }
-
-  .packing-calculator-page .packing-shipment-header .h-10,
-  .packing-calculator-page .packing-shipment-header .w-10 {
-    width: 2.1rem;
-    height: 2.1rem;
-  }
-
-  .packing-calculator-page .packing-shipment-body {
+  .packing-calculator-page section[aria-labelledby='packing-run-activation-title'],
+  .packing-calculator-page section[aria-labelledby='packing-run-execution-title'] {
     padding: 1.05rem;
   }
 
-  .packing-calculator-page .packing-shipment-summary {
-    gap: 0.79rem;
-  }
-
-  .packing-calculator-page .packing-primary-number {
-    font-size: clamp(2.68rem, 3.99vw, 3.99rem);
-    line-height: 0.9;
-  }
-
-  .packing-calculator-page .packing-remaining-loads > .uppercase {
-    margin-top: 0.47rem;
-    font-size: 0.67rem;
-  }
-
-  .packing-calculator-page .packing-shipment-progress,
-  .packing-calculator-page .packing-shipment-actions {
-    margin-top: 0.79rem;
-  }
-
-  .packing-calculator-page .packing-load-progress,
-  .packing-calculator-page .packing-volume-progress,
-  .packing-calculator-page .packing-next-load {
-    padding: 0.79rem;
-    border-radius: 0.84rem;
-  }
-
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] .text-xl.tabular-nums {
-    font-size: 1rem;
-    line-height: 1.31rem;
-  }
-
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button {
+  .packing-calculator-page section[aria-labelledby='packing-run-execution-title'] input {
     min-height: 2.68rem;
-    border-radius: 0.84rem;
-    padding-left: 1.05rem;
-    padding-right: 1.05rem;
-    gap: 0.53rem;
-  }
-
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button[aria-label='Déclarer la prochaine charge expédiée'],
-  .packing-calculator-page section[aria-labelledby='packing-shipment-title'] button[aria-label='Expédition terminée'] {
-    min-height: 3.5rem;
   }
 
   .packing-calculator-page svg {
