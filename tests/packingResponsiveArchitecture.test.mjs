@@ -25,7 +25,7 @@ test('Packing density targets semantic hooks instead of DOM position discovery',
   const page = await read('src/pages/PackingCalculatorPage.tsx');
 
   assert.doesNotMatch(css, /:has\(/);
-  assert.doesNotMatch(css, /:(?:first|last|nth)-(?:child|of-type)/);
+  assert.doesNotMatch(css, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
   assert.doesNotMatch(css, /\.packing-remaining-loads\s*>\s*p\s*\+\s*p/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
   assert.match(css, /section\[aria-label='Découpage final et suivi manuel'\]/);
