@@ -5,7 +5,6 @@ export interface PackingPlanningFormState {
   quantity: string;
   unitsPerCarton: string;
   cartonsPerPalette: string;
-  policy: PackingPolicy;
 }
 
 interface PackingPlanningCalculation {
