@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
@@ -44,6 +44,10 @@ function RouteFallback({ label = 'Chargement…' }: { label?: string }) {
       {label}
     </div>
   );
+}
+
+function PageScope({ className, children }: { className: string; children: ReactNode }) {
+  return <div className={className}>{children}</div>;
 }
 
 function PublicNotFound() {
@@ -103,7 +107,14 @@ export function App() {
             </DemoBoundaryNotice>
           )}
         />
-        <Route path="/proposition-pilote" element={<PilotProposalPage />} />
+        <Route
+          path="/proposition-pilote"
+          element={(
+            <PageScope className="pilot-proposal-page">
+              <PilotProposalPage />
+            </PageScope>
+          )}
+        />
         <Route path="/expiry-check" element={<ExpiryCheckPage />} />
         <Route
           path="/logistics-call"
@@ -117,7 +128,14 @@ export function App() {
           )}
         />
         <Route path="/knowledge-base/*" element={<KnowledgeBasePage />} />
-        <Route path="/packing-calculator" element={<PackingCalculatorPage />} />
+        <Route
+          path="/packing-calculator"
+          element={(
+            <PageScope className="packing-calculator-page">
+              <PackingCalculatorPage />
+            </PageScope>
+          )}
+        />
         <Route path="*" element={<PublicNotFound />} />
       </Route>
     </Routes>
