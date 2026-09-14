@@ -79,11 +79,12 @@ test('responsive architecture contract is a named CI quality gate backed by a sh
   const harness = await read('e2e/responsive-harness.ts');
   const contract = await read('e2e/responsive-contract.spec.ts');
   const architecture = await read('docs/responsive-architecture.md');
+  const responsiveCommand = packageJson.scripts['test:e2e:responsive'];
 
-  assert.equal(
-    packageJson.scripts['test:e2e:responsive'],
-    'npm run build && playwright test e2e/responsive-contract.spec.ts --project=chromium',
-  );
+  assert.match(responsiveCommand, /^npm run build && playwright test /);
+  assert.match(responsiveCommand, /e2e\/responsive-contract\.spec\.ts/);
+  assert.match(responsiveCommand, /e2e\/packing-responsive-contract\.spec\.ts/);
+  assert.match(responsiveCommand, /--project=chromium$/);
   assert.match(workflow, /Run responsive architecture contract/);
   assert.match(workflow, /run:\s+npm run test:e2e:responsive/);
   assert.match(harness, /phoneMin:.*width:\s*320,\s*height:\s*568/);

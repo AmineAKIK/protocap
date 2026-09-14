@@ -6,6 +6,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import './index.css';
 import './responsive-shell.css';
 import './pilot-responsive.css';
+import './packing-responsive.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
