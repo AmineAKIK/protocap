@@ -66,6 +66,38 @@ describe('PackingCalculatorPage operator run flow', () => {
     expect(activate.disabled).toBe(false);
   });
 
+  it('describes corrupt active-run storage as degraded persistence, not unavailable storage', async () => {
+    const user = userEvent.setup();
+    storePackingForm();
+    localStorage.setItem(activeRunStorageKey, JSON.stringify({ schemaVersion: 1, activeRun: { broken: true } }));
+    render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
+
+    expect(screen.getByText(/Persistance locale dégradée/)).toBeTruthy();
+    expect(screen.queryByText(/stockage local est actuellement indisponible/i)).toBeNull();
+  });
+
+  it('never displays 100 percent while planned units remain', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(formStorageKey, JSON.stringify({
+      quantity: '201',
+      unitsPerCarton: '1',
+      cartonsPerPalette: '200',
+      policy: 'no-overrun',
+    }));
+    render(<PackingCalculatorPage />);
+
+    const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
+    await user.click(within(strategyGroup).getByRole('radio', { name: /Exact/i }));
+    await activateRun(user);
+    await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
+
+    const execution = screen.getByRole('region', { name: 'Déclarations de production' });
+    expect(within(execution).getByText('1', { selector: '.tabular-nums' })).toBeTruthy();
+    expect(within(execution).getByText('99 %')).toBeTruthy();
+    expect(within(execution).queryByText('100 %')).toBeNull();
+  });
+
   it('declares a complete load in one click and reloads it from the active-run history', async () => {
     const user = userEvent.setup();
     storePackingForm();
