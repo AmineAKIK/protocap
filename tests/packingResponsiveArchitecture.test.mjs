@@ -6,6 +6,10 @@ async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
+function stripCssComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 test('Packing responsive rules are isolated from the global stylesheet', async () => {
   const globalCss = await read('src/index.css');
   const packingCss = await read('src/packing-responsive.css');
@@ -17,7 +21,7 @@ test('Packing responsive rules are isolated from the global stylesheet', async (
 });
 
 test('Packing density targets semantic boundaries instead of :has tree discovery', async () => {
-  const css = await read('src/packing-responsive.css');
+  const css = stripCssComments(await read('src/packing-responsive.css'));
 
   assert.doesNotMatch(css, /:has\(/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
