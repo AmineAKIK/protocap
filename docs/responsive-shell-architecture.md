@@ -1,6 +1,6 @@
 # Responsive shell architecture
 
-PR4 makes shell ownership explicit without forcing ProtoCap's public application and ShiftGuide to share the same navigation presentation.
+The responsive shell architecture makes ownership explicit without forcing ProtoCap's public application and ShiftGuide to share the same navigation presentation.
 
 ## Contract
 
@@ -17,7 +17,9 @@ Each shell exposes a `data-shell-content` region. Shell-level runtime behavior m
 - mobile navigation compensation and safe-area handling;
 - the main shell content boundary.
 
-Route-specific scopes such as `pilot-proposal-page` and `packing-calculator-page` are owned by routing composition in `App.tsx`, not by `AppShell`. They remain temporary migration hooks until their respective page migrations remove the need for legacy scoped CSS.
+The mobile-nav reserve is derived from the same CSS geometry consumed by the nav items themselves: row height × active row count + deliberate content clearance. At the `sm` transition, only the row count changes. The content reserve therefore cannot drift independently from the persistent navigation height.
+
+Route-specific scopes such as `pilot-proposal-page` and `packing-calculator-page` are owned by routing composition in `App.tsx`, not by `AppShell`. They are intentional boundaries for local exceptional styling, not temporary shell migration hooks. A route scope must never duplicate persistent-navigation compensation or safe-area geometry.
 
 ## ShiftGuide shell
 
@@ -44,6 +46,6 @@ Both shells must guarantee:
 5. shell runtime behavior scoped to the smallest responsible region;
 6. semantic navigation landmarks with accessible names.
 
-## Migration rule
+## Route rule
 
-A page may define domain composition and temporary page-scoped migration hooks, but it must not teach a shell about its route name, hard-code shell geometry, or require shell-wide DOM scanning to behave correctly.
+A page may define domain composition and documented page-scoped responsive exceptions, but it must not teach a shell about its route name, hard-code shell geometry, or require shell-wide DOM scanning to behave correctly.
