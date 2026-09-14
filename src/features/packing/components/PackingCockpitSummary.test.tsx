@@ -19,8 +19,8 @@ function makeRun(declaredUnits = 0): PackingRun {
       : [{
           id: 'declaration-1',
           createdAt: '2026-09-14T13:00:00.000Z',
-          completeCartons: declaredUnits / 480,
-          partialCartonUnits: 0,
+          completeCartons: Math.floor(declaredUnits / 480),
+          partialCartonUnits: declaredUnits % 480,
         }],
   };
 }
@@ -45,5 +45,27 @@ describe('PackingCockpitSummary', () => {
     expect(within(cockpit).getByText('41 %')).toBeTruthy();
     expect(within(cockpit).getByText(/232\s320/)).toBeTruthy();
     expect(within(cockpit).getByText('64 h 32 min')).toBeTruthy();
+
+    const progressbar = within(cockpit).getByRole('progressbar', { name: 'Avancement conditionné' });
+    expect(progressbar.getAttribute('aria-valuenow')).toBe('41');
+    const fill = progressbar.querySelector('.packing-progress-fill') as HTMLElement;
+    expect(fill.style.width).toBe('41%');
+    expect(fill.className).toContain('bg-teal-300');
+  });
+
+  it('exposes the completed visual state only when the run truth is complete', () => {
+    render(<PackingCockpitSummary run={makeRun(400320)} />);
+
+    const cockpit = screen.getByRole('region', { name: 'État de production' });
+    expect(cockpit.className).toContain('packing-cockpit-complete');
+    expect(within(cockpit).getByText('100 %')).toBeTruthy();
+    expect(within(cockpit).getByText('Run terminé')).toBeTruthy();
+    expect(within(cockpit).getByText(/Carton/i)).toBeTruthy();
+
+    const progressbar = within(cockpit).getByRole('progressbar', { name: 'Avancement conditionné' });
+    expect(progressbar.getAttribute('aria-valuenow')).toBe('100');
+    const fill = progressbar.querySelector('.packing-progress-fill') as HTMLElement;
+    expect(fill.style.width).toBe('100%');
+    expect(fill.className).toContain('bg-emerald-300');
   });
 });
