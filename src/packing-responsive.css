@@ -81,11 +81,13 @@
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'],
+  .packing-calculator-page section[aria-label='Préparation du run'],
   .packing-calculator-page section[aria-label='Plan actif et déclarations de production'] {
     --tw-space-y-reverse: 0;
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'] > :not([hidden]) ~ :not([hidden]),
+  .packing-calculator-page section[aria-label='Préparation du run'] > :not([hidden]) ~ :not([hidden]),
   .packing-calculator-page section[aria-label='Plan actif et déclarations de production'] > :not([hidden]) ~ :not([hidden]) {
     margin-top: 0.79rem;
   }
