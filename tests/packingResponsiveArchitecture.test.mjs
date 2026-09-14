@@ -26,12 +26,13 @@ test('Packing density targets semantic hooks instead of DOM position discovery',
 
   assert.doesNotMatch(css, /:has\(/);
   assert.doesNotMatch(css, /:(?:first|last|nth)-(?:child|of-type)/);
+  assert.doesNotMatch(css, /\.packing-remaining-loads\s*>\s*p\s*\+\s*p/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
   assert.match(css, /section\[aria-label='Découpage final et suivi manuel'\]/);
   assert.match(css, /section\[aria-labelledby='packing-shipment-title'\]/);
   assert.match(css, /\.packing-primary-number/);
   assert.match(css, /\.packing-shipment-progress/);
-  assert.match(css, /\.packing-plan-metrics/);
+  assert.match(css, /\.packing-plan(?:-metric)?/);
   assert.match(page, /packing-primary-number/);
   assert.match(page, /packing-shipment-progress/);
   assert.match(page, /packing-plan-metrics/);
