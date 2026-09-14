@@ -24,6 +24,16 @@ The axe gate blocks automated WCAG A/AA findings with `critical` or `serious` im
 
 Cross-browser smoke scripts do not call a live AI provider. They run against the same deterministic local E2E server fixture used by the Chromium journeys.
 
+## Responsive architecture policy
+
+Responsiveness is an application invariant with its own browser quality gate, not a visual-polish task left to individual pages.
+
+`npm run test:e2e:responsive` exercises shared responsive invariants through a named viewport matrix in Chromium. The shared harness centralizes viewport profiles and geometry assertions so page tests do not scatter magic width values or reimplement overflow checks.
+
+The responsive gate is intentionally behavior-oriented rather than screenshot-oriented. It checks mechanical guarantees such as root-document containment and primary-action reachability while the architecture contract in `docs/responsive-architecture.md` defines the broader qualitative standard. Passing the gate does not prove that a compressed composition is good design; visual review still owns readability and hierarchy judgments.
+
+During the migration programme, the gate is expanded only when a route is healthy enough for its invariants to become regression-blocking. Existing debt must not be encoded as an expected baseline. New pages created after the responsive infrastructure is established are expected to enter enforced coverage immediately.
+
 ## Coverage policy
 
 Coverage is intentionally scoped to behavior-bearing frontend modules that have direct automated tests. Large presentation-oriented pages are not counted merely to inflate or depress a global percentage.

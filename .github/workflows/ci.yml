@@ -58,6 +58,9 @@ jobs:
       - name: Run critical Chromium journeys
         run: npm run test:e2e
 
+      - name: Run responsive architecture contract
+        run: npm run test:e2e:responsive
+
       - name: Run mobile Chromium and WebKit smoke tests
         run: npm run test:e2e:browser-smoke
 

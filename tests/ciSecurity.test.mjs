@@ -73,6 +73,30 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   assert.match(browserSmoke, /Packing Calculator keeps its primary shipment action usable/);
 });
 
+test('responsive architecture contract is a named CI quality gate backed by a shared viewport harness', async () => {
+  const packageJson = JSON.parse(await read('package.json'));
+  const workflow = await read('.github/workflows/ci.yml');
+  const harness = await read('e2e/responsive-harness.ts');
+  const contract = await read('e2e/responsive-contract.spec.ts');
+  const architecture = await read('docs/responsive-architecture.md');
+
+  assert.equal(
+    packageJson.scripts['test:e2e:responsive'],
+    'npm run build && playwright test e2e/responsive-contract.spec.ts --project=chromium',
+  );
+  assert.match(workflow, /Run responsive architecture contract/);
+  assert.match(workflow, /run:\s+npm run test:e2e:responsive/);
+  assert.match(harness, /phoneMin:.*width:\s*320,\s*height:\s*568/);
+  assert.match(harness, /phoneLandscape:.*width:\s*844,\s*height:\s*390/);
+  assert.match(harness, /expectNoDocumentHorizontalOverflow/);
+  assert.match(harness, /expectPrimaryActionUsable/);
+  assert.match(contract, /CORE_RESPONSIVE_MATRIX/);
+  assert.match(contract, /proposition-pilote/);
+  assert.match(contract, /shiftguide\/module\/module_standard/);
+  assert.match(architecture, /responsiveness as an application invariant/);
+  assert.match(architecture, /Definition of done for a new page/);
+});
+
 test('scheduled live smoke remains read-only, secret-free and outside AI/auth routes', async () => {
   const packageJson = JSON.parse(await read('package.json'));
   const workflow = await read('.github/workflows/live-smoke.yml');
