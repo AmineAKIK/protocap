@@ -38,6 +38,7 @@ async function expectAtomicVisibleNumber(locator: Locator) {
   expect(state.whiteSpace).toBe('nowrap');
 }
 
+// responsive-contract:packing-responsive-contract
 test('Packing dense surface stays contained and changes composition only in the wide regime', async ({ page }) => {
   for (const viewport of PACKING_VIEWPORTS) {
     await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
