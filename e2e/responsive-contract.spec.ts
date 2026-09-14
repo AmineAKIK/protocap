@@ -3,6 +3,7 @@ import {
   CORE_RESPONSIVE_MATRIX,
   REPRESENTATIVE_RESPONSIVE_MATRIX,
   RESPONSIVE_VIEWPORTS,
+  expectLocatorInsideViewport,
   expectNoDocumentHorizontalOverflow,
   expectPrimaryActionUsable,
   useViewport,
@@ -14,6 +15,12 @@ const OPERATIONAL_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phoneLandscape,
   RESPONSIVE_VIEWPORTS.tabletLandscape,
   RESPONSIVE_VIEWPORTS.laptopSmall,
+] as const;
+const EDITORIAL_VIEWPORTS = [
+  RESPONSIVE_VIEWPORTS.phoneMin,
+  RESPONSIVE_VIEWPORTS.phoneLandscape,
+  RESPONSIVE_VIEWPORTS.laptopSmall,
+  RESPONSIVE_VIEWPORTS.laptopCompact,
 ] as const;
 
 test.describe('responsive architecture contract', () => {
@@ -71,6 +78,40 @@ test.describe('responsive architecture contract', () => {
           await expect(page.getByRole('heading', { name: 'Board de traitement' })).toBeVisible();
           await expectNoDocumentHorizontalOverflow(page);
         }
+      });
+    }
+  });
+
+  test('editorial report and presentation remain readable across width and low-height regimes', async ({ page }) => {
+    for (const viewport of EDITORIAL_VIEWPORTS) {
+      await test.step(`Operational Report — ${viewport.name}`, async () => {
+        await useViewport(page, viewport);
+        await page.goto('/rapport');
+
+        await expect(page.getByRole('heading', { name: /Du terrain/ })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Synthèse opérationnelle' })).toBeVisible();
+        await expectNoDocumentHorizontalOverflow(page);
+      });
+
+      await test.step(`Presentation Mode — ${viewport.name}`, async () => {
+        await useViewport(page, viewport);
+        await page.goto('/');
+        await page.getByRole('button', { name: 'Lancer la présentation' }).click();
+
+        const dialog = page.getByRole('dialog', { name: 'Présentation du rapport opérationnel' });
+        const next = dialog.getByRole('button', { name: /Suivant|→/ });
+        const close = dialog.getByRole('button', { name: 'Quitter la présentation' });
+
+        await expect(dialog).toBeVisible();
+        await expect(dialog.getByRole('heading', { name: 'Du terrain au prototype' })).toBeVisible();
+        await expectLocatorInsideViewport(page, close);
+        await expectLocatorInsideViewport(page, next);
+        await expectNoDocumentHorizontalOverflow(page);
+
+        for (let i = 0; i < 4; i += 1) await next.click();
+        await expect(dialog.getByRole('heading', { name: 'Impact opérationnel attendu' })).toBeVisible();
+        await expectLocatorInsideViewport(page, close);
+        await expectLocatorInsideViewport(page, next);
       });
     }
   });

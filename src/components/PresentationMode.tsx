@@ -14,7 +14,7 @@ import {
   X,
   Zap
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 
 /* ─── DATA ──────────────────────────────────────────────────────────────── */
@@ -167,11 +167,11 @@ const slides: Slide[] = [
           La performance d'une ligne dépend autant de la cadence machine que de la qualité
           de l'environnement informationnel autour du conducteur.
         </p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-3">
           {openingStatements.map((s, i) => (
-            <div key={s.key} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:rounded-2xl sm:p-4">
+            <div key={s.key} className="min-w-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 sm:rounded-2xl sm:p-4">
               <span className="mb-1 block text-xs font-black text-teal-400">0{i + 1}</span>
-              <p className="text-xs font-semibold leading-5 text-white sm:text-sm sm:leading-6">{s.text}</p>
+              <p className="break-normal text-xs font-semibold leading-5 text-white sm:text-sm sm:leading-6">{s.text}</p>
             </div>
           ))}
         </div>
@@ -184,17 +184,17 @@ const slides: Slide[] = [
     body: (
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
         {summaryRows.map((row) => (
-          <div key={row.module} className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-2 mb-2 sm:gap-3 sm:mb-4">
+          <div key={row.module} className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <div className="mb-2 flex min-w-0 items-center gap-2 sm:mb-4 sm:gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-500/20">
                 <row.icon size={16} className="text-teal-400" />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-white text-sm">{row.module}</p>
-                <p className="text-xs text-teal-400 truncate">{row.flow}</p>
+                <p className="break-normal text-sm font-bold text-white">{row.module}</p>
+                <p className="break-normal text-xs text-teal-400">{row.flow}</p>
               </div>
             </div>
-            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">{row.contribution}</p>
+            <p className="break-normal text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">{row.contribution}</p>
           </div>
         ))}
       </div>
@@ -204,14 +204,14 @@ const slides: Slide[] = [
     label: `Chapitre 01`,
     title: `Conduite de ligne et charge réelle`,
     body: (
-      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+      <div className="max-w-3xl space-y-3 sm:space-y-5">
         <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           La conduite de ligne concentre plusieurs responsabilités simultanées.
           Leur superposition crée la difficulté réelle du poste.
         </p>
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-6">
-          <Gauge size={20} className="text-teal-400 mb-2" />
-          <p className="text-sm font-bold leading-6 text-white sm:text-lg sm:leading-8">
+          <Gauge size={20} className="mb-2 text-teal-400" />
+          <p className="break-normal text-sm font-bold leading-6 text-white sm:text-lg sm:leading-8">
             La machine · le produit · la matière · la qualité · la quantité · les palettes ·
             les arrêts · les outils · les documents · les priorités · les urgences · les aléas.
           </p>
@@ -227,11 +227,11 @@ const slides: Slide[] = [
     label: `Chapitre 02`,
     title: `Fragmentation de l'attention`,
     body: (
-      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+      <div className="max-w-3xl space-y-3 sm:space-y-5">
         <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Le point critique n'est pas l'absence d'information — c'est sa dispersion.
         </p>
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2">
           {[
             `Une date sur une feuille.`,
             `Une déclaration dans un logiciel.`,
@@ -240,15 +240,15 @@ const slides: Slide[] = [
             `Un calcul fait mentalement.`,
             `Un statut non visible par tous.`,
           ].map((t) => (
-            <div key={t} className="flex items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+            <div key={t} className="flex min-w-0 items-start gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
               <ArrowRight size={12} className="mt-0.5 shrink-0 text-slate-500" />
-              <p className="text-xs leading-5 text-slate-300">{t}</p>
+              <p className="min-w-0 break-normal text-xs leading-5 text-slate-300">{t}</p>
             </div>
           ))}
         </div>
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-5">
-          <AlertTriangle size={18} className="text-teal-400 mb-2" />
-          <p className="text-sm font-bold leading-6 text-white sm:text-base sm:leading-7">
+          <AlertTriangle size={18} className="mb-2 text-teal-400" />
+          <p className="break-normal text-sm font-bold leading-6 text-white sm:text-base sm:leading-7">
             Le conducteur ne doit pas compenser le système d'information.
             Le système d'information doit soutenir le conducteur.
           </p>
@@ -260,18 +260,18 @@ const slides: Slide[] = [
     label: `Chapitre 03`,
     title: `Impact opérationnel attendu`,
     body: (
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
         {impactBlocks.map((block) => (
-          <div key={block.title} className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
-            <div className="flex items-center gap-1.5 mb-2 sm:gap-2 sm:mb-3">
+          <div key={block.title} className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <div className="mb-2 flex min-w-0 items-center gap-1.5 sm:mb-3 sm:gap-2">
               <block.icon size={15} className="shrink-0 text-teal-400" />
-              <p className="font-bold text-white text-xs leading-4 sm:text-sm">{block.title}</p>
+              <p className="min-w-0 break-normal text-xs font-bold leading-4 text-white sm:text-sm">{block.title}</p>
             </div>
             <ul className="space-y-1">
               {block.items.map((item) => (
-                <li key={item} className="flex items-start gap-1.5 text-xs text-slate-300 leading-4">
+                <li key={item} className="flex min-w-0 items-start gap-1.5 text-xs leading-4 text-slate-300">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
-                  {item}
+                  <span className="min-w-0 break-normal">{item}</span>
                 </li>
               ))}
             </ul>
@@ -284,21 +284,21 @@ const slides: Slide[] = [
     label: `Chapitre 04`,
     title: `Principe de conception`,
     body: (
-      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+      <div className="max-w-3xl space-y-3 sm:space-y-5">
         <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Un outil métier efficace ne cherche pas à être visible pour lui-même. Il sert l'action.
         </p>
         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 sm:gap-2 lg:grid-cols-3">
           {designQuestions.map((q, i) => (
-            <div key={q} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 sm:rounded-xl">
+            <div key={q} className="flex min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 sm:rounded-xl">
               <span className="shrink-0 text-xs font-black text-teal-400">{String(i + 1).padStart(2, '0')}</span>
-              <span className="text-xs font-semibold text-white sm:text-sm">{q}</span>
+              <span className="min-w-0 break-normal text-xs font-semibold text-white sm:text-sm">{q}</span>
             </div>
           ))}
         </div>
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-5">
-          <Zap size={18} className="text-teal-400 mb-2" />
-          <p className="text-sm font-bold leading-6 text-white sm:text-base">
+          <Zap size={18} className="mb-2 text-teal-400" />
+          <p className="break-normal text-sm font-bold leading-6 text-white sm:text-base">
             La valeur d'un outil métier se mesure à la quantité de friction retirée du travail réel.
           </p>
         </div>
@@ -310,35 +310,35 @@ const slides: Slide[] = [
     title: `${proto.title}`,
     body: (
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
-        <div className="space-y-2 sm:space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+        <div className="min-w-0 space-y-2 sm:space-y-4">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Enjeu</p>
-            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.issueParagraph}</p>
+            <p className="break-normal text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.issueParagraph}</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Réponse</p>
-            <p className="text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.responseParagraph}</p>
+            <p className="break-normal text-xs leading-5 text-slate-300 sm:text-sm sm:leading-7">{proto.responseParagraph}</p>
           </div>
         </div>
-        <div className="space-y-2 sm:space-y-4">
-          <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-3 sm:rounded-2xl sm:p-5">
+        <div className="min-w-0 space-y-2 sm:space-y-4">
+          <div className="min-w-0 rounded-xl border border-teal-500/20 bg-teal-500/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-teal-500">Valeur</p>
             <ul className="space-y-1.5">
               {proto.valueParagraphs.map((p) => (
-                <li key={p} className="flex items-center gap-1.5 text-xs font-semibold text-white sm:text-sm">
+                <li key={p} className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-white sm:text-sm">
                   <ArrowRight size={12} className="shrink-0 text-teal-500" />
-                  {p}
+                  <span className="min-w-0 break-normal">{p}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Indicateurs</p>
             <ul className="space-y-1">
               {proto.indicators.map((ind) => (
-                <li key={ind} className="flex items-start gap-1.5 text-xs text-slate-400 leading-4">
+                <li key={ind} className="flex min-w-0 items-start gap-1.5 text-xs leading-4 text-slate-400">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-600" />
-                  {ind}
+                  <span className="min-w-0 break-normal">{ind}</span>
                 </li>
               ))}
             </ul>
@@ -351,42 +351,42 @@ const slides: Slide[] = [
     label: `Chapitres 06 — 07`,
     title: `Lecture globale & Prototypes`,
     body: (
-      <div className="grid gap-2 sm:grid-cols-2 sm:gap-5 max-w-4xl">
-        <div className="space-y-2 sm:space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
-            <Route size={18} className="text-teal-400 mb-2" />
-            <p className="text-xs font-bold text-white leading-5 sm:text-base sm:leading-7">
+      <div className="grid max-w-4xl gap-2 sm:grid-cols-2 sm:gap-5">
+        <div className="min-w-0 space-y-2 sm:space-y-4">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <Route size={18} className="mb-2 text-teal-400" />
+            <p className="break-normal text-xs font-bold leading-5 text-white sm:text-base sm:leading-7">
               L'outil doit absorber la complexité répétitive pour laisser au conducteur
               la décision, la vigilance et l'arbitrage.
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">4 formes de friction</p>
             <ul className="space-y-1.5">
               {globalFrictionItems.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-xs text-slate-300 leading-4 sm:text-sm sm:leading-6">
+                <li key={item} className="flex min-w-0 items-start gap-2 text-xs leading-4 text-slate-300 sm:text-sm sm:leading-6">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
-                  {item}
+                  <span className="min-w-0 break-normal">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="space-y-2 sm:space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
-            <FileText size={18} className="text-teal-400 mb-2" />
-            <p className="text-xs font-bold text-white leading-5 sm:text-base sm:leading-7">
+        <div className="min-w-0 space-y-2 sm:space-y-4">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+            <FileText size={18} className="mb-2 text-teal-400" />
+            <p className="break-normal text-xs font-bold leading-5 text-white sm:text-base sm:leading-7">
               Un prototype transforme une idée abstraite en objet manipulable
               et accélère le passage entre observation et décision.
             </p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-white/5 p-3 sm:rounded-2xl sm:p-5">
             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-slate-500">Sa valeur</p>
             <ul className="space-y-1.5">
               {prototypeValueItems.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-xs text-slate-300 leading-4 sm:text-sm sm:leading-6">
+                <li key={item} className="flex min-w-0 items-start gap-2 text-xs leading-4 text-slate-300 sm:text-sm sm:leading-6">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
-                  {item}
+                  <span className="min-w-0 break-normal">{item}</span>
                 </li>
               ))}
             </ul>
@@ -399,27 +399,27 @@ const slides: Slide[] = [
     label: `Chapitre 08`,
     title: `Vision`,
     body: (
-      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+      <div className="max-w-3xl space-y-3 sm:space-y-5">
         <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           L'objectif est de construire un environnement de conduite plus fluide —
           la bonne information, au bon moment, avec une action claire.
         </p>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
+        <div className="grid grid-cols-1 gap-1.5 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:gap-2">
           {visionItems.map((item) => (
-            <div key={item} className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 sm:rounded-xl sm:gap-2 sm:px-4 sm:py-3">
+            <div key={item} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 sm:rounded-xl sm:gap-2 sm:px-4 sm:py-3">
               <CheckCircle2 size={12} className="shrink-0 text-teal-500" />
-              <span className="text-xs text-white sm:text-sm">{item}</span>
+              <span className="min-w-0 break-normal text-xs text-white sm:text-sm">{item}</span>
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3 sm:gap-3">
           {[
             { text: `L'interface disparaît dans l'exécution.`, accent: true },
             { text: `Elle sécurise, alerte, guide et trace.`, accent: false },
             { text: `Elle s'efface quand le travail avance.`, accent: false },
           ].map((item) => (
-            <div key={item.text} className={`rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/30 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
-              <p className={`text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
+            <div key={item.text} className={`min-w-0 rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/30 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
+              <p className={`break-normal text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
             </div>
           ))}
         </div>
@@ -430,25 +430,25 @@ const slides: Slide[] = [
     label: `Conclusion`,
     title: `Rendre les flux terrain plus visibles, plus traçables, plus simples.`,
     body: (
-      <div className="space-y-3 sm:space-y-5 max-w-3xl">
+      <div className="max-w-3xl space-y-3 sm:space-y-5">
         <p className="text-base leading-7 text-slate-200 sm:text-xl sm:leading-9">
           Une ligne de conditionnement ne se résume pas à sa cadence.
           Elle dépend de la façon dont l'information circule autour de ceux qui la pilotent.
         </p>
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 sm:rounded-2xl sm:p-6">
-          <p className="text-sm font-black leading-6 text-white sm:text-lg sm:leading-8">
+          <p className="break-normal text-sm font-black leading-6 text-white sm:text-lg sm:leading-8">
             Moins d'erreurs évitables · moins de temps perdu · moins de charge cognitive ·
             plus de traçabilité · meilleure continuité opérationnelle.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3 sm:gap-3">
           {[
             { text: `Les meilleurs outils ne s'ajoutent pas au travail.`, accent: false },
             { text: `Ils s'intègrent à son mouvement.`, accent: true },
             { text: `Ils soutiennent l'action sans la ralentir.`, accent: false },
           ].map((item) => (
-            <div key={item.text} className={`rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/40 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
-              <p className={`text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
+            <div key={item.text} className={`min-w-0 rounded-lg p-2.5 sm:rounded-xl sm:p-4 ${item.accent ? 'border border-teal-500/40 bg-teal-500/10' : 'border border-white/10 bg-white/5'}`}>
+              <p className={`break-normal text-xs font-semibold leading-4 sm:text-sm sm:leading-6 ${item.accent ? 'text-teal-300' : 'text-slate-400'}`}>{item.text}</p>
             </div>
           ))}
         </div>
@@ -466,6 +466,9 @@ const slides: Slide[] = [
 
 export function PresentationMode({ onClose }: { onClose: () => void }) {
   const [index, setIndex] = useState(0);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const total = slides.length;
   const slide = slides[index];
 
@@ -473,85 +476,129 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
   const next = useCallback(() => setIndex((i) => Math.min(total - 1, i + 1)), [total]);
 
   useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    if (!dialog.open) dialog.showModal();
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); next(); }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prev(); }
-      if (e.key === 'Escape') onClose();
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const isInteractive = target?.matches('button, a, input, select, textarea, [role="button"]');
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === ' ' && !isInteractive)) {
+        e.preventDefault();
+        next();
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        prev();
+      }
     }
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev, onClose]);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+      if (dialog.open) dialog.close();
+      previousFocusRef.current?.focus();
+    };
+  }, [next, prev]);
 
   const progress = ((index + 1) / total) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white">
-      {/* Progress bar */}
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 z-50 m-0 grid h-[100dvh] max-h-none min-h-0 w-screen max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden border-0 bg-slate-950 p-0 text-white backdrop:bg-slate-950"
+      aria-label="Présentation du rapport opérationnel"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <div className="h-0.5 w-full bg-white/10">
         <div className="h-0.5 bg-teal-500 transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 sm:px-10 sm:py-4">
-        <span className="text-xs font-bold uppercase tracking-widest text-teal-500">{slide.label}</span>
-        <div className="flex items-center gap-4">
+      <div className="contents">
+        <div className="flex min-w-0 items-center justify-between px-4 py-2.5 sm:px-10 sm:py-4">
+          <span className="min-w-0 break-normal pr-3 text-[10px] font-bold uppercase tracking-widest text-teal-500 sm:text-xs">{slide.label}</span>
           <button
+            ref={closeButtonRef}
+            type="button"
             onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/30"
             aria-label="Quitter la présentation"
           >
             <X size={18} />
           </button>
         </div>
-      </div>
 
-      {/* Slide content */}
-      <div className="flex flex-1 flex-col justify-center overflow-y-auto px-5 py-4 sm:px-10 lg:px-16">
-        <h2 className="mb-6 text-2xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
-          {slide.title}
-        </h2>
-        <div>{slide.body}</div>
-      </div>
-
-      {/* Navigation footer */}
-      <div className="flex items-center justify-between border-t border-white/10 px-4 py-3 sm:px-10 sm:py-4">
-        <button
-          onClick={prev}
-          disabled={index === 0}
-          className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-white/20 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed sm:px-5 sm:py-2.5"
-        >
-          ← <span className="hidden sm:inline">Précédent</span>
-        </button>
-
-        <div className="hidden items-center gap-1.5 sm:flex">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              className={`h-1.5 rounded-full transition-all ${i === index ? 'w-6 bg-teal-500' : 'w-1.5 bg-white/20 hover:bg-white/40'}`}
-              aria-label={`Aller à la slide ${i + 1}`}
-            />
-          ))}
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-3 sm:px-10 sm:py-4 lg:px-16">
+          <div className="mx-auto flex min-h-full w-full max-w-5xl min-w-0 flex-col justify-center py-1 sm:py-3">
+            <h2 className="mb-4 break-normal text-[clamp(1.5rem,7vw,3rem)] font-black tracking-tight text-white sm:mb-6 lg:text-5xl">
+              {slide.title}
+            </h2>
+            <div className="min-w-0">{slide.body}</div>
+          </div>
         </div>
 
-        <span className="text-xs font-bold tabular-nums text-slate-500 sm:hidden">{index + 1} / {total}</span>
+        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-white/10 px-4 py-2.5 sm:px-10 sm:py-4">
+          <button
+            type="button"
+            onClick={prev}
+            disabled={index === 0}
+            className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 sm:px-5 sm:py-2.5"
+          >
+            ← <span className="hidden sm:inline">Précédent</span>
+          </button>
 
-        {index === total - 1 ? (
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-500 sm:px-5 sm:py-2.5"
-          >
-            Terminer
-          </button>
-        ) : (
-          <button
-            onClick={next}
-            className="flex items-center gap-2 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-500 sm:px-5 sm:py-2.5"
-          >
-            <span className="hidden sm:inline">Suivant</span> →
-          </button>
-        )}
+          <div className="hidden min-w-0 items-center justify-center gap-1.5 sm:flex">
+            {slides.map((_, i) => (
+              <button
+                type="button"
+                key={i}
+                onClick={() => setIndex(i)}
+                className={`h-1.5 shrink-0 rounded-full transition-all ${i === index ? 'w-6 bg-teal-500' : 'w-1.5 bg-white/20 hover:bg-white/40'}`}
+                aria-label={`Aller à la slide ${i + 1}`}
+              />
+            ))}
+          </div>
+
+          <span className="shrink-0 text-xs font-bold tabular-nums text-slate-500 sm:hidden">{index + 1} / {total}</span>
+
+          {index === total - 1 ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-500 sm:px-5 sm:py-2.5"
+            >
+              Terminer
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={next}
+              className="flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-500 sm:px-5 sm:py-2.5"
+            >
+              <span className="hidden sm:inline">Suivant</span> →
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+    </dialog>
   );
 }
