@@ -45,3 +45,18 @@ test('TSX cannot hide horizontal overflow without an explicit responsive excepti
   }
   assert.deepEqual(offenders, [], 'use local overflow ownership or document an explicit exception instead of clipping x-overflow');
 });
+
+test('shared surface and form primitives remain defined while application pages consume them', async () => {
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  const tsxFiles = await collectFiles(sourceRoot.pathname, '.tsx');
+  const source = (await Promise.all(tsxFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+
+  for (const primitive of ['panel', 'label', 'field']) {
+    assert.match(source, new RegExp(`className=[^\\n]*\\b${primitive}\\b`), `expected ${primitive} to remain consumed by application pages`);
+    assert.match(css, new RegExp(`\\.${primitive}\\s*\\{`), `src/index.css must define the shared .${primitive} primitive`);
+  }
+
+  assert.match(css, /\.label\s*\{[\s\S]*?@apply[^;]*\bblock\b[^;]*;/, '.label must stay block-level so labels cannot collapse inline with controls');
+  assert.match(css, /\.field\s*\{[\s\S]*?@apply[^;]*\bw-full\b[^;]*\bmin-w-0\b[^;]*;/, '.field must own full-width shrink-safe control geometry');
+  assert.match(css, /\.field\s*\{[\s\S]*?@apply[^;]*\bmin-h-11\b[^;]*;/, '.field must preserve the minimum touch target height');
+});

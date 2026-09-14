@@ -25,6 +25,24 @@ textarea {
   font: inherit;
 }
 
+@layer components {
+  .panel {
+    @apply min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .label {
+    @apply block min-w-0 text-xs font-bold uppercase tracking-wide text-slate-600;
+  }
+
+  .field {
+    @apply block min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base leading-6 text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-700/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+  }
+
+  textarea.field {
+    @apply resize-y;
+  }
+}
+
 .industrial-grid {
   background-image:
     linear-gradient(rgba(15, 118, 110, 0.08) 1px, transparent 1px),
