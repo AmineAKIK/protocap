@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
 
 const formStorageKey = 'lineops.packing.form.inputs.v8';
-const trackingStorageKey = 'lineops.packing.shipment.progress.v8';
+const activeRunStorageKey = 'lineops.packing.active-run.v1';
 
 function storePackingForm(quantity = '30880', policy = 'round-carton') {
   localStorage.setItem(
@@ -23,161 +23,149 @@ async function chooseCartonStrategy(user: ReturnType<typeof userEvent.setup>) {
   await user.click(within(strategyGroup).getByRole('radio', { name: /Carton/i }));
 }
 
-describe('PackingCalculatorPage premium workshop flow', () => {
-  it('keeps reference theory separate from the active operational plan', async () => {
+async function activateRun(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText('Cadence de référence en unités par minute'), '60');
+  await user.click(screen.getByRole('button', { name: 'Activer ce run' }));
+}
+
+describe('PackingCalculatorPage operator run flow', () => {
+  it('keeps calculation draft separate from an explicitly activated run', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
     await chooseCartonStrategy(user);
 
-    const referenceColumn = screen.getByRole('region', { name: 'Référence et résultat exact' });
-    expect(within(referenceColumn).getByRole('heading', { name: 'Paramètres de référence' })).toBeTruthy();
-    expect(within(referenceColumn).getByRole('heading', { name: 'Résultat exact' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Activer le run' })).toBeTruthy();
+    await activateRun(user);
 
-    const operationsColumn = screen.getByRole('region', { name: 'Découpage final et suivi manuel' });
-    expect(within(operationsColumn).getByRole('heading', { name: 'Découpage final sélectionné' })).toBeTruthy();
-    expect(within(operationsColumn).getByRole('heading', { name: 'Charges à expédier' })).toBeTruthy();
-    expect(within(operationsColumn).queryByRole('heading', { name: 'Résultat exact' })).toBeNull();
-    expect(within(operationsColumn).getByText('2 cartons · 256 unités')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
+    expect(screen.getByText('Run actif')).toBeTruthy();
+
+    const quantity = screen.getByLabelText('Quantité demandée en unités');
+    await user.clear(quantity);
+    await user.type(quantity, '40000');
+
+    const operations = screen.getByRole('region', { name: 'Plan actif et déclarations de production' });
+    expect(within(operations).getByText(/30\s976/)).toBeTruthy();
+    expect(within(operations).queryByText(/40\s064/)).toBeNull();
   });
 
-  it('requires an explicit operator choice before activating any strategy', async () => {
-    const user = userEvent.setup();
-    storePackingForm('30880', 'no-overrun');
-    render(<PackingCalculatorPage />);
-
-    const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
-    const exact = within(strategyGroup).getByRole('radio', { name: /Exact/i });
-    const carton = within(strategyGroup).getByRole('radio', { name: /Carton/i });
-    const pallet = within(strategyGroup).getByRole('radio', { name: /Palette/i });
-
-    expect(exact.getAttribute('aria-checked')).toBe('false');
-    expect(carton.getAttribute('aria-checked')).toBe('false');
-    expect(pallet.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByRole('heading', { name: 'Plan en attente' })).toBeTruthy();
-    expect(screen.getByText('Choisissez une stratégie de préparation pour activer le plan et le suivi atelier.')).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: 'Charges à expédier' })).toBeNull();
-
-    await user.click(carton);
-    expect(carton.getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByRole('heading', { name: 'Charges à expédier' })).toBeTruthy();
-  });
-
-  it('shows the three strategies as a real radio decision with their consequences', async () => {
+  it('requires an explicit operator strategy and cadence before run activation', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
 
-    const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
-    const exact = within(strategyGroup).getByRole('radio', { name: /Exact/i });
-    const carton = within(strategyGroup).getByRole('radio', { name: /Carton/i });
-    const pallet = within(strategyGroup).getByRole('radio', { name: /Palette/i });
+    expect(screen.getByRole('heading', { name: 'Plan en attente' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Activer le run' })).toBeNull();
 
-    expect(within(strategyGroup).getByText(/30\s976/)).toBeTruthy();
-    expect(within(strategyGroup).getByText('+96 unités')).toBeTruthy();
+    await chooseCartonStrategy(user);
+    const activate = screen.getByRole('button', { name: 'Activer ce run' }) as HTMLButtonElement;
+    expect(activate.disabled).toBe(true);
 
-    await user.click(exact);
-    expect(exact.getAttribute('aria-checked')).toBe('true');
-    expect(carton.getAttribute('aria-checked')).toBe('false');
-
-    await user.click(pallet);
-    expect(pallet.getAttribute('aria-checked')).toBe('true');
-    expect(exact.getAttribute('aria-checked')).toBe('false');
+    await user.type(screen.getByLabelText('Cadence de référence en unités par minute'), '60');
+    expect(activate.disabled).toBe(false);
   });
 
-  it('persists sequential shipment progress and exposes exact load and volume progress', async () => {
+  it('declares a complete load in one click and reloads it from the active-run history', async () => {
     const user = userEvent.setup();
     storePackingForm();
     const view = render(<PackingCalculatorPage />);
     await chooseCartonStrategy(user);
+    await activateRun(user);
 
-    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
-    expect(within(shipment).getByLabelText('7 charges restantes')).toBeTruthy();
-    expect(within(shipment).getByText('0 / 7 charges expédiées')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
+    expect(screen.getByText(/5\s120 unités déclarées produites/)).toBeTruthy();
+    expect(screen.getByText(/5\s120/)).toBeTruthy();
+    expect(screen.getByText('1 déclaration')).toBeTruthy();
 
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
-    const decrement = within(shipment).getByRole('button', { name: 'Corriger la dernière charge expédiée' });
-    await user.click(increment);
-    await user.click(increment);
-    await user.click(decrement);
-
-    expect(within(shipment).getByLabelText('6 charges restantes')).toBeTruthy();
-    expect(within(shipment).getByText('1 / 7 charges expédiées')).toBeTruthy();
-    await waitFor(() => expect(localStorage.getItem(trackingStorageKey)).toContain('"30880:128:40:round-carton":1'));
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(activeRunStorageKey) ?? 'null') as { activeRun?: { declarations?: unknown[] } };
+      expect(stored.activeRun?.declarations).toHaveLength(1);
+    });
 
     view.unmount();
-    const secondUser = userEvent.setup();
     render(<PackingCalculatorPage />);
-    expect(screen.queryByText('1 / 7 charges expédiées')).toBeNull();
-    await chooseCartonStrategy(secondUser);
-    expect(screen.getByText('1 / 7 charges expédiées')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Déclarations de production' })).toBeTruthy();
+    expect(screen.getByText('1 déclaration')).toBeTruthy();
   });
 
-  it('distinguishes load completion from shipped volume when the last load is a small remainder', async () => {
+  it('accepts partial cartons and units with an exact preview', async () => {
+    const user = userEvent.setup();
+    storePackingForm('400000');
+    localStorage.setItem(formStorageKey, JSON.stringify({
+      quantity: '400000',
+      unitsPerCarton: '480',
+      cartonsPerPalette: '50',
+      policy: 'round-carton',
+    }));
+    render(<PackingCalculatorPage />);
+    await chooseCartonStrategy(user);
+    await activateRun(user);
+
+    await user.type(screen.getByLabelText('Cartons complets à déclarer'), '10');
+    await user.type(screen.getByLabelText('Unités du carton partiel à déclarer'), '120');
+    expect(screen.getByText(/Aperçu :/).parentElement?.textContent).toContain('4 920 unités');
+
+    await user.click(screen.getByRole('button', { name: 'Déclarer ce volume' }));
+    expect(screen.getByText(/4\s920 unités déclarées produites/)).toBeTruthy();
+    expect(screen.getByText(/10 cartons \+ 120 unités partielles/)).toBeTruthy();
+  });
+
+  it('visibly rejects a declaration above the remaining run volume', async () => {
+    const user = userEvent.setup();
+    storePackingForm('100');
+    localStorage.setItem(formStorageKey, JSON.stringify({
+      quantity: '100',
+      unitsPerCarton: '10',
+      cartonsPerPalette: '10',
+      policy: 'no-overrun',
+    }));
+    render(<PackingCalculatorPage />);
+
+    const strategyGroup = screen.getByRole('radiogroup', { name: 'Politique opérationnelle' });
+    await user.click(within(strategyGroup).getByRole('radio', { name: /Exact/i }));
+    await activateRun(user);
+
+    await user.type(screen.getByLabelText('Cartons complets à déclarer'), '11');
+    await user.click(screen.getByRole('button', { name: 'Déclarer ce volume' }));
+    expect(screen.getByRole('alert').textContent).toContain('dépasse le volume restant');
+    expect(screen.getByText('0 déclaration')).toBeTruthy();
+  });
+
+  it('corrects and removes declarations by identity while restoring exact progress', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
     await chooseCartonStrategy(user);
+    await activateRun(user);
+    await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
 
-    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
+    await user.click(screen.getByRole('button', { name: 'Corriger la déclaration 1' }));
+    const cartons = screen.getByLabelText('Cartons complets à déclarer');
+    await user.clear(cartons);
+    await user.type(cartons, '10');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer la correction' }));
 
-    for (let load = 0; load < 6; load += 1) await user.click(increment);
+    expect(screen.getByText(/1\s280 unités/)).toBeTruthy();
+    expect(screen.getByText('Déclaration corrigée.')).toBeTruthy();
 
-    expect(within(shipment).getByText('6 / 7 charges expédiées')).toBeTruthy();
-    expect(within(shipment).getByText(/30\s720\s\/\s30\s976/)).toBeTruthy();
-    expect(within(shipment).getByText('99,2 %')).toBeTruthy();
-    expect(within(shipment).getByText('Charge reliquat')).toBeTruthy();
-    expect(within(shipment).getByText('2 cartons · 256 unités')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Supprimer la déclaration 1' }));
+    expect(screen.getByText('0 déclaration')).toBeTruthy();
+    expect(screen.getByText('Aucune production déclarée pour ce run.')).toBeTruthy();
   });
 
-  it('keeps the counter within bounds, completes cleanly and offers an explicit reset', async () => {
+  it('starts a fresh same-parameter run without inheriting prior declarations', async () => {
     const user = userEvent.setup();
-    storePackingForm('30720');
+    storePackingForm();
     render(<PackingCalculatorPage />);
     await chooseCartonStrategy(user);
+    await activateRun(user);
+    await user.click(screen.getByRole('button', { name: 'Déclarer une charge' }));
+    expect(screen.getByText('1 déclaration')).toBeTruthy();
 
-    const shipment = screen.getByRole('region', { name: 'Charges à expédier' });
-    const decrement = within(shipment).getByRole('button', { name: 'Corriger la dernière charge expédiée' });
-    const increment = within(shipment).getByRole('button', { name: 'Déclarer la prochaine charge expédiée' });
-    expect((decrement as HTMLButtonElement).disabled).toBe(true);
-
-    for (let load = 0; load < 6; load += 1) await user.click(increment);
-
-    expect(within(shipment).getByLabelText('0 charges restantes')).toBeTruthy();
-    expect((increment as HTMLButtonElement).disabled).toBe(true);
-    expect(within(shipment).getByText('Toutes les charges prévues ont été déclarées comme expédiées.')).toBeTruthy();
-
-    await user.click(within(shipment).getByRole('button', { name: 'Réinitialiser le suivi' }));
-    expect(screen.getByText('0 / 6 charges expédiées')).toBeTruthy();
-    expect((decrement as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('keeps independent persisted progress for each calculation', async () => {
-    const user = userEvent.setup();
-    storePackingForm('30720');
-    render(<PackingCalculatorPage />);
-    await chooseCartonStrategy(user);
-
-    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
-    const quantity = screen.getByLabelText('Quantité demandée en unités');
-    await user.clear(quantity);
-    await user.type(quantity, '30880');
-    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
-    await user.click(screen.getByRole('button', { name: 'Déclarer la prochaine charge expédiée' }));
-
-    await user.clear(quantity);
-    await user.type(quantity, '30720');
-    expect(screen.getByText('1 / 6 charges expédiées')).toBeTruthy();
-
-    await waitFor(() => {
-      const storedProgress = JSON.parse(localStorage.getItem(trackingStorageKey) ?? '{}') as {
-        progressByCalculation?: Record<string, number>;
-      };
-      expect(storedProgress.progressByCalculation).toEqual({
-        '30720:128:40:round-carton': 1,
-        '30880:128:40:round-carton': 2,
-      });
-    });
+    await user.click(screen.getByRole('button', { name: 'Nouveau run' }));
+    expect(screen.getByRole('heading', { name: 'Activer le run' })).toBeTruthy();
+    await activateRun(user);
+    expect(screen.getByText('0 déclaration')).toBeTruthy();
   });
 });
