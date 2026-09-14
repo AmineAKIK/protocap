@@ -12,12 +12,12 @@ class SingleValueStorage implements PackingStorageLike {
     return key === PACKING_ACTIVE_RUN_STORAGE_KEY ? this.value : null;
   }
 
-  setItem(_key: string, value: string): void {
-    this.value = value;
+  setItem(key: string, value: string): void {
+    if (key === PACKING_ACTIVE_RUN_STORAGE_KEY) this.value = value;
   }
 
-  removeItem(_key: string): void {
-    this.value = null;
+  removeItem(key: string): void {
+    if (key === PACKING_ACTIVE_RUN_STORAGE_KEY) this.value = null;
   }
 }
 
