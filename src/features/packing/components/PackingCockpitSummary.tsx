@@ -53,14 +53,14 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
       </div>
 
       <div className="packing-plan-body p-5 sm:p-7">
-        <div className="packing-cockpit-primary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="packing-cockpit-primary grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           <CockpitMetric label="Planifié" value={formatNumber(run.plannedUnits)} detail={`${formatNumber(run.requestedUnits)} demandées`} />
           <CockpitMetric label="Déclaré" value={formatNumber(progress.declaredUnits)} detail="production conditionnée" />
           <CockpitMetric label="Progression" value={`${formatNumber(progressPercent)} %`} detail={isComplete ? 'Run terminé' : 'Production en cours'} />
           <CockpitMetric label="Restant" value={formatNumber(progress.remainingUnits)} detail="unités à conditionner" />
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           <CockpitMetric label="Cadence de référence" value={`${formatNumber(run.referenceCadenceUnitsPerMinute)} u/min`} />
           <CockpitMetric label="Temps total estimé" value={formatPackingDuration(progress.estimatedTotalMinutes)} />
           <CockpitMetric label="Temps restant estimé" value={formatPackingDuration(progress.estimatedRemainingMinutes)} />
