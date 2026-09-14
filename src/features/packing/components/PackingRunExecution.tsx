@@ -183,9 +183,9 @@ export function PackingRunExecution({
   return (
     <section
       aria-labelledby="packing-run-execution-title"
-      className={`packing-operator-panel overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}
+      className={`packing-operator-panel overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'packing-operator-complete border-emerald-200' : 'border-slate-200'}`}
     >
-      <div className={`border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-slate-200'}`}>
+      <div className={`packing-operator-header border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/80' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Agir · opérateur</p>
@@ -201,7 +201,7 @@ export function PackingRunExecution({
             <button
               type="button"
               onClick={onNewRun}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 hover:bg-slate-50"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
             >
               <RotateCcw size={13} aria-hidden="true" />
               Nouveau run
@@ -210,12 +210,12 @@ export function PackingRunExecution({
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <div className="packing-operator-body p-5 sm:p-6">
+        <div className={`packing-primary-action rounded-2xl border p-4 sm:p-5 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-teal-200 bg-teal-50/70'}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Action principale</p>
-              <p className="mt-1 text-sm font-bold text-slate-700">
+              <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${isComplete ? 'text-emerald-700' : 'text-teal-700'}`}>{isComplete ? 'Production terminée' : 'Action principale'}</p>
+              <p className="mt-1 text-sm font-bold text-slate-800">
                 Charge complète · {formatNumber(run.cartonsPerLoad)} cartons · {formatNumber(fullLoadUnits)} unités
               </p>
             </div>
@@ -223,7 +223,7 @@ export function PackingRunExecution({
               type="button"
               disabled={!canDeclareFullLoad || isComplete}
               onClick={declareFullLoad}
-              className="inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 text-sm font-black text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className={`packing-primary-action-button inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black text-white shadow-sm transition disabled:cursor-not-allowed disabled:shadow-none ${isComplete ? 'bg-emerald-700 disabled:bg-emerald-600' : 'bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300'}`}
             >
               {isComplete ? <CheckCircle2 size={18} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}
               {isComplete ? 'Run terminé' : 'Déclarer une charge'}
@@ -236,7 +236,7 @@ export function PackingRunExecution({
           ) : null}
         </div>
 
-        <form onSubmit={submitPartialDeclaration} className="mt-5 rounded-2xl border border-slate-200 p-4 sm:p-5">
+        <form onSubmit={submitPartialDeclaration} className="packing-partial-form mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
@@ -245,7 +245,7 @@ export function PackingRunExecution({
               <p className="mt-1 text-sm font-semibold text-slate-600">Cartons complets + unités dans le carton partiel final.</p>
             </div>
             {editingDeclarationId ? (
-              <button type="button" onClick={cancelCorrection} className="min-h-9 rounded-xl px-3 text-xs font-bold text-slate-500 hover:bg-slate-100">
+              <button type="button" onClick={cancelCorrection} className="min-h-9 rounded-xl px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-100">
                 Annuler
               </button>
             ) : null}
@@ -260,7 +260,7 @@ export function PackingRunExecution({
                 pattern="[0-9]*"
                 value={draft.completeCartons}
                 onChange={(event) => setDraft((current) => ({ ...current, completeCartons: event.target.value.replace(/\D/g, '') }))}
-                className="min-h-12 w-full rounded-xl border border-slate-200 px-3 font-black tabular-nums outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+                className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-black tabular-nums outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
               />
             </label>
             <label className="block">
@@ -271,7 +271,7 @@ export function PackingRunExecution({
                 pattern="[0-9]*"
                 value={draft.partialCartonUnits}
                 onChange={(event) => setDraft((current) => ({ ...current, partialCartonUnits: event.target.value.replace(/\D/g, '') }))}
-                className="min-h-12 w-full rounded-xl border border-slate-200 px-3 font-black tabular-nums outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+                className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-black tabular-nums outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
               />
             </label>
           </div>
@@ -283,7 +283,7 @@ export function PackingRunExecution({
             <button
               type="submit"
               disabled={isComplete && !editingDeclarationId}
-              className="min-h-11 rounded-xl border border-slate-900 bg-slate-950 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="min-h-11 rounded-xl border border-slate-900 bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300"
             >
               {editingDeclarationId ? 'Enregistrer la correction' : 'Déclarer ce volume'}
             </button>
@@ -292,18 +292,18 @@ export function PackingRunExecution({
         </form>
 
         {errorMessage ? (
-          <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-900">
+          <div role="alert" className="packing-error-state mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-900">
             <TriangleAlert size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             {errorMessage}
           </div>
         ) : null}
         {feedback ? (
-          <p role="status" aria-live="polite" className="mt-4 text-sm font-bold text-emerald-800">
+          <p role="status" aria-live="polite" className="packing-feedback-state mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
             {feedback}
           </p>
         ) : null}
 
-        <div className="mt-6 border-t border-slate-200 pt-5">
+        <div className="packing-history mt-6 border-t border-slate-200 pt-5">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-black text-slate-950">Historique du run</h3>
             <span className="text-xs font-bold text-slate-500">{run.declarations.length} déclaration{run.declarations.length > 1 ? 's' : ''}</span>
@@ -316,7 +316,7 @@ export function PackingRunExecution({
               {run.declarations.map((declaration, index) => {
                 const units = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
                 return (
-                  <li key={declaration.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-3">
+                  <li key={declaration.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
                     <div>
                       <p className="text-sm font-black tabular-nums text-slate-950">#{index + 1} · {formatNumber(units)} unités</p>
                       <p className="mt-0.5 text-xs font-semibold text-slate-500">
@@ -328,7 +328,7 @@ export function PackingRunExecution({
                         type="button"
                         aria-label={`Corriger la déclaration ${index + 1}`}
                         onClick={() => beginCorrection(declaration.id)}
-                        className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950"
+                        className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
                       >
                         <Pencil size={16} aria-hidden="true" />
                       </button>
@@ -336,7 +336,7 @@ export function PackingRunExecution({
                         type="button"
                         aria-label={`Supprimer la déclaration ${index + 1}`}
                         onClick={() => removeDeclaration(declaration.id)}
-                        className="grid h-10 w-10 place-items-center rounded-xl text-rose-600 hover:bg-rose-50"
+                        className="grid h-10 w-10 place-items-center rounded-xl text-rose-600 transition hover:bg-rose-50"
                       >
                         <Trash2 size={16} aria-hidden="true" />
                       </button>
