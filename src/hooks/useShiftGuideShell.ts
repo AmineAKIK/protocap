@@ -9,13 +9,30 @@ const KEYBOARD_THRESHOLD_PX = 120;
 const MIN_CELINE_VIEWPORT_PX = 240;
 const SHIFTGUIDE_CONTENT_SELECTOR = '[data-shiftguide-shell] [data-shell-content]';
 
+export interface CelineViewportGeometry {
+  height: number;
+  offsetTop: number;
+}
+
+export function computeCelineViewportGeometry(
+  layoutHeight: number,
+  visibleHeight: number,
+  visibleOffsetTop = 0
+): CelineViewportGeometry {
+  const keyboardOpen = visibleHeight < layoutHeight - KEYBOARD_THRESHOLD_PX;
+  const mobileNavReserve = keyboardOpen ? 0 : SHIFTGUIDE_MOBILE_NAV_RESERVE_PX;
+
+  return {
+    height: Math.max(MIN_CELINE_VIEWPORT_PX, Math.floor(visibleHeight - mobileNavReserve)),
+    offsetTop: Math.max(0, Math.floor(visibleOffsetTop)),
+  };
+}
+
 export function computeCelineViewportHeight(
   layoutHeight: number,
   visibleHeight: number
 ): number {
-  const keyboardOpen = visibleHeight < layoutHeight - KEYBOARD_THRESHOLD_PX;
-  const mobileNavReserve = keyboardOpen ? 0 : SHIFTGUIDE_MOBILE_NAV_RESERVE_PX;
-  return Math.max(MIN_CELINE_VIEWPORT_PX, Math.floor(visibleHeight - mobileNavReserve));
+  return computeCelineViewportGeometry(layoutHeight, visibleHeight).height;
 }
 
 function resetShiftGuideScroll() {
@@ -104,8 +121,8 @@ function useCelineDocumentLock(isCelineRoute: boolean) {
   }, [isCelineRoute]);
 }
 
-function useCelineViewportHeight(isCelineRoute: boolean) {
-  const [height, setHeight] = useState<number | null>(null);
+function useCelineViewportGeometry(isCelineRoute: boolean) {
+  const [geometry, setGeometry] = useState<CelineViewportGeometry | null>(null);
 
   useEffect(() => {
     if (!isCelineRoute) return;
@@ -113,33 +130,34 @@ function useCelineViewportHeight(isCelineRoute: boolean) {
     const media = window.matchMedia(SHIFTGUIDE_MOBILE_MEDIA_QUERY);
     const viewport = window.visualViewport;
 
-    const updateViewportHeight = () => {
+    const updateViewportGeometry = () => {
       if (!media.matches) {
-        setHeight(null);
+        setGeometry(null);
         return;
       }
 
       const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
       const visibleHeight = viewport?.height ?? layoutHeight;
-      setHeight(computeCelineViewportHeight(layoutHeight, visibleHeight));
+      const visibleOffsetTop = viewport?.offsetTop ?? 0;
+      setGeometry(computeCelineViewportGeometry(layoutHeight, visibleHeight, visibleOffsetTop));
     };
 
-    const initialFrame = window.requestAnimationFrame(updateViewportHeight);
-    window.addEventListener('resize', updateViewportHeight);
-    viewport?.addEventListener('resize', updateViewportHeight);
-    viewport?.addEventListener('scroll', updateViewportHeight);
-    media.addEventListener('change', updateViewportHeight);
+    const initialFrame = window.requestAnimationFrame(updateViewportGeometry);
+    window.addEventListener('resize', updateViewportGeometry);
+    viewport?.addEventListener('resize', updateViewportGeometry);
+    viewport?.addEventListener('scroll', updateViewportGeometry);
+    media.addEventListener('change', updateViewportGeometry);
 
     return () => {
       window.cancelAnimationFrame(initialFrame);
-      window.removeEventListener('resize', updateViewportHeight);
-      viewport?.removeEventListener('resize', updateViewportHeight);
-      viewport?.removeEventListener('scroll', updateViewportHeight);
-      media.removeEventListener('change', updateViewportHeight);
+      window.removeEventListener('resize', updateViewportGeometry);
+      viewport?.removeEventListener('resize', updateViewportGeometry);
+      viewport?.removeEventListener('scroll', updateViewportGeometry);
+      media.removeEventListener('change', updateViewportGeometry);
     };
   }, [isCelineRoute]);
 
-  return isCelineRoute ? height : null;
+  return isCelineRoute ? geometry : null;
 }
 
 export function useShiftGuideShell(pathname: string) {
@@ -149,11 +167,11 @@ export function useShiftGuideShell(pathname: string) {
   useManualScrollRestoration();
   useShiftGuideRouteReset(pathname, isCelineRoute);
   useCelineDocumentLock(isCelineRoute);
-  const celineViewportHeight = useCelineViewportHeight(isCelineRoute);
+  const celineViewportGeometry = useCelineViewportGeometry(isCelineRoute);
 
   return {
     isCelineRoute,
     isMobileViewport,
-    celineViewportHeight,
+    celineViewportGeometry,
   };
 }
