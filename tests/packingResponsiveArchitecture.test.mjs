@@ -26,6 +26,7 @@ test('Packing responsive and polish rules are isolated from the global styleshee
 
 test('Packing density targets semantic hooks instead of DOM position discovery', async () => {
   const css = stripCssComments(await read('src/packing-responsive.css'));
+  const polishCss = stripCssComments(await read('src/packing-polish.css'));
   const page = await read('src/pages/PackingCalculatorPage.tsx');
   const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
   const cockpit = await read('src/features/packing/components/PackingCockpitSummary.tsx');
@@ -34,10 +35,14 @@ test('Packing density targets semantic hooks instead of DOM position discovery',
 
   assert.doesNotMatch(css, /:has\(/);
   assert.doesNotMatch(css, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
+  assert.doesNotMatch(polishCss, /:has\(/);
+  assert.doesNotMatch(polishCss, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
   assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
   assert.match(css, /section\[aria-label='Plan actif et déclarations de production'\]/);
   assert.match(css, /section\[aria-labelledby='packing-run-execution-title'\]/);
   assert.match(css, /\.packing-plan(?:-metric)?/);
+  assert.match(polishCss, /\.packing-progress-label/);
+  assert.match(polishCss, /\.packing-progress-track/);
   assert.match(page, /PackingPlanningRail/);
   assert.match(page, /PackingCockpitSummary/);
   assert.match(page, /PackingRunExecution/);
@@ -45,6 +50,8 @@ test('Packing density targets semantic hooks instead of DOM position discovery',
   assert.match(candidate, /packing-plan-metrics/);
   assert.match(cockpit, /packing-cockpit-primary/);
   assert.match(cockpit, /packing-cockpit-secondary/);
+  assert.match(cockpit, /packing-progress-label/);
+  assert.match(cockpit, /packing-progress-track/);
   assert.match(cockpit, /packing-progress-fill/);
   assert.match(execution, /packing-primary-action/);
   assert.match(execution, /packing-run-execution-title/);
