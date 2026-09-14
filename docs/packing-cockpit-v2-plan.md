@@ -2,40 +2,47 @@
 
 ## Purpose
 
-This document defines the implementation plan for turning `PackingCalculatorPage` from a calculation-first workshop tool into a production cockpit that remains operational for the line operator while exposing manager-readable KPIs at a glance.
+Packing Calculator must evolve from a calculation-first workshop tool into a production cockpit that remains fast for the line operator while exposing manager-readable KPIs at a glance.
 
-The plan is intentionally architecture-first. It preserves the arithmetic that is already reliable, replaces the execution model that no longer matches the real workflow, introduces manual cadence-based production estimates without pretending to have machine telemetry, and establishes a viewport-fit cockpit contract for working screens.
-
-This is not a visual reskin. The target changes the product model from:
+This is not a visual reskin. The target product model changes from:
 
 > calculate a packing strategy and increment a sequential shipment counter
 
 into:
 
-> create a production run, execute it through quantitative declarations, and continuously derive trustworthy operational KPIs from the declared state
+> create a production run, execute it through quantitative declarations, and derive trustworthy operational KPIs from declared state
+
+The implementation stays deliberately honest: V2 has no machine telemetry, no live cadence, no OEE/TRS, and no wall-clock countdown. Cadence is a manually entered **reference cadence**.
 
 ## Product principles
 
 ### One business truth, two reading levels
 
-The operator and manager must not receive separate dashboards. They consume the same underlying state through different visual priorities:
+The operator and manager consume the same underlying state through different visual priorities.
 
-- manager scan: planned, declared, progress, remaining, variance, reference cadence, estimated production time;
-- operator action: reference inputs, strategy, next declaration, complete/partial load entry, correction and reset/start-over controls.
+Manager scan:
 
-The manager layer must never invent performance data that the prototype does not possess. Terms such as `current cadence`, `actual efficiency`, `OEE`, `live ETA`, or other telemetry-derived claims are out of scope until there is a real machine data source.
+- planned units;
+- declared units;
+- progress;
+- remaining units;
+- plan variance;
+- reference cadence;
+- estimated production time.
 
-### Operator truth before visual spectacle
+Operator action:
 
-The cockpit is allowed to be visually strong, but visual impact comes from hierarchy, large business numbers, contrast, and immediate state comprehension. It must not come from decorative gauges, fake live animations, excessive gradients, or metric proliferation.
+- reference inputs;
+- strategy choice;
+- complete/partial declaration;
+- correction;
+- explicit new-run/reset actions.
 
-### Manual data must stay explicit
-
-Cadence is a manually entered **reference cadence in units/minute**. Time values are estimates derived from that reference cadence and the declared production state. They do not count down with wall-clock time.
+No KPI may claim to be live, actual, measured, or machine-derived unless such a source genuinely exists.
 
 ### Units are the canonical execution quantity
 
-All execution arithmetic is normalized to units.
+All execution arithmetic normalizes to units.
 
 For a declaration:
 
@@ -43,39 +50,45 @@ For a declaration:
 declaredUnits = completeCartons * unitsPerCarton + partialCartonUnits
 ```
 
-`partialCartonUnits` represents units contained in the final incomplete carton, not loose/unpacked units.
+`partialCartonUnits` means units contained in the final incomplete carton. They are not loose/unpacked units.
 
 ### A declaration is an event, not a counter increment
 
-Every operator declaration must become a first-class record. Progress is derived from declaration history, not stored as an opaque sequential load count.
+Every operator declaration is a first-class immutable record. Progress is derived from active declaration records, not persisted as a generic count of completed loads.
+
+### Derived values are not persisted
+
+Values that can be reconstructed from run inputs and declarations — totals, progress ratio, remaining quantity, duration estimates — remain derived state. Persistence stores source facts only.
 
 ## Business invariants
 
 These invariants are mandatory and must be locked by unit tests before the new cockpit UI becomes authoritative.
 
-1. `requestedUnits` remains a positive safe integer.
-2. `unitsPerCarton` remains a positive safe integer.
-3. `cartonsPerLoad` remains a positive safe integer. The UI may continue to use pallet terminology where appropriate, but the execution domain must not require every physical load to be a pallet.
-4. Strategy calculations preserve the existing `exact`, `round-carton`, and `round-pallet` arithmetic unless a separate business decision changes those policies.
-5. `plannedUnits` equals the `totalPrepared` of the selected strategy.
-6. Production estimates are calculated against `plannedUnits`, not requested units.
-7. `referenceCadenceUnitsPerMinute` is a positive safe integer.
-8. `estimatedTotalMinutes = plannedUnits / referenceCadenceUnitsPerMinute`.
-9. `declaredUnits` is the sum of active declaration records.
-10. `remainingUnits = max(0, plannedUnits - declaredUnits)`.
-11. `estimatedRemainingMinutes = remainingUnits / referenceCadenceUnitsPerMinute`.
-12. A declaration can be complete or partial.
-13. A partial declaration can contain complete cartons, units in one final partial carton, or both.
-14. `partialCartonUnits` must normalize into the range `[0, unitsPerCarton - 1]`. Input greater than or equal to `unitsPerCarton` must be normalized into additional complete cartons instead of creating an invalid state.
-15. A declaration may not make the cumulative declared production exceed the active run plan unless the product explicitly introduces an over-declaration workflow in a later change.
-16. Correction must target a declaration record, not decrement a generic counter.
-17. Removing/correcting a declaration must deterministically recompute declared units, progress, remaining units, and time estimate.
+1. `requestedUnits`, `unitsPerCarton`, `cartonsPerLoad`, `plannedUnits`, and `referenceCadenceUnitsPerMinute` are positive safe integers.
+2. Strategy calculations preserve the existing `exact`, `round-carton`, and `round-pallet` arithmetic unless a later business decision explicitly changes them.
+3. `plannedUnits` equals the selected strategy `totalPrepared`.
+4. Production estimates use `plannedUnits`, never requested units.
+5. A declaration input contains non-negative safe integers for `completeCartons` and `partialCartonUnits`.
+6. A declaration must represent a strictly positive quantity after normalization. `0 cartons + 0 units` is rejected.
+7. `partialCartonUnits >= unitsPerCarton` is normalized into additional complete cartons plus a remainder in `[0, unitsPerCarton - 1]`.
+8. Normalization must remain in the safe-integer domain. Unsafe multiplication/addition is rejected.
+9. Declaration records persist only normalized source quantities (`completeCartons`, `partialCartonUnits`) plus identity/timestamp. `totalUnits` is derived and is **not** a persisted second source of truth.
+10. `declaredUnits` is the sum of all active declaration quantities derived against the immutable run `unitsPerCarton`.
+11. `remainingUnits = plannedUnits - declaredUnits` and must never be negative.
+12. A new declaration that would make cumulative `declaredUnits > plannedUnits` is rejected with an explicit domain validation error. It is never silently capped, split, or accepted.
+13. Correction/removal targets a declaration identity, not a generic counter.
+14. Removing/correcting a declaration deterministically recomputes declared units, progress, remaining units, and duration estimates.
+15. `progressRatio = declaredUnits / plannedUnits` and remains in `[0, 1]`.
+16. Raw duration arithmetic retains full numeric precision in **minutes as a finite number**: `plannedUnits / referenceCadenceUnitsPerMinute` and `remainingUnits / referenceCadenceUnitsPerMinute`.
+17. Display duration uses a single explicit policy: **round to the nearest whole minute, half-up**, implemented as `Math.round(minutes)` for non-negative durations, then format as hours/minutes. Business arithmetic never mutates source quantities to satisfy display rounding.
 18. No wall-clock countdown is allowed in V2.
-19. No KPI may be labelled as measured/live/actual unless it is derived from recorded operator declarations or a real external source.
+19. No KPI may be labelled measured/live/actual unless derived from recorded operator declarations or a real external source.
 
 ## Target domain model
 
-The existing `packing.ts` arithmetic remains the calculation foundation. The execution layer should be replaced with a run-oriented model similar to the following conceptual shape:
+The existing `src/utils/packing.ts` remains the calculation foundation. The new execution domain is run-oriented.
+
+Conceptual shape:
 
 ```ts
 interface PackingRun {
@@ -96,15 +109,8 @@ interface PackingDeclaration {
   createdAt: string;
   completeCartons: number;
   partialCartonUnits: number;
-  totalUnits: number;
 }
-```
 
-Names can change during implementation, but the responsibilities must not collapse back into a single numeric progress counter.
-
-Derived state must remain pure and reproducible:
-
-```ts
 interface PackingRunProgress {
   declaredUnits: number;
   remainingUnits: number;
@@ -115,149 +121,154 @@ interface PackingRunProgress {
 }
 ```
 
-No derived KPI should be persisted if it can be reconstructed from the run.
+Names can evolve during implementation, but these responsibilities must not collapse back into one numeric progress counter.
 
 ## Storage and migration strategy
 
-The existing persisted progress key is parameter-derived and therefore unsuitable as run identity. V2 must introduce a new persisted schema and storage key.
+The current parameter-derived progress key is unsuitable as a production-run identity. V2 introduces a packing-specific persisted schema without changing the shared version of unrelated public storage.
 
-Recommended approach:
+### Versioning rule
 
-- keep the existing form input persistence for convenience;
-- introduce a dedicated active-run key, e.g. `lineops.packing.active-run`;
-- register the new schema in `publicStorageValidation.ts`;
-- bump the public storage data version if the shared versioning strategy requires it;
-- do not migrate old sequential progress into the new run automatically because the old state cannot prove the exact quantities of every prior declaration;
-- preserve old data only as legacy storage that the new runtime ignores;
-- on first V2 use, require creation/activation of a new run from the current calculation.
+`useLocalStorage` currently appends one shared `DATA_VERSION` to every public key. **Packing V2 must not bump that shared version**, because that would orphan unrelated Expiry, Logistics, and other persisted data.
 
-This is deliberately conservative: fabricating declaration history from an old integer counter would create false operational truth.
+PR2 must therefore use packing-specific schema/versioning, for example a new logical key such as:
+
+```text
+lineops.packing.runs.v1
+```
+
+or a dedicated packing storage adapter that owns its own version marker. The final choice must isolate Packing migrations from unrelated features.
+
+### Run history
+
+Persistence must support more than one run. A single `active-run` slot is insufficient because identical production parameters must still produce independent durable histories.
+
+The persisted packing state must therefore contain:
+
+- `activeRunId: string | null`;
+- a bounded collection of run records keyed by unique run ID;
+- explicit status/archival semantics sufficient to reopen the active run and retain recently completed runs.
+
+PR2 must define a retention policy rather than allowing unbounded localStorage growth. Baseline: retain the active run plus a bounded recent history; exact bound is selected and tested in PR2.
+
+### Legacy state
+
+Old sequential progress is **not** converted into fake declaration history. The new runtime ignores it. On first V2 use, the operator starts a new run from the current calculation.
+
+### Persistence truthfulness
+
+The current UI phrase `Enregistré sur cet appareil` cannot survive unchanged while storage writes can fail silently.
+
+PR2 must provide one of these truthful behaviors:
+
+- an observable persisted/degraded storage state; or
+- removal of any positive persistence claim.
+
+A failed write must never leave a UI assertion that durable storage succeeded.
 
 ## State ownership
 
-The target page must separate:
+The target page separates:
 
 1. editable calculation draft;
 2. selected strategy / plan candidate;
-3. active production run;
+3. immutable production-defining snapshot of the active run;
 4. declaration draft UI;
-5. derived cockpit KPIs.
+5. declaration history;
+6. derived cockpit KPIs.
 
-Once a run is active, its production-defining parameters must not silently mutate when the reference form changes. The product must use an explicit transition such as `Recalculer / remplacer le plan` or `Nouveau run` rather than transparently rebinding the active run to edited inputs.
-
-This removes a major ambiguity in the current implementation where changing quantity after selecting a policy silently changes the active plan.
+Once a run is active, production-defining parameters do not silently mutate when draft inputs change. Replacing the plan requires an explicit transition such as `Nouveau run` / `Remplacer le plan`.
 
 ## UX architecture
 
 ### Working-screen contract
 
-The cockpit target is a one-viewport operational surface on working landscape screens.
+The completed cockpit is a one-viewport operational surface on working landscape screens.
 
-Mandatory no-document-scroll viewports for the completed cockpit:
+Mandatory no-document-scroll viewports:
 
-- 1024×768 — tablet landscape, dense regime;
-- 1180×820 — small laptop;
-- 1280×720 — compact/short laptop;
-- 1366×768 — primary industrial reference viewport;
-- 1440×900 — desktop;
-- 1920×1080 — large desktop validation.
+- 1024×768;
+- 1180×820;
+- 1280×720;
+- 1366×768 — primary industrial reference;
+- 1440×900;
+- 1920×1080.
 
-Mobile remains scrollable and vertically composed. Tablet portrait may remain scrollable if fitting would require substandard touch targets or unreadable typography.
+Mobile remains vertically composed and scrollable. Tablet portrait may remain scrollable if fitting would require unreadable typography or undersized touch targets.
 
-The no-scroll contract means critical cockpit content and the primary declaration action must fit inside the shell-adjusted viewport **without `scrollIntoViewIfNeeded()`**.
+The no-scroll contract means critical cockpit content and the primary declaration action fit inside the shell-adjusted viewport **without** `scrollIntoViewIfNeeded()`.
 
-No implementation may satisfy this with route-level clipping (`overflow: hidden`) that hides inaccessible content.
-
-### Height-aware composition
-
-The current responsive system is mostly width-driven. V2 must explicitly account for short-height working screens.
-
-The implementation should define at least:
-
-- compact-height landscape cockpit;
-- standard landscape cockpit;
-- large landscape cockpit;
-- stacked/mobile composition.
-
-Exact media/container-query mechanics are an implementation detail, but layout changes must be driven by comfort and available space, not by width alone.
+No implementation may satisfy this by clipping inaccessible content with route-level `overflow: hidden`.
 
 ### Information architecture
 
-The cockpit should expose four conceptual areas, even if exact placement changes during implementation:
+The cockpit has four conceptual areas.
 
-#### A. KPI scan layer
+#### KPI scan layer
 
-Manager-readable, immediately visible:
+Manager-readable without interaction:
 
-- planned units;
-- declared units;
+- planned;
+- declared;
 - progress percentage;
-- remaining units;
+- remaining;
 - estimated remaining production time;
 - reference cadence;
-- plan variance versus requested quantity.
+- requested-versus-planned variance.
 
-This layer must be readable at a distance. KPI labels must remain semantically honest (`reference cadence`, `estimated`, `declared`).
+#### Plan/reference controls
 
-#### B. Plan/reference controls
-
-Operator-editable before run activation:
+Operator-editable before activation:
 
 - requested quantity;
 - units/carton;
-- cartons/load or pallet, according to the final terminology decision;
+- cartons/load (UI terminology may still say palette where physically appropriate);
 - reference cadence;
-- strategy choice.
+- strategy.
 
-These controls become secondary once the run is active. The cockpit must not spend permanent vertical space on explanatory copy that is only useful during initial configuration.
+#### Production state
 
-#### C. Production state
+Visual centre of gravity:
 
-Central operational state:
-
-- planned / declared / remaining quantities;
+- planned / declared / remaining;
 - progress visualization;
-- estimated total and remaining time;
+- estimated total and remaining duration;
 - selected strategy;
-- requested-versus-planned variance.
+- variance.
 
-This is the visual centre of gravity of the page.
+#### Declaration action
 
-#### D. Declaration action
+Fastest operator path:
 
-The operator's fastest path:
-
-- one-click complete-load declaration using the expected full-load quantity;
-- explicit partial-load path;
-- partial declaration form with complete cartons + final partial carton units;
-- immediate computed unit total before confirmation;
-- correction of the most recent declaration, with a path to inspect/correct history if needed;
+- one-click complete-load declaration using expected full-load quantity;
+- explicit partial declaration path;
+- complete cartons + units in final partial carton;
+- immediate computed-unit preview;
+- correction/removal by declaration identity;
 - no ambiguous `next load` wording.
 
-The current primary action text `Déclarer la prochaine charge expédiée` must be replaced by wording that does not assume a predetermined complete next load. `Déclarer une charge` is the baseline.
+`Déclarer la prochaine charge expédiée` becomes `Déclarer une charge` or an equally non-presumptive label.
 
 ## Visual direction
 
-The target should read as an industrial operations cockpit, not a generic SaaS dashboard.
-
-Guidelines:
+The target is an industrial operations cockpit, not a generic SaaS dashboard.
 
 - large tabular business numbers;
 - high contrast between state and controls;
 - teal for nominal/action state;
 - amber for planned variance/attention;
 - red only for genuine error/invalid state;
-- dark surfaces reserved for high-priority operational summaries, not every card;
+- dark surfaces reserved for high-priority operational summaries;
 - minimal explanatory prose during active execution;
-- no fake gauges where a number + progress bar communicates more precisely;
+- no decorative fake gauges;
 - no tiny typography used merely to force viewport fit;
-- visual transitions may animate state changes briefly, but must respect `prefers-reduced-motion` and must not simulate real-time telemetry.
+- short state transitions may animate, but must respect `prefers-reduced-motion` and must not simulate telemetry.
 
 ## Architecture decomposition
 
-The existing `PackingCalculatorPage.tsx` should stop owning all domain orchestration and view code.
+`PackingCalculatorPage.tsx` must stop owning domain orchestration, storage coordination, and all view components in one file.
 
-A likely end state is:
+Likely target structure:
 
 ```text
 src/features/packing/
@@ -265,7 +276,7 @@ src/features/packing/
     packingRun.ts
     packingRun.test.ts
   persistence/
-    packingRunStorage.ts (only if needed beyond shared validation)
+    packingRunStorage.ts
   components/
     PackingCockpit.tsx
     PackingKpiStrip.tsx
@@ -273,341 +284,257 @@ src/features/packing/
     PackingStrategySelector.tsx
     PackingProductionState.tsx
     PackingDeclarationPanel.tsx
-    PackingDeclarationHistory.tsx (if history is exposed in V2)
+    PackingDeclarationHistory.tsx
 ```
 
-The exact file tree is not mandatory. The architectural requirement is that pure business logic, run orchestration, and visual components are separately testable.
+Exact file names are flexible. Pure domain logic, persistence, orchestration, and visual components must remain separately testable.
 
-`packing.ts` remains the calculation engine unless a future business rule explicitly changes it.
-
-The old `packingShipment.ts` may be retired, reduced to planning helpers, or replaced. It must not remain the authoritative execution model if declarations become quantity-based.
-
-## PR sequence
-
-The implementation should be delivered as a sequence of focused pull requests. Do not combine the complete rewrite into a single PR.
+## Delivery sequence
 
 ### PR1 — Run domain foundation
 
-**Goal:** establish the new operational truth without changing the production UI.
+**Goal:** establish operational truth without changing production UI.
 
 Scope:
 
-- introduce `PackingRun` / declaration domain;
-- implement declaration normalization;
-- implement progress derivation;
-- implement cadence/time-estimate derivation;
-- keep all arithmetic in safe integer domain where applicable;
-- define duration formatting separately from arithmetic;
-- add exhaustive unit tests including partial declarations and correction/removal;
-- document terminology (`partial carton units`, `reference cadence`, `declared units`).
+- introduce run/declaration domain types and pure functions;
+- normalize partial-carton declarations;
+- derive declaration totals, run progress, and cadence estimates;
+- reject zero, negative/invalid, unsafe, and over-plan declarations deterministically;
+- keep raw duration precision separate from display rounding;
+- provide duration formatting with nearest-minute half-up policy;
+- add exhaustive unit tests;
+- document terminology in code.
 
 Acceptance:
 
-- complete and partial declarations derive exact totals;
 - `10 cartons + 120 units` with `480 units/carton` = `4,920 units`;
-- `600 partial units` normalize to `+1 carton + 120 units` for a 480-unit carton;
-- progress cannot exceed planned units;
-- time estimate uses selected plan quantity;
-- no wall-clock dependency;
-- existing `packing.ts` tests remain green.
+- `600 partial units` with `480 units/carton` normalizes to `1 carton + 120 units`;
+- zero declaration rejected;
+- unsafe arithmetic rejected;
+- declaration above remaining quantity rejected, never capped;
+- removing a declaration restores exact prior progress;
+- `400,320 / 60 = 6,672 min = 111 h 12 min`;
+- `232,320 / 60 = 3,872 min = 64 h 32 min`;
+- fractional raw minutes retain precision while display formatting applies the defined rounding rule;
+- existing packing arithmetic remains green.
 
-No page redesign in this PR.
+**No UI or persistence changes.**
 
 ### PR2 — Run persistence and migration boundary
 
-**Goal:** give every production run its own durable identity.
+**Goal:** give every run an independent durable identity without disturbing unrelated browser data.
 
 Scope:
 
-- create new active-run persistence schema;
-- add runtime storage validation;
-- add unique run ID and timestamps;
-- ensure identical production parameters can create independent runs;
-- define explicit reset/new-run behavior;
-- leave legacy sequential progress ignored rather than falsely migrated;
-- add invalid-storage recovery tests.
+- packing-specific versioned storage schema;
+- unique run IDs and timestamps;
+- active-run pointer plus bounded recent run history;
+- runtime validation that recomputes all derived totals rather than trusting persisted duplicates;
+- independent runs for identical parameters;
+- legacy sequential state ignored, not fabricated into declarations;
+- explicit storage degraded state or removal of persistence-success copy;
+- corruption and write-failure tests.
 
 Acceptance:
 
-- two runs with identical quantities cannot share progress;
-- corrupt persisted run state fails closed to a safe state;
-- localStorage write failure does not crash;
-- UI/storage status does not claim successful persistence when it cannot be established (if persistence status is surfaced).
-
-No major visual redesign in this PR.
+- two identical plans can coexist as different durable runs;
+- completed/replaced run history remains reloadable within retention policy;
+- no global `DATA_VERSION` bump;
+- corrupt state fails closed;
+- write failure does not crash and never claims successful persistence.
 
 ### PR3 — Operator declaration workflow
 
-**Goal:** replace sequential load increment/decrement semantics with real declarations.
+**Goal:** replace sequential increment/decrement with real declarations.
 
 Scope:
 
 - wire active run into page orchestration;
-- replace `Déclarer la prochaine charge expédiée` with `Déclarer une charge`;
-- implement fast complete-load declaration;
-- implement partial declaration input;
-- preview exact units before confirmation;
-- support correction/removal of last declaration;
-- derive progress from declaration records;
-- update accessible names/live regions;
-- remove misleading `looseUnits` terminology from operator-facing UI and new domain.
+- `Déclarer une charge` primary action;
+- one-click full-load declaration;
+- partial declaration form;
+- exact unit preview;
+- correction/removal by declaration identity;
+- progress derived from history;
+- accessible live feedback;
+- remove misleading `looseUnits` wording from the new execution path.
 
 Acceptance:
 
-- complete declaration is no slower than current one-click flow;
-- partial declaration supports cartons, partial-carton units, or both;
-- declaration immediately updates declared/remaining units;
-- correction restores the exact previous derived state;
-- no implicit `next load` assumption remains in execution state.
-
-This PR may retain mostly existing visual composition to reduce risk while changing behavior.
+- complete path is no slower than current one-click flow;
+- partial path accepts cartons, partial-carton units, or both;
+- over-plan declaration is visibly rejected;
+- correction restores exact previous derived state;
+- no implicit predetermined `next load` execution assumption remains.
 
 ### PR4 — Cadence and production estimates
 
-**Goal:** add truthful manual production-time planning.
+**Goal:** expose truthful manual production-time planning.
 
 Scope:
 
-- add reference cadence input in units/minute;
-- derive total estimated duration from `plannedUnits`;
-- derive remaining estimated duration from `remainingUnits`;
-- integrate duration formatter suitable for long runs (`111 h 12`, etc.);
-- persist cadence as part of the run snapshot;
-- recalculate estimates after declarations/corrections;
-- make all labels explicitly estimated/reference-based.
+- reference cadence input in units/minute;
+- total and remaining estimates from run state;
+- defined duration formatter;
+- cadence captured in immutable run snapshot;
+- recalculation after declarations/corrections;
+- explicit `référence` / `estimé` labels.
 
 Acceptance:
 
-- 400,320 units at 60 units/min produces 6,672 min = 111 h 12 min;
-- after 168,000 units declared, 232,320 remain = 3,872 min = 64 h 32 min;
-- changing a draft cadence does not silently mutate an already active run unless the UX explicitly supports editing the run cadence;
-- nothing counts down with real time.
+- known examples above match exactly;
+- draft cadence edits never silently mutate an active run;
+- nothing counts down with wall time.
 
-### PR5 — Cockpit information architecture and component decomposition
+### PR5 — Cockpit information architecture and decomposition
 
-**Goal:** rebuild the page around the operator/manager dual-read contract.
+**Goal:** rebuild the screen around manager scan + operator action.
 
 Scope:
 
-- split monolithic page into cockpit components;
-- remove wizard-like `01 / 02 / 03` hierarchy from the active cockpit state;
-- introduce KPI scan layer;
-- make production state the visual centre;
-- demote configuration controls after run activation;
-- surface planned, declared, progress, remaining, cadence, estimate, variance;
-- preserve clear strategy selection and reference edit flows;
-- eliminate redundant explanatory copy during execution;
-- keep semantic regions/headings meaningful.
+- decompose monolithic page;
+- remove active-state wizard hierarchy `01 / 02 / 03`;
+- KPI scan layer;
+- production state as visual centre;
+- configuration demoted after activation;
+- one authoritative instance of each primary KPI;
+- truthful terminology and semantic regions.
 
 Acceptance:
 
-- manager can identify plan, progress, remaining, cadence, estimate and variance without interacting;
+- manager can identify plan, progress, remaining, cadence, estimate, and variance without interaction;
 - operator primary action is immediately identifiable;
-- there is one authoritative instance of every primary KPI;
-- no KPI claims live or measured telemetry that does not exist;
-- automated accessibility scan remains free of serious/critical violations.
+- accessibility remains free of serious/critical automated violations.
 
 ### PR6 — Cockpit responsive / viewport-fit contract
 
-**Goal:** make the working cockpit fit as a true single-screen surface.
+**Goal:** true single-screen working cockpit.
 
 Scope:
 
-- rewrite Packing responsive composition around height + width regimes;
-- replace generic route-wide typography overrides with semantic cockpit hooks/tokens;
-- expand useful working width beyond the current conservative 1480px treatment where appropriate;
-- enforce shell-aware available height;
-- retain mobile stacked/scrollable behavior;
-- keep AppShell as owner of persistent navigation geometry;
-- update responsive documentation.
+- height-aware + width-aware composition;
+- semantic responsive hooks/tokens instead of route-wide Tailwind utility overrides;
+- shell-aware available height;
+- wider use of large work screens;
+- mobile remains scrollable;
+- AppShell keeps ownership of persistent navigation geometry.
 
 Required browser assertions:
 
-- no document horizontal overflow;
-- no document vertical scroll for active cockpit at 1024×768, 1180×820, 1280×720, 1366×768, 1440×900, 1920×1080;
-- primary declaration action visible without scroll;
-- manager KPI strip visible without scroll;
-- all primary business numbers remain atomic/readable;
-- touch/click targets maintain minimum usable dimensions;
+- no horizontal document overflow;
+- no vertical document scroll for active cockpit at all mandatory working viewports;
+- KPI scan layer visible without scrolling;
+- primary declaration action visible without scrolling;
+- primary business numbers remain atomic/readable;
+- usable action target sizes preserved;
 - no clipping-based success.
 
-The existing `scrollIntoViewIfNeeded()` proof is insufficient for these working-screen profiles and must be replaced by direct viewport geometry assertions.
+### PR7 — Visual cockpit polish
 
-### PR7 — Visual cockpit polish and presentation validation
-
-**Goal:** achieve the deliberate high-impact industrial visual finish after behavior and geometry are stable.
+**Goal:** strengthen industrial command-centre perception without reducing operational clarity.
 
 Scope:
 
-- final hierarchy/spacing/contrast treatment;
-- KPI typography and distance readability;
-- brief state-change transitions with reduced-motion support;
-- final dark/light surface balance;
-- remove leftover calculator-era presentation debt;
-- validate screenshots across canonical work screens;
-- cross-browser Chromium/WebKit checks;
-- final copy/terminology pass.
+- final hierarchy, typography, spacing, contrast;
+- state transitions with reduced-motion support;
+- empty/complete/error states;
+- cross-browser visual validation;
+- validation at 1366×768 and 1920×1080.
 
-Acceptance:
+No new business logic belongs here.
 
-- no font-size reductions below the agreed operational readability floor just to fit;
-- state transitions remain understandable with animations disabled;
-- key KPI values are readable at the primary 1366×768 cockpit viewport;
-- no duplicate or decorative KPI pollution;
-- all previous domain/E2E gates remain green.
+### PR8 — Closure, debt removal, production proof
 
-### PR8 — Closure, debt removal and release proof
-
-**Goal:** remove old contracts once V2 is proven.
+**Goal:** remove superseded architecture and prove the shipped system.
 
 Scope:
 
-- retire obsolete sequential shipment storage/model code;
-- remove dead `form.policy` persistence if it remains unused;
-- update static architecture guards;
-- update packing responsive documentation to the cockpit contract;
-- add route-level release checklist;
-- production deploy verification on Railway;
-- verify `/api/ready` and latest commit hash;
-- perform real-device/operator sanity check after PWA refresh.
+- retire obsolete sequential shipment execution path once unused;
+- remove dead persisted form `policy` if superseded;
+- update responsive and operations docs;
+- static architecture guards for new boundaries;
+- complete CI matrix;
+- deploy exact main SHA to Railway and verify `/api/ready`.
 
-Acceptance:
-
-- no code path still reads the old progress counter;
-- no old UI copy (`prochaine charge`, `unités libres`) remains where semantically incorrect;
-- exact main SHA is deployed;
-- Railway healthcheck is green;
-- no open review threads;
-- required repository checks green on exact merge head.
-
-## Testing strategy
+## Test strategy
 
 ### Unit/domain
 
-Mandatory coverage:
+Must cover at minimum:
 
-- strategy arithmetic remains unchanged;
-- run creation snapshot;
-- complete declaration;
-- partial declaration cartons only;
-- partial declaration partial-carton units only;
-- cartons + partial carton units;
-- normalization over one carton;
-- declaration exceeding remaining units;
+- full declaration;
+- partial cartons only;
+- partial-carton units only;
+- cartons + partial units;
+- normalization across carton boundary;
+- zero declaration rejection;
+- unsafe numeric boundaries;
+- over-plan rejection;
 - declaration removal/correction;
-- identical-parameter run independence;
-- cadence duration estimates;
-- safe integer boundaries;
-- storage validator recovery.
+- progress at zero / intermediate / complete;
+- fractional raw duration precision;
+- display rounding boundaries (`x.49`, `x.50` minutes);
+- long-duration formatting.
 
-### Component/integration
+### Integration/component
 
-Mandatory flows:
+Must cover:
 
-- explicit strategy selection;
-- run activation;
-- reference fields cannot silently rewrite active run;
-- complete declaration fast path;
-- partial declaration path;
-- KPI recomputation;
+- explicit run activation;
+- immutable active plan versus editable draft;
+- full declaration fast path;
+- partial declaration preview/confirmation;
 - correction;
-- reset/new run confirmation if destructive;
-- keyboard strategy interaction must either implement real radiogroup keyboard semantics or use native radio semantics instead of partial ARIA emulation.
+- independent identical runs;
+- corrupted storage recovery;
+- storage degraded state.
 
-### E2E
+### Browser/E2E
 
-Canonical scenarios:
+Must cover:
 
-1. configure 400,000 / 480 / 50 / 60;
-2. select carton strategy => 400,320 planned;
-3. verify total estimate 111 h 12;
-4. declare several complete loads;
-5. declare a partial load (e.g. 10 cartons + 120 units);
-6. verify exact declared and remaining units;
-7. verify estimate recalculation;
-8. correct declaration and verify deterministic restoration;
-9. reload and verify active run persistence;
-10. start a second identical run and prove progress isolation.
+- full operator journey;
+- partial declaration journey;
+- correction;
+- reload persistence;
+- manager KPI correctness;
+- mandatory working-screen no-scroll geometry;
+- mobile scrollable composition;
+- Chromium + WebKit smoke;
+- accessibility.
 
-Responsive E2E must separately validate mobile behavior and working-screen zero-scroll behavior.
+## Explicit non-goals
 
-## Accessibility requirements
+V2 does not add:
 
-- use native form semantics wherever possible;
-- avoid role emulation when a native control can express the interaction;
-- all declaration inputs must have explicit accessible labels and error descriptions;
-- progress must expose the unit-based truth;
-- live announcements should announce confirmed declaration outcomes, not every keystroke;
-- destructive reset/new-run actions require explicit confirmation if they discard declaration history;
-- color is never the only carrier of variance/error state;
-- reduced-motion support is mandatory.
+- machine-cell integration;
+- automatically measured cadence;
+- wall-clock production countdown;
+- OEE/TRS/performance KPI without measured inputs;
+- backend synchronization;
+- multi-user concurrency;
+- ERP/MES integration;
+- invented operational telemetry.
 
-## Performance and reliability
-
-- no one-object-per-planned-load allocation for very large plans;
-- declaration history scales with actual operator events, not theoretical plan size;
-- derived KPIs use memoized/pure calculations as needed but must remain simple enough to recompute safely;
-- no network dependency is introduced for the cockpit prototype;
-- local persistence remains an enhancement, but the UI must be honest about its status;
-- no service-worker-specific state should be used for business persistence.
-
-## Explicit non-goals for V2
-
-The following are intentionally excluded unless separately approved:
-
-- direct machine/cell integration;
-- live measured cadence;
-- OEE/TRS calculation;
-- automatic downtime detection;
-- multi-user synchronization;
-- backend persistence;
-- operator authentication/audit identity;
-- production order integration with ERP/MES;
-- wall-clock ETA countdown;
-- predictive performance analytics.
-
-The architecture should not prevent these later, but V2 must not simulate them.
-
-## Critical decisions still to preserve during implementation
-
-The implementation must not casually change these without explicit product discussion:
-
-- whether UI terminology remains `palette` for the reference packaging field or becomes a generic `charge` label;
-- whether the existing `Carton` strategy remains the default recommendation rule or the recommendation label is removed/qualified;
-- whether reference cadence is editable on an active run, and if so whether the change should be recorded as run history;
-- how much declaration history is visible in the main cockpit versus a secondary panel.
-
-These are product decisions, not details to be silently inferred by implementation.
-
-## Merge discipline
-
-Every implementation PR must:
-
-- be based on current `main`;
-- contain one coherent architectural step;
-- include tests in the same PR as the behavior change;
-- keep exact domain semantics documented;
-- preserve current functionality unless that PR explicitly replaces it;
-- pass the repository Quality Gate and CodeQL on the exact head;
-- have all review threads resolved before squash merge;
-- not be merged while required checks are pending or red.
+Architecture should leave room for a future measured-data source without pretending that it exists today.
 
 ## Definition of done
 
-Packing Cockpit V2 is complete only when all of the following are true:
+Packing Cockpit V2 is complete only when:
 
-1. Production progress is declaration-based, not sequential-counter-based.
-2. Complete and partial loads are accurately representable.
-3. Units are the canonical progress truth.
-4. Identical production runs have independent identities and histories.
-5. Reference cadence in units/minute drives truthful static production estimates.
-6. KPI layer exposes planned, declared, progress, remaining, cadence, estimate and variance.
-7. Operator actions remain faster and more obvious than manager-only information.
-8. Working landscape screens fit the complete active cockpit without document scroll.
-9. Mobile remains usable through an intentional stacked composition.
-10. No fake telemetry or live-performance claims exist.
-11. Accessibility, responsive, unit, integration and E2E gates all pass.
-12. Obsolete shipment-counter code and storage contracts are removed.
-13. The exact final `main` commit is successfully deployed to Railway and `/api/ready` passes.
-
-Only after these conditions are met should the page be considered a production-cockpit redesign rather than an upgraded calculator.
+1. execution truth is declaration-based;
+2. units are the canonical progress quantity;
+3. partial loads match real carton + partial-carton workflow;
+4. active run parameters cannot change silently;
+5. identical plans can exist as independent persisted runs;
+6. recent run history has an explicit bounded retention policy;
+7. storage failures cannot masquerade as successful persistence;
+8. cadence/time estimates are manual, truthful, deterministic, and consistently rounded for display;
+9. manager KPIs and operator actions share one underlying state;
+10. mandatory landscape work screens require no document scroll;
+11. mobile remains usable rather than artificially compressed;
+12. serious/critical automated accessibility violations are absent;
+13. old sequential execution code is removed once no longer authoritative;
+14. exact merged SHA passes required GitHub gates;
+15. exact main SHA deploys successfully to Railway and `/api/ready` returns 200.
