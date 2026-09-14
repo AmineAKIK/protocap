@@ -1,4 +1,7 @@
-import type { PackingPolicy } from '../../../utils/packing';
+import {
+  calculatePackingOptions,
+  type PackingPolicy,
+} from '../../../utils/packing';
 
 export type PackingRunDomainErrorCode =
   | 'INVALID_RUN'
@@ -178,6 +181,34 @@ export function getPackingDeclarationUnits(
   return totalUnits;
 }
 
+function getExpectedSelectedPlan(run: PackingRun): { totalPrepared: number; variance: number } {
+  try {
+    const selectedOption = calculatePackingOptions({
+      quantity: run.requestedUnits,
+      unitsPerCarton: run.unitsPerCarton,
+      cartonsPerPalette: run.cartonsPerLoad,
+    }).find((option) => option.policy === run.selectedPolicy);
+
+    if (!selectedOption) {
+      throw new PackingRunDomainError(
+        'INVALID_RUN',
+        'selectedPolicy must resolve to a packing plan.',
+      );
+    }
+
+    return {
+      totalPrepared: selectedOption.totalPrepared,
+      variance: selectedOption.variance,
+    };
+  } catch (error) {
+    if (error instanceof PackingRunDomainError) throw error;
+    throw new PackingRunDomainError(
+      'INVALID_RUN',
+      'Run planning inputs must resolve to an exactly representable packing plan.',
+    );
+  }
+}
+
 export function validatePackingRun(run: PackingRun): void {
   assertIdentity(run.id, 'run.id');
   assertTimestamp(run.createdAt, 'run.createdAt');
@@ -192,11 +223,14 @@ export function validatePackingRun(run: PackingRun): void {
     throw new PackingRunDomainError('INVALID_RUN', 'varianceUnits must be a non-negative safe integer.');
   }
 
-  const expectedVariance = run.plannedUnits - run.requestedUnits;
-  if (!Number.isSafeInteger(expectedVariance) || expectedVariance < 0 || expectedVariance !== run.varianceUnits) {
+  const expectedPlan = getExpectedSelectedPlan(run);
+  if (
+    run.plannedUnits !== expectedPlan.totalPrepared ||
+    run.varianceUnits !== expectedPlan.variance
+  ) {
     throw new PackingRunDomainError(
       'INVALID_RUN',
-      'plannedUnits, requestedUnits and varianceUnits must describe one consistent plan.',
+      'plannedUnits and varianceUnits must match the selected packing strategy.',
     );
   }
 
@@ -205,6 +239,7 @@ export function validatePackingRun(run: PackingRun): void {
   }
 
   const seenIds = new Set<string>();
+  let declaredUnits = 0;
   for (const declaration of run.declarations) {
     assertIdentity(declaration.id, 'declaration.id');
     assertTimestamp(declaration.createdAt, 'declaration.createdAt');
@@ -212,7 +247,18 @@ export function validatePackingRun(run: PackingRun): void {
       throw new PackingRunDomainError('INVALID_DECLARATION', `Duplicate declaration id: ${declaration.id}`);
     }
     seenIds.add(declaration.id);
-    getPackingDeclarationUnits(declaration, run.unitsPerCarton);
+
+    declaredUnits = safeAdd(
+      declaredUnits,
+      getPackingDeclarationUnits(declaration, run.unitsPerCarton),
+      'Cumulative declared production',
+    );
+    if (declaredUnits > run.plannedUnits) {
+      throw new PackingRunDomainError(
+        'OVER_DECLARATION',
+        'Declared production cannot exceed the active run plan.',
+      );
+    }
   }
 }
 
@@ -226,13 +272,6 @@ export function getPackingRunProgress(run: PackingRun): PackingRunProgress {
       getPackingDeclarationUnits(declaration, run.unitsPerCarton),
       'Cumulative declared production',
     );
-
-    if (declaredUnits > run.plannedUnits) {
-      throw new PackingRunDomainError(
-        'OVER_DECLARATION',
-        'Declared production cannot exceed the active run plan.',
-      );
-    }
   }
 
   const remainingUnits = run.plannedUnits - declaredUnits;
@@ -319,15 +358,15 @@ export function removePackingDeclaration(run: PackingRun, declarationId: string)
 
 /**
  * Estimated durations keep fractional-minute precision in domain arithmetic.
- * Presentation rounds non-negative minutes to the nearest whole minute (half-up)
- * before rendering hours/minutes.
+ * Presentation rounds any positive fractional minute upward so the displayed
+ * estimate never understates the remaining production duration.
  */
 export function formatPackingDuration(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes < 0) {
     throw new PackingRunDomainError('INVALID_RUN', 'Duration must be a finite non-negative number of minutes.');
   }
 
-  const roundedMinutes = Math.round(minutes);
+  const roundedMinutes = Math.ceil(minutes);
   const hours = Math.floor(roundedMinutes / 60);
   const remainingMinutes = roundedMinutes % 60;
 
