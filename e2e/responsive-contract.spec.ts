@@ -22,6 +22,12 @@ const EDITORIAL_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.laptopSmall,
   RESPONSIVE_VIEWPORTS.laptopCompact,
 ] as const;
+const SHIFTGUIDE_VIEWPORTS = [
+  RESPONSIVE_VIEWPORTS.phoneMin,
+  RESPONSIVE_VIEWPORTS.phoneLandscape,
+  RESPONSIVE_VIEWPORTS.tabletLandscape,
+  RESPONSIVE_VIEWPORTS.laptopSmall,
+] as const;
 
 test.describe('responsive architecture contract', () => {
   test('public shell keeps the root document contained across the core viewport matrix', async ({ page }) => {
@@ -116,13 +122,11 @@ test.describe('responsive architecture contract', () => {
     }
   });
 
-  test('protected ShiftGuide primary action stays reachable on minimum phone and phone landscape', async ({ browser }) => {
-    for (const viewport of [RESPONSIVE_VIEWPORTS.phoneMin, RESPONSIVE_VIEWPORTS.phoneLandscape]) {
+  test('ShiftGuide surfaces stay contained across mobile, landscape and desktop-rail onset', async ({ browser, baseURL }) => {
+    for (const viewport of SHIFTGUIDE_VIEWPORTS) {
       await test.step(`${viewport.name}: ${viewport.intent}`, async () => {
-        // Protected-route scenarios must be isolated at browser-context level.
-        // This prevents cookies, local/session storage or other auth state from
-        // leaking between viewport cases and obscuring responsive regressions.
         const context = await browser.newContext({
+          baseURL,
           viewport: { width: viewport.width, height: viewport.height },
         });
         const page = await context.newPage();
@@ -137,6 +141,31 @@ test.describe('responsive architecture contract', () => {
           const primaryAction = page.getByRole('button', { name: 'Valider' });
           await expect(page.getByText('Valider le contrôle E2E')).toBeVisible();
           await expectPrimaryActionUsable(page, primaryAction);
+          await expectNoDocumentHorizontalOverflow(page);
+
+          await page.goto('/shiftguide/celine');
+          const celineInput = page.getByPlaceholder('Décris ta situation…');
+          await expect(celineInput).toBeVisible();
+          await expectLocatorInsideViewport(page, celineInput);
+          await expectLocatorInsideViewport(page, page.getByRole('button', { name: 'Envoyer' }));
+          await expectNoDocumentHorizontalOverflow(page);
+
+          await page.goto('/shiftguide/lexique');
+          const lexiconSearch = page.getByPlaceholder('Rechercher un sigle ou une définition…');
+          await expect(lexiconSearch).toBeVisible();
+          await expectLocatorInsideViewport(page, lexiconSearch);
+          await expectNoDocumentHorizontalOverflow(page);
+
+          await page.goto('/shiftguide/urgences');
+          await expect(page.getByRole('heading', { name: 'Urgences & Règles d’Or' })).toBeVisible();
+          await expectNoDocumentHorizontalOverflow(page);
+
+          await page.goto('/shiftguide/linepulse');
+          await expect(page.getByRole('heading', { name: /Voir ou agir maintenant/ })).toBeVisible();
+          await expectNoDocumentHorizontalOverflow(page);
+
+          await page.goto('/shiftguide/analyse-ligne');
+          await expect(page.getByRole('heading', { name: 'Du symptôme visible à la cause réelle.' })).toBeVisible();
           await expectNoDocumentHorizontalOverflow(page);
         } finally {
           await context.close();
