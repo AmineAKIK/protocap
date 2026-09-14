@@ -307,6 +307,7 @@ export function ExpiryCheckPage() {
 
       <div
         className="sticky top-[var(--app-header-height)] z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 px-3 py-2 backdrop-blur lg:hidden"
+        role="group"
         aria-label="Vue Expiry Check"
       >
         <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
