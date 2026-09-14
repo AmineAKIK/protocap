@@ -486,7 +486,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid h-[100dvh] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-slate-950 text-white"
+      className="fixed inset-0 z-50 grid h-[100dvh] min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden bg-slate-950 text-white"
       role="dialog"
       aria-modal="true"
       aria-label="Présentation du rapport opérationnel"
