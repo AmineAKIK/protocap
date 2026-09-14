@@ -238,7 +238,7 @@ export function PackingCalculatorPage() {
     return { exact, options, recommendation, selected };
   }, [input, selectedPolicy]);
 
-  const operational = useMemo(() => {
+  const operational = (() => {
     if (activeRun) {
       const activeInput: PackingInput = {
         quantity: activeRun.requestedUnits,
@@ -262,7 +262,7 @@ export function PackingCalculatorPage() {
       plan: createPackingShipmentPlan(input, calculation.selected),
       isActive: false,
     };
-  }, [activeRun, calculation?.selected, input, selectedPolicy]);
+  })();
 
   function updateField(field: keyof PackingFormState, value: string) {
     const nextValue = field === 'policy' ? value : value.replace(/\D/g, '');
