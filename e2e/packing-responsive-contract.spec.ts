@@ -11,7 +11,7 @@ const PACKING_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phoneLandscape,
   RESPONSIVE_VIEWPORTS.tabletLandscape,
   RESPONSIVE_VIEWPORTS.laptopCompact,
-  RESPONSIVE_VIEWPORTS.desktopStandard,
+  RESPONSIVE_VIEWPORTS.laptop,
 ] as const;
 
 async function configurePacking(page: Page) {
