@@ -1,6 +1,6 @@
 import { Bot, Boxes, Calculator, ClipboardCheck, FileText, FlaskConical, Home, Library, RadioTower } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { APP_HEADER_HEIGHT_PX, RESPONSIVE_SHELL_CSS_VARS } from '../layout/responsiveGeometry';
 
 const navItems = [
@@ -19,23 +19,14 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { pathname } = useLocation();
-  const pageClassName =
-    pathname === '/packing-calculator'
-      ? ' packing-calculator-page'
-      : pathname === '/proposition-pilote'
-        ? ' pilot-proposal-page'
-        : '';
   const shellGeometry = {
     [RESPONSIVE_SHELL_CSS_VARS.appHeaderHeight]: `${APP_HEADER_HEIGHT_PX}px`,
   } as CSSProperties;
 
   return (
-    <div className="min-h-screen bg-slate-50" style={shellGeometry}>
-      {/* Top header */}
+    <div className="min-h-screen bg-slate-50" style={shellGeometry} data-app-shell>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <div className="app-shell-header-inner mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)] items-center gap-6 px-4 sm:px-6 lg:px-8">
-          {/* Logo */}
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
               <Boxes size={18} />
@@ -43,8 +34,7 @@ export function AppShell({ children }: AppShellProps) {
             <span className="hidden text-sm font-bold text-slate-950 sm:block">ProtoCap</span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden min-w-0 items-center justify-end gap-0.5 xl:flex">
+          <nav className="hidden min-w-0 items-center justify-end gap-0.5 xl:flex" aria-label="Navigation principale">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -66,13 +56,14 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {/* The shell owns persistent-navigation compensation and safe-area padding. */}
-      <main className={`app-shell-content${pageClassName}`}>
+      <main className="app-shell-content" data-shell-content>
         {children}
       </main>
 
-      {/* Mobile/tablet bottom nav */}
-      <nav className="app-shell-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm xl:hidden">
+      <nav
+        className="app-shell-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm xl:hidden"
+        aria-label="Navigation principale"
+      >
         <div className="grid grid-cols-4 sm:grid-cols-8">
           {navItems.map((item) => (
             <NavLink

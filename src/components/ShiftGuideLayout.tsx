@@ -50,7 +50,7 @@ export function ShiftGuideLayout() {
       : null;
 
   return (
-    <div className={shellClass} style={shellGeometry}>
+    <div className={shellClass} style={shellGeometry} data-shiftguide-shell>
       <ShiftGuideDesktopNavigation loggingOut={loggingOut} onLogout={handleLogout} />
 
       {degradedMessage && (
@@ -63,6 +63,7 @@ export function ShiftGuideLayout() {
       )}
 
       <div
+        data-shell-content
         className={
           isCelineRoute
             ? 'shiftguide-celine-content [&>div]:h-full [&>div]:min-h-0 [&>div]:overflow-hidden lg:[&>div]:h-[100dvh] lg:[&>div]:overflow-visible'
