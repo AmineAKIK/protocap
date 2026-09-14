@@ -50,6 +50,7 @@ describe('PackingCockpitSummary', () => {
     expect(progressbar.getAttribute('aria-valuenow')).toBe('41');
     const fill = progressbar.querySelector('.packing-progress-fill') as HTMLElement;
     expect(fill.style.width).toBe('41%');
+    expect(fill.className).toContain('bg-teal-300');
   });
 
   it('exposes the completed visual state only when the run truth is complete', () => {
@@ -65,5 +66,6 @@ describe('PackingCockpitSummary', () => {
     expect(progressbar.getAttribute('aria-valuenow')).toBe('100');
     const fill = progressbar.querySelector('.packing-progress-fill') as HTMLElement;
     expect(fill.style.width).toBe('100%');
+    expect(fill.className).toContain('bg-emerald-300');
   });
 });
