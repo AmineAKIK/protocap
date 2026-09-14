@@ -14,7 +14,7 @@ import {
   X,
   Zap
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 
 /* ─── DATA ──────────────────────────────────────────────────────────────── */
@@ -466,6 +466,9 @@ const slides: Slide[] = [
 
 export function PresentationMode({ onClose }: { onClose: () => void }) {
   const [index, setIndex] = useState(0);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const total = slides.length;
   const slide = slides[index];
 
@@ -473,23 +476,58 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
   const next = useCallback(() => setIndex((i) => Math.min(total - 1, i + 1)), [total]);
 
   useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    if (!dialog.open) dialog.showModal();
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); next(); }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prev(); }
-      if (e.key === 'Escape') onClose();
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const isInteractive = target?.matches('button, a, input, select, textarea, [role="button"]');
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === ' ' && !isInteractive)) {
+        e.preventDefault();
+        next();
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        prev();
+      }
     }
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev, onClose]);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+      if (dialog.open) dialog.close();
+      previousFocusRef.current?.focus();
+    };
+  }, [next, prev]);
 
   const progress = ((index + 1) / total) * 100;
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid h-[100dvh] min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden bg-slate-950 text-white"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 z-50 m-0 grid h-[100dvh] max-h-none min-h-0 w-screen max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden border-0 bg-slate-950 p-0 text-white backdrop:bg-slate-950"
       aria-label="Présentation du rapport opérationnel"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
     >
       <div className="h-0.5 w-full bg-white/10">
         <div className="h-0.5 bg-teal-500 transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -499,9 +537,10 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
         <div className="flex min-w-0 items-center justify-between px-4 py-2.5 sm:px-10 sm:py-4">
           <span className="min-w-0 break-normal pr-3 text-[10px] font-bold uppercase tracking-widest text-teal-500 sm:text-xs">{slide.label}</span>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-500/30"
             aria-label="Quitter la présentation"
           >
             <X size={18} />
@@ -560,6 +599,6 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
