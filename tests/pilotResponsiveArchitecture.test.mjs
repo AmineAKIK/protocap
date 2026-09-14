@@ -23,13 +23,13 @@ test('pilot responsive behavior is expressed by explicit composition instead of 
   assert.doesNotMatch(css, /> div > div > section/);
 });
 
-test('pilot keeps local horizontal overflow explicit and document text natural', async () => {
+test('pilot keeps local horizontal overflow explicit without route-wide wrapping overrides', async () => {
   const page = await read('src/pages/PilotProposalPage.tsx');
   const css = await read('src/pilot-responsive.css');
 
   assert.match(page, /max-w-full overflow-x-auto/);
   assert.match(page, /min-w-\[820px\]/);
-  assert.match(css, /overflow-wrap:\s*normal/);
-  assert.match(css, /word-break:\s*normal/);
+  assert.doesNotMatch(css, /overflow-wrap:/);
+  assert.doesNotMatch(css, /word-break:/);
   assert.match(css, /white-space:\s*nowrap/);
 });
