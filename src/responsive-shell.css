@@ -1,11 +1,9 @@
-:root {
-  --app-header-height: 56px;
-  --shiftguide-mobile-nav-reserve: 80px;
-  --shiftguide-desktop-nav-width: 96px;
-}
-
 /*
  * Shared shell geometry
+ *
+ * Numeric shell dimensions are injected by the owning React shell from
+ * src/layout/responsiveGeometry.ts. This stylesheet consumes those custom
+ * properties but never duplicates their values.
  *
  * These classes own persistent-navigation compensation and safe-area handling.
  * Page implementations should not duplicate these dimensions.
