@@ -121,6 +121,7 @@
     border-radius: 1.05rem;
   }
 
+  .packing-calculator-page .packing-reference-card,
   .packing-calculator-page .packing-strategies {
     padding: 0.84rem;
   }
