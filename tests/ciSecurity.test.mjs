@@ -82,7 +82,7 @@ test('responsive architecture contract is a named CI quality gate backed by a sh
 
   assert.equal(
     packageJson.scripts['test:e2e:responsive'],
-    'playwright test e2e/responsive-contract.spec.ts --project=chromium',
+    'npm run build && playwright test e2e/responsive-contract.spec.ts --project=chromium',
   );
   assert.match(workflow, /Run responsive architecture contract/);
   assert.match(workflow, /run:\s+npm run test:e2e:responsive/);
