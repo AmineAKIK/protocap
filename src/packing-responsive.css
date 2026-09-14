@@ -88,14 +88,13 @@
 }
 
 /*
- * Wide workshop density. The page composition already waits until xl before
- * splitting into reference and execution columns. These rules only compact
- * visual rhythm inside that wide regime; they do not create another layout
- * breakpoint or change application behavior.
+ * Wide workshop density. At xl, the reference rail stays deliberately narrow
+ * so the execution surface receives the width needed by atomic operational
+ * numbers. The existing 1480px page cap remains authoritative instead of
+ * introducing a second, tighter cap here.
  */
 @media (min-width: 1280px) {
   .packing-calculator-page > div > div.relative {
-    max-width: 1240px;
     padding: 1.05rem 1.6rem 1.18rem;
   }
 
@@ -119,7 +118,7 @@
 
   .packing-calculator-page header + div.grid {
     gap: 0.79rem;
-    grid-template-columns: minmax(21rem, 0.74fr) minmax(0, 1.26fr);
+    grid-template-columns: 20rem minmax(0, 1fr);
   }
 
   .packing-calculator-page section[aria-label='Référence et résultat exact'],
@@ -300,5 +299,15 @@
   .packing-calculator-page svg {
     max-width: 90%;
     max-height: 90%;
+  }
+}
+
+/*
+ * At 2xl the reference rail can grow again, which matches the strategy cards
+ * returning to three columns while keeping the execution surface comfortable.
+ */
+@media (min-width: 1536px) {
+  .packing-calculator-page header + div.grid {
+    grid-template-columns: minmax(28rem, 0.78fr) minmax(0, 1.22fr);
   }
 }
