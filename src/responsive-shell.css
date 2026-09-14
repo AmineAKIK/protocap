@@ -2,24 +2,38 @@
  * Shared shell geometry
  *
  * Numeric shell dimensions are injected by the owning React shell from
- * src/layout/responsiveGeometry.ts. This stylesheet consumes those custom
- * properties but never duplicates their values.
+ * src/layout/responsiveGeometry.ts when they are runtime-owned. CSS-only
+ * geometry stays here when both the navigation and its compensation consume
+ * the same custom properties.
  *
  * These classes own persistent-navigation compensation and safe-area handling.
  * Page implementations should not duplicate these dimensions.
  */
+.app-shell {
+  --app-mobile-nav-row-height: 3.5rem;
+  --app-mobile-nav-clearance: 1.5rem;
+  --app-mobile-nav-rows: 2;
+  --app-mobile-nav-reserve: calc(
+    var(--app-mobile-nav-row-height) * var(--app-mobile-nav-rows) + var(--app-mobile-nav-clearance)
+  );
+}
+
 .app-shell-header-inner {
   height: var(--app-header-height);
 }
 
 .app-shell-content {
   min-width: 0;
-  padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-mobile-nav-reserve) + env(safe-area-inset-bottom));
 }
 
 .app-shell-mobile-nav,
 .shiftguide-mobile-nav {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-shell-mobile-nav-item {
+  min-height: var(--app-mobile-nav-row-height);
 }
 
 .shiftguide-shell {
@@ -38,8 +52,8 @@
 }
 
 @media (min-width: 640px) {
-  .app-shell-content {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  .app-shell {
+    --app-mobile-nav-rows: 1;
   }
 }
 
