@@ -7,6 +7,7 @@ import {
   persistActivePackingRun,
   type NewPackingRunInput,
   type PackingRunWriteResult,
+  type PackingStorageLike,
 } from './persistence/packingRunStorage';
 
 export type PackingPersistenceStatus = 'persisted' | 'degraded';
@@ -16,8 +17,21 @@ interface InitialActiveRunState {
   persistenceStatus: PackingPersistenceStatus;
 }
 
+function getBrowserPackingStorage(): PackingStorageLike | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function loadInitialActiveRun(): InitialActiveRunState {
-  const result = loadActivePackingRun(window.localStorage);
+  const storage = getBrowserPackingStorage();
+  if (!storage) {
+    return { activeRun: null, persistenceStatus: 'degraded' };
+  }
+
+  const result = loadActivePackingRun(storage);
   if (result.status === 'loaded') {
     return { activeRun: result.activeRun, persistenceStatus: 'persisted' };
   }
@@ -32,24 +46,29 @@ function toPersistenceStatus(result: PackingRunWriteResult): PackingPersistenceS
   return result.status;
 }
 
+const degradedWriteResult: PackingRunWriteResult = { status: 'degraded' };
+
 export function usePackingActiveRun() {
   const [state, setState] = useState<InitialActiveRunState>(loadInitialActiveRun);
 
   const startRun = useCallback((input: NewPackingRunInput): PackingRun => {
     const run = createNewPackingRun(input);
-    const result = persistActivePackingRun(window.localStorage, run);
+    const storage = getBrowserPackingStorage();
+    const result = storage ? persistActivePackingRun(storage, run) : degradedWriteResult;
     setState({ activeRun: run, persistenceStatus: toPersistenceStatus(result) });
     return run;
   }, []);
 
   const updateRun = useCallback((run: PackingRun): PackingRunWriteResult => {
-    const result = persistActivePackingRun(window.localStorage, run);
+    const storage = getBrowserPackingStorage();
+    const result = storage ? persistActivePackingRun(storage, run) : degradedWriteResult;
     setState({ activeRun: run, persistenceStatus: toPersistenceStatus(result) });
     return result;
   }, []);
 
   const clearRun = useCallback((): PackingRunWriteResult => {
-    const result = clearActivePackingRun(window.localStorage);
+    const storage = getBrowserPackingStorage();
+    const result = storage ? clearActivePackingRun(storage) : degradedWriteResult;
     setState({ activeRun: null, persistenceStatus: toPersistenceStatus(result) });
     return result;
   }, []);
