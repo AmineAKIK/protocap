@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from 'react';
 import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
+import { PageFrame } from '../components/PageFrame';
 import { knowledgeCategories, procedureDocs } from '../data/knowledgeData';
 import type { StandardStatus, StandardType } from '../types/knowledge';
 import { formatDate } from '../utils/date';
@@ -66,7 +67,7 @@ function DocList() {
   }, [query, category]);
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <PageFrame gutter="compact" className="py-6 sm:py-8">
       <div className="mb-6">
         <p className="label">Module documentation</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Knowledge Base</h1>
@@ -74,7 +75,6 @@ function DocList() {
         <p className="mt-2 max-w-3xl text-sm font-semibold text-teal-800">Information accessible rapidement, standard facile à appliquer.</p>
       </div>
 
-      {/* Search + filters */}
       <div className="mb-4 space-y-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -100,12 +100,10 @@ function DocList() {
         </div>
       </div>
 
-      {/* Count */}
       <p className="mb-3 text-xs text-slate-400 font-medium uppercase tracking-wide">
         {filtered.length} document{filtered.length !== 1 ? 's' : ''}
       </p>
 
-      {/* Dense list */}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-500">
@@ -123,7 +121,6 @@ function DocList() {
                     onClick={() => navigate(doc.id)}
                     className="group flex min-h-16 w-full items-center gap-3 px-3 py-3.5 text-left transition hover:bg-slate-50 sm:gap-4 sm:px-5"
                   >
-                    {/* Type icon */}
                     <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
                       doc.type === 'SOP' ? 'bg-teal-50 text-teal-700' :
                       doc.type === 'CHECK' ? 'bg-amber-50 text-amber-700' :
@@ -133,7 +130,6 @@ function DocList() {
                       <Icon size={18} />
                     </div>
 
-                    {/* Main info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-bold text-slate-400">{doc.code}</span>
@@ -144,7 +140,6 @@ function DocList() {
                       <p className="mt-0.5 text-xs text-slate-500">{doc.lineArea} · {doc.version} · Validé le {formatDate(doc.updatedAt)}</p>
                     </div>
 
-                    {/* Key checks preview */}
                     <div className="hidden xl:flex flex-col gap-1 w-56 shrink-0">
                       {doc.keyChecks.slice(0, 2).map((c) => (
                         <p key={c} className="flex items-start gap-1.5 text-xs text-slate-500">
@@ -162,7 +157,7 @@ function DocList() {
           </ul>
         )}
       </div>
-    </div>
+    </PageFrame>
   );
 }
 
@@ -172,15 +167,15 @@ function DocDetail() {
 
   if (!doc) {
     return (
-      <div className="mx-auto max-w-7xl px-3 py-16 text-center sm:px-6 lg:px-8">
+      <PageFrame gutter="compact" className="py-16 text-center">
         <p className="text-slate-500">Document introuvable.</p>
         <Link to="/knowledge-base" className="mt-4 inline-block text-teal-700 underline">Retour</Link>
-      </div>
+      </PageFrame>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <PageFrame gutter="compact" className="py-6 sm:py-8">
       <Link
         to="/knowledge-base"
         className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 transition"
@@ -189,7 +184,6 @@ function DocDetail() {
         Standards terrain
       </Link>
 
-      {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -201,7 +195,6 @@ function DocDetail() {
           <p className="mt-2 text-sm leading-6 text-slate-600">{doc.summary}</p>
         </div>
 
-        {/* Meta row */}
         <div className="grid grid-cols-1 divide-y divide-slate-100 border-b border-slate-100 min-[360px]:grid-cols-2 min-[360px]:divide-x min-[360px]:divide-y-0 sm:grid-cols-4">
           {[
             { label: 'Version', value: doc.version },
@@ -217,7 +210,6 @@ function DocDetail() {
         </div>
 
         <div className="grid divide-y divide-slate-100 sm:divide-y-0 sm:divide-x sm:grid-cols-2">
-          {/* Key checks */}
           <div className="p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
               <ListChecks size={15} className="text-teal-600" />Points de contrôle clés
@@ -232,7 +224,6 @@ function DocDetail() {
             </ul>
           </div>
 
-          {/* Watch points */}
           <div className="p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-500 mb-4">
               <AlertTriangle size={15} className="text-amber-500" />Points de vigilance
@@ -249,7 +240,6 @@ function DocDetail() {
         </div>
       </div>
 
-      {/* Steps */}
       <div className="mt-5 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <div className="border-b border-slate-100 px-5 py-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Séquence opératoire</h2>
@@ -272,7 +262,6 @@ function DocDetail() {
         </div>
       </div>
 
-      {/* Footer meta */}
       <div className="mt-5 flex flex-col items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-5">
         <span>Rédigé par <strong className="text-slate-700">{doc.author}</strong></span>
         <span>Validé par <strong className="text-slate-700">{doc.validator}</strong></span>
@@ -280,7 +269,7 @@ function DocDetail() {
           <span>Voir aussi : <strong className="text-slate-700">{doc.relatedDocs.join(', ')}</strong></span>
         )}
       </div>
-    </div>
+    </PageFrame>
   );
 }
 
