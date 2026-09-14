@@ -51,21 +51,21 @@ function RunActivation({
   const parsedCadence = parsePositiveIntegerInput(cadence);
 
   return (
-    <section aria-labelledby="packing-run-activation-title" className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-6">
-      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Passer en exécution</p>
+    <section aria-labelledby="packing-run-activation-title" className="packing-run-activation rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-6">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-teal-700">Passer en exécution</p>
       <h2 id="packing-run-activation-title" className="mt-1 text-lg font-black tracking-tight text-slate-950">Activer le run</h2>
       <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
         Le plan devient un snapshot opérationnel indépendant du brouillon de préparation.
       </p>
       <label className="mt-4 block max-w-sm">
-        <span className="mb-1.5 block text-xs font-black text-slate-600">Cadence de référence · unités/minute</span>
+        <span className="mb-1.5 block text-xs font-black text-slate-700">Cadence de référence · unités/minute</span>
         <input
           aria-label="Cadence de référence en unités par minute"
           inputMode="numeric"
           pattern="[0-9]*"
           value={cadence}
           onChange={(event) => onCadenceChange(event.target.value.replace(/\D/g, ''))}
-          className="min-h-12 w-full rounded-xl border border-slate-200 px-3 font-black tabular-nums outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
+          className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-black tabular-nums outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
         />
       </label>
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -73,7 +73,7 @@ function RunActivation({
           type="button"
           disabled={parsedCadence === null}
           onClick={onActivate}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           <CheckCircle2 size={17} aria-hidden="true" />
           Activer ce run
@@ -152,10 +152,10 @@ export function PackingCalculatorPage() {
   const neutral = !activeRun && candidate === null;
 
   return (
-    <div className="packing-calculator-page relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-slate-100/80 to-transparent" aria-hidden="true" />
+    <div className="packing-calculator-page relative overflow-hidden bg-slate-50/40">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-slate-100/90 via-slate-50/60 to-transparent" aria-hidden="true" />
       <div className="packing-page-frame relative mx-auto max-w-[1480px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8 xl:py-8">
-        <header className="mb-5 flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <header className="packing-page-header mb-5 flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-teal-700">
               <Boxes size={14} aria-hidden="true" />
@@ -166,7 +166,7 @@ export function PackingCalculatorPage() {
               Préparer le plan, lire l’état de production à distance, puis déclarer le volume réellement conditionné.
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-[11px] font-bold text-slate-500 shadow-sm backdrop-blur sm:self-auto">
+          <div className="packing-local-status flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm backdrop-blur sm:self-auto">
             <CircleDot size={13} className="text-teal-700" aria-hidden="true" />
             Run local · cockpit opérationnel
           </div>
@@ -190,11 +190,11 @@ export function PackingCalculatorPage() {
 
           <section aria-label="Plan actif et déclarations de production" className="min-w-0 space-y-5">
             {neutral ? (
-              <div className="grid min-h-[28rem] place-items-center rounded-[2rem] border border-dashed border-slate-300 bg-white/70 px-6 text-center shadow-sm">
+              <div className="packing-empty-state grid min-h-[28rem] place-items-center rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 text-center shadow-[0_18px_50px_rgba(15,23,42,0.04)]">
                 <div className="max-w-md">
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Boxes size={27} aria-hidden="true" /></span>
+                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-500"><Boxes size={27} aria-hidden="true" /></span>
                   <h2 className="mt-5 text-xl font-black tracking-tight text-slate-950">Cockpit en attente</h2>
-                  <p className="mt-2 text-sm font-medium leading-6 text-slate-500">
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
                     {combinationInvalid ? 'La combinaison saisie dépasse le domaine de calcul exact.' : input && calculation ? 'Choisissez une stratégie pour préparer l’activation du run.' : 'Renseignez la quantité et le conditionnement.'}
                   </p>
                 </div>
