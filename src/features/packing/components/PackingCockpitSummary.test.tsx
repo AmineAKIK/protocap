@@ -30,10 +30,10 @@ describe('PackingCockpitSummary', () => {
     render(<PackingCockpitSummary run={makeRun()} />);
 
     const cockpit = screen.getByRole('region', { name: 'État de production' });
-    expect(within(cockpit).getByText('400 320')).toBeTruthy();
-    expect(within(cockpit).getByText('400 000 demandées')).toBeTruthy();
+    expect(within(cockpit).getAllByText(/400\s320/)).toHaveLength(2);
+    expect(within(cockpit).getByText(/400\s000 demandées/)).toBeTruthy();
     expect(within(cockpit).getByText('60 u/min')).toBeTruthy();
-    expect(within(cockpit).getByText('111 h 12 min', { selector: '.tabular-nums' })).toBeTruthy();
+    expect(within(cockpit).getAllByText('111 h 12 min', { selector: '.tabular-nums' })).toHaveLength(2);
     expect(within(cockpit).getByText('+320')).toBeTruthy();
   });
 
@@ -41,9 +41,9 @@ describe('PackingCockpitSummary', () => {
     render(<PackingCockpitSummary run={makeRun(168000)} />);
 
     const cockpit = screen.getByRole('region', { name: 'État de production' });
-    expect(within(cockpit).getByText('168 000')).toBeTruthy();
+    expect(within(cockpit).getByText(/168\s000/)).toBeTruthy();
     expect(within(cockpit).getByText('41 %')).toBeTruthy();
-    expect(within(cockpit).getByText('232 320')).toBeTruthy();
+    expect(within(cockpit).getByText(/232\s320/)).toBeTruthy();
     expect(within(cockpit).getByText('64 h 32 min')).toBeTruthy();
   });
 });
