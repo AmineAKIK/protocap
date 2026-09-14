@@ -186,12 +186,14 @@ export function persistActivePackingRun(
   storage: PackingStorageLike,
   run: PackingRun | null,
 ): PackingRunWriteResult {
+  const state: PersistedPackingStateV1 = {
+    schemaVersion: PACKING_RUN_STORAGE_SCHEMA_VERSION,
+    activeRun: run === null ? null : serializeRun(run),
+  };
+  const serialized = JSON.stringify(state);
+
   try {
-    const state: PersistedPackingStateV1 = {
-      schemaVersion: PACKING_RUN_STORAGE_SCHEMA_VERSION,
-      activeRun: run === null ? null : serializeRun(run),
-    };
-    storage.setItem(PACKING_ACTIVE_RUN_STORAGE_KEY, JSON.stringify(state));
+    storage.setItem(PACKING_ACTIVE_RUN_STORAGE_KEY, serialized);
     return { status: 'persisted' };
   } catch {
     return { status: 'degraded' };
