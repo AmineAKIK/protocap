@@ -13,11 +13,21 @@ function formatNumber(value: number): string {
   return numberFormatter.format(value);
 }
 
-function CockpitMetric({ label, value, detail }: { label: string; value: string; detail?: string }) {
+function CockpitMetric({
+  label,
+  value,
+  detail,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  compact?: boolean;
+}) {
   return (
     <div className="packing-cockpit-metric min-w-0 rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-2xl font-black tabular-nums text-white">{value}</p>
+      <p className={`mt-1 break-words font-black tabular-nums text-white ${compact ? 'text-lg' : 'text-2xl'}`}>{value}</p>
       {detail ? <p className="mt-1 text-xs font-semibold text-slate-400">{detail}</p> : null}
     </div>
   );
@@ -61,10 +71,10 @@ export function PackingCockpitSummary({ run }: PackingCockpitSummaryProps) {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-          <CockpitMetric label="Cadence de référence" value={`${formatNumber(run.referenceCadenceUnitsPerMinute)} u/min`} />
-          <CockpitMetric label="Temps total estimé" value={formatPackingDuration(progress.estimatedTotalMinutes)} />
-          <CockpitMetric label="Temps restant estimé" value={formatPackingDuration(progress.estimatedRemainingMinutes)} />
-          <CockpitMetric label="Écart plan / demande" value={run.varianceUnits === 0 ? '0' : `+${formatNumber(run.varianceUnits)}`} detail={`${formatNumber(shipmentPlan.totalLoads)} charge${shipmentPlan.totalLoads > 1 ? 's' : ''} planifiée${shipmentPlan.totalLoads > 1 ? 's' : ''}`} />
+          <CockpitMetric compact label="Cadence de référence" value={`${formatNumber(run.referenceCadenceUnitsPerMinute)} u/min`} />
+          <CockpitMetric compact label="Temps total estimé" value={formatPackingDuration(progress.estimatedTotalMinutes)} />
+          <CockpitMetric compact label="Temps restant estimé" value={formatPackingDuration(progress.estimatedRemainingMinutes)} />
+          <CockpitMetric compact label="Écart plan / demande" value={run.varianceUnits === 0 ? '0' : `+${formatNumber(run.varianceUnits)}`} detail={`${formatNumber(shipmentPlan.totalLoads)} charge${shipmentPlan.totalLoads > 1 ? 's' : ''} planifiée${shipmentPlan.totalLoads > 1 ? 's' : ''}`} />
         </div>
       </div>
     </section>
