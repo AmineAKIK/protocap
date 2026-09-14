@@ -1,6 +1,6 @@
 # Packing and dense-surface responsive contract
 
-PR9 treats Packing Calculator as an intentional dense-surface exception without creating a second responsive architecture.
+Packing Calculator is an intentional dense-surface exception without creating a second responsive architecture.
 
 ## Why Packing is exceptional
 
@@ -22,17 +22,16 @@ This is an intentional example of a reusable responsive principle: a component c
 
 Packing-specific overrides live in `src/packing-responsive.css`, not `src/index.css`.
 
-The stylesheet is route-scoped by `.packing-calculator-page` and relies primarily on existing semantic boundaries:
+The stylesheet is route-scoped by `.packing-calculator-page`. Business regions keep their accessible ARIA boundaries, while responsive compaction that needs a more precise target uses explicit stable hooks such as:
 
-- `section[aria-label='Référence et résultat exact']`;
-- `section[aria-label='Découpage final et suivi manuel']`;
-- `section[aria-labelledby='packing-exact-title']`;
-- `section[aria-labelledby='packing-shipment-title']`;
-- the strategy `radiogroup` and `radio` roles.
+- `.packing-primary-input`;
+- `.packing-exact-summary` and `.packing-exact-value`;
+- `.packing-plan-metrics` and `.packing-plan-metric`;
+- `.packing-primary-number`;
+- `.packing-shipment-progress`;
+- `.packing-load-progress` and `.packing-volume-progress`.
 
-PR9 removes the previous `:has()`-driven tree discovery from the Packing rules. A future JSX refactor should not require CSS to rediscover which deeply nested anonymous `div` represents a business region.
-
-Some shallow structural selectors remain inside already semantic regions for purely visual compaction. They are local implementation details, not application-wide layout rules.
+The responsive stylesheet must not rediscover meaning through JSX tree order. `:has()`, `first-child`, `last-child`, `first-of-type`, `last-of-type` and `nth-*` selectors are intentionally excluded from the Packing responsive contract. JSX may therefore gain wrappers or reorder sibling regions without silently retargeting responsive rules.
 
 ## Intrinsic sizing and business numbers
 
@@ -40,7 +39,7 @@ Ordinary French copy uses normal browser wrapping. Packing does not carry a rout
 
 Atomic business values remain explicit with `.tabular-nums { white-space: nowrap; }`, and the surrounding layout is responsible for giving those values enough room. The narrow-phone regime scales large shipment/progress numbers down rather than character-breaking them. The theoretical result stacks below 480 px instead of squeezing both sides of the row.
 
-The load-progress counter and shipped-volume percentage remain intentionally distinct: the first answers “how many loads?”, while the second answers “how much volume?”. The load percentage stays visually suppressed.
+The load-progress counter and shipped-volume percentage remain intentionally distinct: the first answers “how many loads?”, while the second answers “how much volume?”. The load percentage stays visually suppressed through the explicit `.packing-load-percent` hook.
 
 ## Validation
 
@@ -54,10 +53,10 @@ Packing remains covered by its workflow E2E suite and is part of the responsive 
 
 For every profile the test checks document horizontal containment, primary shipment-action reachability, atomic business numbers and whether the page is stacked or split in the intended regime.
 
-Static tests additionally prevent Packing rules from returning to `index.css`, reintroducing `:has()` tree discovery, or depending on route-wide wrapping overrides.
+Static tests additionally prevent Packing rules from returning to `index.css`, reintroducing tree-discovery selectors, or depending on route-wide wrapping overrides.
 
 ## Final enforcement state
 
-PR10 removes the repository-wide `overflow-x: hidden` and `overflow-wrap: anywhere` safety wheels. Packing must therefore pass the same root-overflow contract as ordinary surfaces while keeping its intentional local density rules.
+The repository-wide `overflow-x: hidden` and `overflow-wrap: anywhere` safety wheels are gone. Packing must therefore pass the same root-overflow contract as ordinary surfaces while keeping its intentional local density rules.
 
 Packing remains exceptional only in presentation density; it does not own an alternative shell, scrolling model, or global responsive policy.
