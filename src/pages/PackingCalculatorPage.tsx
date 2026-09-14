@@ -208,7 +208,9 @@ function RunActivation({
           <CheckCircle2 size={17} aria-hidden="true" />
           Activer ce run
         </button>
-        {persistenceDegraded ? <span className="text-xs font-bold text-amber-800">Le stockage local est actuellement indisponible.</span> : null}
+        {persistenceDegraded ? (
+          <span className="text-xs font-bold text-amber-800">Persistance locale dégradée : la conservation du run n’est pas garantie.</span>
+        ) : null}
       </div>
     </section>
   );
