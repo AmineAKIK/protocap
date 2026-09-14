@@ -24,7 +24,7 @@ Responsive composition now lives next to the JSX that owns it:
 - the “Aujourd’hui” flow becomes vertical on phones and horizontal from tablet upward;
 - the rules table keeps one explicit local horizontal scroll owner.
 
-`pilot-responsive.css` is deliberately small. It contains only behavior that is still better represented as scoped CSS: temporary natural-word wrapping while the global compatibility rule exists, positional border ownership for the 2 + 1 reminder context, the summary-card span in the intermediate regime, and arrow rotation for the vertical flow.
+`pilot-responsive.css` is deliberately small. It contains only scoped domain behavior that remains clearer in CSS: positional border ownership for the 2 + 1 reminder context, the summary-card span in the intermediate regime, arrow rotation for the vertical flow, intrinsic shrinkability, and no-wrap treatment for genuinely atomic values.
 
 ## Architecture rule demonstrated by the Pilot
 
@@ -32,6 +32,8 @@ A page-specific responsive stylesheet may express genuine domain composition, bu
 
 The page should be readable from its JSX: a reviewer should be able to see where a composition collapses, where local overflow is owned, and which content waits for a wide desktop before becoming dense.
 
-## Remaining migration debt
+## Final enforcement state
 
-The `.pilot-proposal-page` natural-wrapping override remains only because `src/index.css` still applies the temporary global `overflow-wrap: anywhere` rule. PR10 removes that global compatibility debt; once it is gone, the Pilot override can be reassessed and likely deleted.
+PR10 removed the repository-wide `overflow-wrap: anywhere` compatibility rule and the Pilot override that existed only to cancel it. The Pilot therefore relies on normal browser text wrapping by default and declares only the exceptions it actually owns.
+
+The rules table remains an intentional local horizontal-scroll surface; the document itself must never depend on root clipping to appear responsive.

@@ -7,12 +7,6 @@
  * than discovering meaning through JSX tree depth or :has() selectors.
  */
 
-.packing-calculator-page,
-.packing-calculator-page * {
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
 .packing-calculator-page .tabular-nums {
   white-space: nowrap;
 }

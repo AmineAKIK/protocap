@@ -1,16 +1,12 @@
 /*
  * Pilot proposal responsive contract
  *
- * The page now expresses its layout regimes explicitly in JSX. This stylesheet
- * keeps only the small amount of scoped behavior that cannot yet live in normal
- * utilities while the global `overflow-wrap: anywhere` compatibility rule still
- * exists (scheduled for removal in the final enforcement PR).
+ * The page expresses its layout regimes explicitly in JSX. This stylesheet
+ * keeps only domain composition that cannot be expressed cleanly by local
+ * utilities without obscuring the page structure.
  */
 
-.pilot-proposal-page,
 .pilot-proposal-page * {
-  overflow-wrap: normal;
-  word-break: normal;
   hyphens: none;
 }
 
