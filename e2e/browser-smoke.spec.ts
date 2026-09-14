@@ -60,7 +60,7 @@ test.describe('browser and responsive smoke', () => {
     await page.getByLabel('Cadence de référence en unités par minute').fill('60');
     await page.getByRole('button', { name: 'Activer ce run' }).click();
 
-    const execution = page.getByRole('region', { name: 'Déclarations de production' });
+    const execution = page.getByRole('region', { name: 'Déclarations de production', exact: true });
     await expect(execution).toBeVisible();
     const primaryAction = execution.getByRole('button', { name: 'Déclarer une charge' });
     await primaryAction.scrollIntoViewIfNeeded();
