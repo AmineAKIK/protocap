@@ -1,6 +1,7 @@
 import { Bot, Boxes, Calculator, ClipboardCheck, FileText, FlaskConical, Home, Library, RadioTower } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { APP_HEADER_HEIGHT_PX, RESPONSIVE_SHELL_CSS_VARS } from '../layout/responsiveGeometry';
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: Home },
@@ -25,15 +26,15 @@ export function AppShell({ children }: AppShellProps) {
       : pathname === '/proposition-pilote'
         ? ' pilot-proposal-page'
         : '';
+  const shellGeometry = {
+    [RESPONSIVE_SHELL_CSS_VARS.appHeaderHeight]: `${APP_HEADER_HEIGHT_PX}px`,
+  } as CSSProperties;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50" style={shellGeometry}>
       {/* Top header */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-        <div
-          className="mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)] items-center gap-6 px-4 sm:px-6 lg:px-8"
-          style={{ height: '56px' }}
-        >
+        <div className="app-shell-header-inner mx-auto grid max-w-7xl grid-cols-[auto_minmax(0,1fr)] items-center gap-6 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
@@ -65,13 +66,13 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {/* Two compact rows on narrow phones keep every destination legible without clipping. */}
-      <main className={`pb-[calc(8.5rem_+_env(safe-area-inset-bottom))] sm:pb-[calc(5rem_+_env(safe-area-inset-bottom))] xl:pb-0${pageClassName}`}>
+      {/* The shell owns persistent-navigation compensation and safe-area padding. */}
+      <main className={`app-shell-content${pageClassName}`}>
         {children}
       </main>
 
       {/* Mobile/tablet bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm xl:hidden">
+      <nav className="app-shell-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-sm xl:hidden">
         <div className="grid grid-cols-4 sm:grid-cols-8">
           {navItems.map((item) => (
             <NavLink

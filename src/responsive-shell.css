@@ -1,0 +1,63 @@
+/*
+ * Shared shell geometry
+ *
+ * Numeric shell dimensions are injected by the owning React shell from
+ * src/layout/responsiveGeometry.ts. This stylesheet consumes those custom
+ * properties but never duplicates their values.
+ *
+ * These classes own persistent-navigation compensation and safe-area handling.
+ * Page implementations should not duplicate these dimensions.
+ */
+.app-shell-header-inner {
+  height: var(--app-header-height);
+}
+
+.app-shell-content {
+  min-width: 0;
+  padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+}
+
+.app-shell-mobile-nav,
+.shiftguide-mobile-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.shiftguide-shell {
+  min-width: 0;
+}
+
+.shiftguide-standard-content {
+  min-width: 0;
+  padding-bottom: calc(var(--shiftguide-mobile-nav-reserve) + env(safe-area-inset-bottom));
+}
+
+.shiftguide-celine-content {
+  min-width: 0;
+  height: calc(100dvh - var(--shiftguide-mobile-nav-reserve) - env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .app-shell-content {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 1024px) {
+  .shiftguide-standard-content {
+    padding-bottom: 0;
+    padding-left: var(--shiftguide-desktop-nav-width);
+  }
+
+  .shiftguide-celine-content {
+    height: auto;
+    overflow: visible;
+    padding-left: var(--shiftguide-desktop-nav-width);
+  }
+}
+
+@media (min-width: 1280px) {
+  .app-shell-content {
+    padding-bottom: 0;
+  }
+}
