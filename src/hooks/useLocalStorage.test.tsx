@@ -7,8 +7,15 @@ const defaultPackingForm = {
   quantity: '',
   unitsPerCarton: '',
   cartonsPerPalette: '',
-  policy: 'no-overrun' as const,
 };
+
+function normalizePackingForm(value: typeof defaultPackingForm) {
+  return {
+    quantity: value.quantity,
+    unitsPerCarton: value.unitsPerCarton,
+    cartonsPerPalette: value.cartonsPerPalette,
+  };
+}
 
 function expectStoredDefault() {
   return waitFor(() => {
@@ -21,7 +28,7 @@ describe('useLocalStorage hydration', () => {
     localStorage.setItem(packingFormKey, JSON.stringify({ quantity: 30880 }));
 
     const { result } = renderHook(() =>
-      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm)
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
     );
 
     expect(result.current[0]).toEqual(defaultPackingForm);
@@ -32,10 +39,36 @@ describe('useLocalStorage hydration', () => {
     localStorage.setItem(packingFormKey, '{not-json');
 
     const { result } = renderHook(() =>
-      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm)
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
     );
 
     expect(result.current[0]).toEqual(defaultPackingForm);
     await expectStoredDefault();
+  });
+
+  it('normalizes accepted legacy values before repersisting them', async () => {
+    localStorage.setItem(packingFormKey, JSON.stringify({
+      quantity: '30880',
+      unitsPerCarton: '128',
+      cartonsPerPalette: '40',
+      policy: 'round-carton',
+    }));
+
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
+    );
+
+    expect(result.current[0]).toEqual({
+      quantity: '30880',
+      unitsPerCarton: '128',
+      cartonsPerPalette: '40',
+    });
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(packingFormKey) ?? 'null')).toEqual({
+        quantity: '30880',
+        unitsPerCarton: '128',
+        cartonsPerPalette: '40',
+      });
+    });
   });
 });
