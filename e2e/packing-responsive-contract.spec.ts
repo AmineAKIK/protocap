@@ -167,6 +167,14 @@ test('Packing visual hierarchy stays operational at the PR7 reference viewports 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await useViewport(page, RESPONSIVE_VIEWPORTS.laptop);
   await configurePacking(page);
-  const transitionDuration = await page.locator('.packing-progress-fill').evaluate((node) => getComputedStyle(node).transitionDuration);
-  expect(transitionDuration).toBe('0.01ms');
+  const transitionDurationMs = await page.locator('.packing-progress-fill').evaluate((node) => {
+    const durations = getComputedStyle(node).transitionDuration.split(',').map((value) => value.trim());
+    const toMilliseconds = (value: string) => {
+      if (value.endsWith('ms')) return Number.parseFloat(value);
+      if (value.endsWith('s')) return Number.parseFloat(value) * 1000;
+      return Number.POSITIVE_INFINITY;
+    };
+    return Math.max(...durations.map(toMilliseconds));
+  });
+  expect(transitionDurationMs).toBeLessThanOrEqual(1);
 });
