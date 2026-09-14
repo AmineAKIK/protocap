@@ -64,6 +64,16 @@
     text-align: left;
   }
 
+  .packing-calculator-page
+    section[aria-label='Découpage final et suivi manuel']
+    > section.bg-slate-950
+    > div:last-child
+    > div:first-child
+    p.tabular-nums {
+    font-size: clamp(1.65rem, 9vw, 2.5rem);
+    letter-spacing: -0.04em;
+  }
+
   .packing-calculator-page section[aria-labelledby='packing-shipment-title'] > div:last-child > div:first-of-type > div:first-child > p:first-child {
     font-size: clamp(2.6rem, 14vw, 4.75rem);
     letter-spacing: -0.06em;
