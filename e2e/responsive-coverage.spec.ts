@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import {
   RESPONSIVE_VIEWPORTS,
   expectLocatorInsideViewport,
@@ -22,7 +22,28 @@ async function unlockShiftGuide(page: import('@playwright/test').Page, path: str
   await page.getByRole('button', { name: 'Déverrouiller' }).click();
 }
 
+async function expectInsideVisualViewport(locator: Locator) {
+  const bounds = await locator.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    return {
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      viewportWidth: viewport?.width ?? window.innerWidth,
+      viewportHeight: viewport?.height ?? window.innerHeight,
+    };
+  });
+
+  expect(bounds.top).toBeGreaterThanOrEqual(0);
+  expect(bounds.left).toBeGreaterThanOrEqual(0);
+  expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth + 1);
+  expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight + 1);
+}
+
 test.describe('responsive principal surface coverage', () => {
+  // responsive-contract:home
   test('Home keeps its primary content and module actions usable', async ({ page }) => {
     for (const viewport of COVERAGE_VIEWPORTS) {
       await test.step(viewport.name, async () => {
@@ -36,6 +57,7 @@ test.describe('responsive principal surface coverage', () => {
     }
   });
 
+  // responsive-contract:knowledge-base
   test('Knowledge Base list and detail remain contained and reachable', async ({ page }) => {
     for (const viewport of COVERAGE_VIEWPORTS) {
       await test.step(viewport.name, async () => {
@@ -55,6 +77,7 @@ test.describe('responsive principal surface coverage', () => {
     }
   });
 
+  // responsive-contract:shiftguide-home
   test('ShiftGuide home is explicitly covered after unlock', async ({ page }) => {
     for (const viewport of COVERAGE_VIEWPORTS) {
       await test.step(viewport.name, async () => {
@@ -68,6 +91,7 @@ test.describe('responsive principal surface coverage', () => {
     }
   });
 
+  // responsive-contract:shiftguide-celine
   test('Céline reacts to a reduced visual viewport without hiding the composer', async ({ browser, baseURL }) => {
     const viewport = RESPONSIVE_VIEWPORTS.phone;
     const context = await browser.newContext({ baseURL, viewport: { width: viewport.width, height: viewport.height } });
@@ -99,6 +123,7 @@ test.describe('responsive principal surface coverage', () => {
     try {
       await unlockShiftGuide(page, '/shiftguide/celine');
       const input = page.getByPlaceholder('Décris ta situation…');
+      const send = page.getByRole('button', { name: 'Envoyer' });
       await expect(input).toBeVisible();
 
       await page.evaluate(() => {
@@ -108,8 +133,8 @@ test.describe('responsive principal surface coverage', () => {
 
       const shellContent = page.locator('[data-shiftguide-shell] [data-shell-content]');
       await expect.poll(async () => Math.round((await shellContent.boundingBox())?.height ?? 0)).toBe(520);
-      await expectLocatorInsideViewport(page, input);
-      await expectLocatorInsideViewport(page, page.getByRole('button', { name: 'Envoyer' }));
+      await expectInsideVisualViewport(input);
+      await expectInsideVisualViewport(send);
       await expectNoDocumentHorizontalOverflow(page);
     } finally {
       await context.close();
