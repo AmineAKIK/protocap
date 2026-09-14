@@ -241,7 +241,7 @@ function ShipmentExecution({
               <h2 id="packing-shipment-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">Charges à expédier</h2>
             </div>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-500">Enregistré sur cet appareil</span>
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-500">Suivi manuel local</span>
         </div>
       </div>
 
