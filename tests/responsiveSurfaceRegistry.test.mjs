@@ -10,6 +10,11 @@ function registeredRoutes(registry) {
   return [...registry.matchAll(/route:\s*'([^']+)'/g)].map((match) => match[1]);
 }
 
+function registryEntries(registry) {
+  return [...registry.matchAll(/\{ id: '([^']+)', route: '([^']+)', coverage: '([^']+)', contractRef: '([^']+)' \}/g)]
+    .map(([, id, route, coverage, contractRef]) => ({ id, route, coverage, contractRef }));
+}
+
 function literalRoutePaths(source) {
   return [...source.matchAll(/<Route\b[^>]*\bpath=(['"])(.*?)\1/g)].map((match) => match[2]);
 }
@@ -42,13 +47,27 @@ test('every principal routed surface is registered for responsive coverage', asy
   assert.deepEqual([...registered].sort(), [...expected].sort());
 });
 
-test('registered surfaces declare a concrete responsive contract', async () => {
-  const registry = await read('src/responsive/surfaceRegistry.ts');
-  const entries = [...registry.matchAll(/\{ id: '([^']+)', route: '([^']+)', coverage: '([^']+)', contractRef: '([^']+)' \}/g)];
+test('every registry object is structurally valid and points to executable responsive proof', async () => {
+  const [registry, sharedContract, coverageContract, packingContract] = await Promise.all([
+    read('src/responsive/surfaceRegistry.ts'),
+    read('e2e/responsive-contract.spec.ts'),
+    read('e2e/responsive-coverage.spec.ts'),
+    read('e2e/packing-responsive-contract.spec.ts'),
+  ]);
 
-  assert.ok(entries.length >= 10, 'principal surfaces must remain explicitly registered');
-  for (const [, id, route, coverage, contractRef] of entries) {
+  const routes = registeredRoutes(registry);
+  const entries = registryEntries(registry);
+  const executableProof = `${sharedContract}\n${coverageContract}\n${packingContract}`;
+
+  assert.equal(entries.length, routes.length, 'every registered route must parse as a complete registry entry');
+  assert.equal(new Set(entries.map((entry) => entry.contractRef)).size, entries.length, 'contractRef values must be unique per principal surface');
+
+  for (const { id, route, coverage, contractRef } of entries) {
     assert.ok(id && route && contractRef);
     assert.ok(['browser-contract', 'specialized-contract'].includes(coverage), `${route} has invalid coverage ${coverage}`);
+    assert.ok(
+      executableProof.includes(`responsive-contract:${contractRef}`),
+      `${route} declares ${contractRef} but no executable responsive spec owns that contract`,
+    );
   }
 });
