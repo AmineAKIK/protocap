@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'blue' | 'slate' | 'teal';
 
-interface BadgeProps {
+interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   children: ReactNode;
   tone?: BadgeTone;
+  nowrap?: boolean;
 }
 
 const tones: Record<BadgeTone, string> = {
@@ -16,9 +17,14 @@ const tones: Record<BadgeTone, string> = {
   teal: 'bg-teal-50 text-teal-700 ring-teal-600/15'
 };
 
-export function Badge({ children, tone = 'slate' }: BadgeProps) {
+export function Badge({ children, tone = 'slate', nowrap = false, className = '', ...props }: BadgeProps) {
+  const wrapping = nowrap ? 'shrink-0 whitespace-nowrap' : 'min-w-0 whitespace-normal break-normal text-center';
+
   return (
-    <span className={`inline-flex max-w-full shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ring-1 ${tones[tone]}`}>
+    <span
+      className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ring-1 ${wrapping} ${tones[tone]} ${className}`}
+      {...props}
+    >
       {children}
     </span>
   );
