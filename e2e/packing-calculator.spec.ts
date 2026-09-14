@@ -10,7 +10,7 @@ async function configurePacking(page: Page, quantity = '30880') {
   await page.getByRole('button', { name: 'Activer ce run' }).click();
 
   await expect(page.getByRole('heading', { name: 'Découpage final sélectionné' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Déclarations de production' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Déclarations de production', exact: true })).toBeVisible();
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -46,7 +46,7 @@ async function expectBusinessNumbersReadable(page: Page) {
 test.describe('Packing Calculator operator declaration flow', () => {
   test('declares full and partial production with exact history', async ({ page }) => {
     await configurePacking(page);
-    const execution = page.getByRole('region', { name: 'Déclarations de production' });
+    const execution = page.getByRole('region', { name: 'Déclarations de production', exact: true });
 
     await execution.getByRole('button', { name: 'Déclarer une charge' }).click();
     await expect(execution).toContainText(/5\s120 unités déclarées produites/);
@@ -62,7 +62,7 @@ test.describe('Packing Calculator operator declaration flow', () => {
 
   test('supports correction and removal by declaration identity', async ({ page }) => {
     await configurePacking(page);
-    const execution = page.getByRole('region', { name: 'Déclarations de production' });
+    const execution = page.getByRole('region', { name: 'Déclarations de production', exact: true });
     await execution.getByRole('button', { name: 'Déclarer une charge' }).click();
 
     await execution.getByRole('button', { name: 'Corriger la déclaration 1' }).click();
