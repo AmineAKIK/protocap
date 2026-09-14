@@ -33,7 +33,9 @@ async function configurePacking(page: Page) {
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
   await page.getByRole('radio', { name: /Carton/i }).click();
-  await expect(page.getByRole('region', { name: 'Charges à expédier' })).toBeVisible();
+  await page.getByLabel('Cadence de référence en unités par minute').fill('60');
+  await page.getByRole('button', { name: 'Activer ce run' }).click();
+  await expect(page.getByRole('region', { name: 'Déclarations de production' })).toBeVisible();
 }
 
 test.describe('critical accessibility smoke', () => {
@@ -47,8 +49,8 @@ test.describe('critical accessibility smoke', () => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await configurePacking(page);
     await expect(page.getByRole('radiogroup', { name: 'Politique opérationnelle' })).toBeVisible();
-    await expect(page.getByRole('progressbar', { name: 'Avancement des charges expédiées' })).toBeVisible();
-    await expect(page.getByRole('progressbar', { name: "Volume d'unités expédié" })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Déclarer une charge' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Historique du run' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
 
