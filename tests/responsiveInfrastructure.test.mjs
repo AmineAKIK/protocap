@@ -54,9 +54,9 @@ test('shell geometry numeric values have a single runtime source of truth', asyn
   assert.match(geometry, /SHIFTGUIDE_DESKTOP_NAV_WIDTH_PX = 96/);
 });
 
-test('PR2 keeps global overflow compatibility debt explicit for later migration', async () => {
+test('global stylesheet cannot hide responsive defects or force arbitrary wrapping', async () => {
   const globalCss = await read('src/index.css');
 
-  assert.match(globalCss, /overflow-x:\s*hidden/);
-  assert.match(globalCss, /overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(globalCss, /overflow-x:\s*hidden/);
+  assert.doesNotMatch(globalCss, /overflow-wrap:\s*anywhere/);
 });
