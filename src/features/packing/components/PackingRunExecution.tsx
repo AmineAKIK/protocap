@@ -85,6 +85,7 @@ export function PackingRunExecution({
   const fullLoadUnits = run.unitsPerCarton * run.cartonsPerLoad;
   const canDeclareFullLoad = progress.remainingUnits >= fullLoadUnits;
   const isComplete = progress.remainingUnits === 0;
+  const progressPercent = isComplete ? 100 : Math.floor(progress.progressRatio * 100);
 
   const preview = useMemo(() => {
     const input = getDraftInput(draft);
@@ -195,7 +196,7 @@ export function PackingRunExecution({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${persistenceStatus === 'persisted' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>
-              {persistenceStatus === 'persisted' ? 'Enregistré localement' : 'Stockage local indisponible'}
+              {persistenceStatus === 'persisted' ? 'Enregistré localement' : 'Persistance locale dégradée'}
             </span>
             <button
               type="button"
@@ -221,7 +222,7 @@ export function PackingRunExecution({
           </div>
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Progression</p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(Math.round(progress.progressRatio * 100))} %</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-slate-950">{formatNumber(progressPercent)} %</p>
           </div>
         </div>
 
