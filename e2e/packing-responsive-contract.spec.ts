@@ -90,6 +90,29 @@ test('Packing preparation fields stay separated at the 1024px cockpit-fit bounda
   await expectNoDocumentHorizontalOverflow(page);
 });
 
+test('Packing preparation sizes to its content instead of stretching to the cockpit viewport', async ({ page }) => {
+  await useViewport(page, RESPONSIVE_VIEWPORTS.tabletLandscape);
+  await page.goto('/packing-calculator');
+  await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
+  await page.reload();
+
+  const preparation = page.locator('.packing-v3-preparation');
+  const waiting = page.getByLabel('Conduite de production en attente');
+  await expect(preparation).toBeVisible();
+  await expect(waiting).toBeVisible();
+  await expect(waiting).toContainText('La progression, le temps restant et les déclarations apparaîtront après le lancement.');
+  await expect(waiting).not.toContainText('Quantité restante');
+
+  const preparationBox = await preparation.boundingBox();
+  const waitingBox = await waiting.boundingBox();
+  expect(preparationBox).not.toBeNull();
+  expect(waitingBox).not.toBeNull();
+  expect(waitingBox!.y).toBeLessThan(RESPONSIVE_VIEWPORTS.tabletLandscape.height * 0.75);
+  expect(waitingBox!.y - (preparationBox!.y + preparationBox!.height)).toBeLessThanOrEqual(16);
+  expect(waitingBox!.height).toBeLessThanOrEqual(100);
+  await expectNoDocumentHorizontalOverflow(page);
+});
+
 // responsive-contract:packing-responsive-contract
 test('Packing dense surface stays contained and changes composition only in supported regimes', async ({ page }) => {
   for (const viewport of PACKING_VIEWPORTS) {

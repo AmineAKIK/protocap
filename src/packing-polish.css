@@ -69,6 +69,18 @@
   opacity: 1;
 }
 
+.packing-calculator-page .packing-v3-waiting {
+  opacity: 1;
+}
+
+.packing-calculator-page .packing-v3-waiting-head strong {
+  color: #334155;
+}
+
+.packing-calculator-page .packing-v3-waiting-head span {
+  color: #64748b;
+}
+
 .packing-v3-datetime-control {
   gap: .35rem;
 }

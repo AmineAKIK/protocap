@@ -241,12 +241,15 @@
 .packing-v3-feedback { color: #047857; }
 .packing-v3-error { display:flex; align-items:center; gap:.4rem; }
 
-.packing-v3-waiting { opacity: .56; background: #f8fafb; box-shadow: none; }
-.packing-v3-waiting-head strong { display:block; color:#334155; font-size:1rem; }
+.packing-v3-waiting {
+  padding: .8rem 1rem;
+  opacity: .7;
+  background: #f8fafb;
+  box-shadow: none;
+}
+.packing-v3-waiting-head { align-items:center; }
+.packing-v3-waiting-head strong { display:block; color:#334155; font-size:.9rem; }
 .packing-v3-waiting-head span { display:block; }
-.packing-v3-waiting-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.6rem; margin-top:.8rem; }
-.packing-v3-waiting-metrics > span { display:grid; gap:.2rem; min-height:3.3rem; padding:.7rem .8rem; border:1px solid #dbe3e9; border-radius:.65rem; color:#8ca0b8; font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
-.packing-v3-waiting-metrics b { color:#9aabba; font-size:1.05rem; }
 
 .packing-v3-production-grid { display:grid; grid-template-columns:minmax(0,1.85fr) minmax(20rem,.95fr); gap:1rem; margin-top:1rem; min-height:0; }
 .packing-v3-production-main { display:flex; min-width:0; min-height:0; flex-direction:column; gap:.75rem; }
@@ -324,14 +327,27 @@
 @media (min-width: 1024px) and (min-height: 700px) {
   .packing-calculator-page {
     --packing-shell-bottom-reserve: var(--app-mobile-nav-reserve);
+  }
+  .packing-calculator-page.packing-v3-is-running {
     height: calc(100dvh - var(--app-header-height) - var(--packing-shell-bottom-reserve) - env(safe-area-inset-bottom));
     min-height: 0;
     overflow: hidden;
   }
-  .packing-v3-frame { height:100%; min-height:0; padding:.72rem 1rem; gap:.65rem; }
-  .packing-v3-is-preparing .packing-v3-frame { grid-template-rows:minmax(0,1fr) 6.5rem; }
-  .packing-v3-is-running .packing-v3-frame { grid-template-rows:minmax(0,1fr) auto; }
-  .packing-v3-stage { min-height:0; overflow:hidden; }
+  .packing-calculator-page.packing-v3-is-preparing {
+    min-height: calc(100dvh - var(--app-header-height) - var(--packing-shell-bottom-reserve) - env(safe-area-inset-bottom));
+  }
+  .packing-v3-frame { min-height:0; padding:.72rem 1rem; gap:.65rem; }
+  .packing-v3-is-preparing .packing-v3-frame {
+    height:auto;
+    grid-template-rows:auto auto;
+    align-content:start;
+  }
+  .packing-v3-is-running .packing-v3-frame {
+    height:100%;
+    grid-template-rows:minmax(0,1fr) auto;
+  }
+  .packing-v3-is-running .packing-v3-stage { min-height:0; overflow:hidden; }
+  .packing-v3-is-preparing .packing-v3-stage { overflow:visible; }
   .packing-v3-preparation { display:flex; flex-direction:column; padding:.85rem 1rem; }
   .packing-v3-preparation .packing-v3-stage-header { flex:0 0 auto; }
   .packing-v3-preparation .packing-v3-inputs {
@@ -351,8 +367,6 @@
   .packing-v3-preparation .packing-v3-plan-metrics > div { padding:.55rem .8rem; }
   .packing-v3-preparation .packing-v3-launch { min-height:2.55rem; margin-top:.55rem; }
   .packing-v3-waiting { padding:.65rem 1rem; }
-  .packing-v3-waiting-metrics { margin-top:.35rem; }
-  .packing-v3-waiting-metrics > span { min-height:2.5rem; padding:.45rem .65rem; }
   .packing-v3-production { display:flex; min-height:0; flex-direction:column; padding:.85rem 1rem; }
   .packing-v3-production-grid { flex:1 1 auto; min-height:0; margin-top:.55rem; gap:.75rem; }
   .packing-v3-production-main { gap:.55rem; }
@@ -395,7 +409,7 @@
   .packing-v3-stage { padding:1rem; }
   .packing-v3-stage-header { align-items:flex-start; }
   .packing-v3-stage-header h1 { font-size:1.25rem; }
-  .packing-v3-inputs,.packing-v3-plan-metrics,.packing-v3-primary-kpis,.packing-v3-time-kpis,.packing-v3-partial-controls,.packing-v3-waiting-metrics { grid-template-columns:1fr; }
+  .packing-v3-inputs,.packing-v3-plan-metrics,.packing-v3-primary-kpis,.packing-v3-time-kpis,.packing-v3-partial-controls { grid-template-columns:1fr; }
   .packing-v3-plan-metrics > div + div::before { display:none; }
   .packing-v3-primary-kpis .packing-v3-remaining strong { font-size:1.65rem; }
   .packing-v3-history-row { grid-template-columns:2.7rem minmax(0,1fr) auto auto; }
