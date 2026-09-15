@@ -45,19 +45,22 @@ function parsePackingInput(form: PackingPlanningFormState): PackingInput | null 
   return isValidPackingInput(input) ? input : null;
 }
 
-function isValidTime(value: string): boolean {
-  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+function isValidProductionStart(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return false;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime());
 }
 
-function resolveProductionStartedAt(time: string, now = new Date()): string {
-  if (!isValidTime(time)) throw new RangeError('Production start time must use HH:mm.');
-  const [hours, minutes] = time.split(':').map(Number);
-  const candidate = new Date(now);
-  candidate.setHours(hours, minutes, 0, 0);
-  if (candidate.getTime() - now.getTime() > 6 * 60 * 60 * 1000) {
-    candidate.setDate(candidate.getDate() - 1);
-  }
-  return candidate.toISOString();
+function resolveProductionStartedAt(value: string): string {
+  if (!isValidProductionStart(value)) throw new RangeError('Production start must include a valid date and time.');
+  return new Date(value).toISOString();
+}
+
+function toLocalDateTimeInputValue(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 type ViewTransitionDocument = Document & {
@@ -106,7 +109,7 @@ export function PackingCalculatorPage() {
   const unitsPerCartonState = numericState(form.unitsPerCarton);
   const cartonsPerPaletteState = numericState(form.cartonsPerPalette);
   const cadenceState = numericState(form.referenceCadence);
-  const startTimeValid = isValidTime(form.productionStartTime);
+  const startTimeValid = isValidProductionStart(form.productionStartTime);
   const combinationInvalid =
     quantityState === 'valid' &&
     unitsPerCartonState === 'valid' &&
@@ -138,7 +141,7 @@ export function PackingCalculatorPage() {
       const confirmed = window.confirm('Modifier la préparation supprimera les déclarations de ce run. Continuer ?');
       if (!confirmed) return;
     }
-    const started = new Date(getPackingRunProductionStartedAt(activeRun)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const started = toLocalDateTimeInputValue(getPackingRunProductionStartedAt(activeRun));
     transitionState(() => {
       setForm({
         quantity: String(activeRun.requestedUnits),
