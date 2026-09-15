@@ -1,72 +1,106 @@
-/* Packing Cockpit V2 visual polish. Keep presentation local to the route. */
-.packing-calculator-page .packing-cockpit,
-.packing-calculator-page .packing-operator-panel,
-.packing-calculator-page .packing-reference-card,
-.packing-calculator-page .packing-strategies,
-.packing-calculator-page .packing-run-activation,
-.packing-calculator-page .packing-empty-state {
+/* Packing Cockpit V3 — motion only reinforces state continuity. */
+.packing-v3-preparation,
+.packing-v3-frozen {
+  view-transition-name: packing-preparation-stage;
+}
+
+.packing-v3-production,
+.packing-v3-waiting {
+  view-transition-name: packing-production-stage;
+}
+
+.packing-v3-stage,
+.packing-v3-frozen,
+.packing-v3-strategy,
+.packing-v3-launch,
+.packing-v3-full-load-action,
+.packing-v3-stepper button,
+.packing-v3-partial-controls > button,
+.packing-v3-history-row button {
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
-.packing-calculator-page .packing-cockpit-metric,
-.packing-calculator-page .packing-primary-action,
-.packing-calculator-page .packing-feedback-state,
-.packing-calculator-page .packing-error-state {
-  transition:
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease;
+/* Keep the V3 cockpit palette readable at WCAG AA contrast levels. */
+.packing-calculator-page .packing-v3-status {
+  color: #475569;
 }
 
-.packing-calculator-page .packing-progress-fill {
-  transition: width 220ms ease-out;
+.packing-calculator-page .packing-v3-status-preparing {
+  color: #92400e;
 }
 
-.packing-calculator-page .packing-primary-action-button {
-  box-shadow: 0 10px 28px rgb(13 148 136 / 0.2);
+.packing-calculator-page .packing-v3-status-running {
+  color: #065f58;
 }
 
-.packing-calculator-page .packing-cockpit-metric-priority {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+.packing-calculator-page .packing-v3-field-label,
+.packing-calculator-page .packing-v3-strategy-result-label,
+.packing-calculator-page .packing-v3-plan-metrics span,
+.packing-calculator-page .packing-v3-primary-kpis span,
+.packing-calculator-page .packing-v3-time-kpis > div > span,
+.packing-calculator-page .packing-v3-partial-heading > div > span {
+  color: #475569;
 }
 
-.packing-calculator-page .packing-cockpit-complete .text-slate-400,
-.packing-calculator-page .packing-cockpit-complete .text-slate-500 {
-  color: #cbd5e1;
+.packing-calculator-page .packing-v3-primary-kpis small,
+.packing-calculator-page .packing-v3-time-kpis small {
+  color: #475569;
 }
 
-.packing-calculator-page .packing-operator-panel:not(.packing-operator-complete) .packing-operator-header {
-  box-shadow: inset 3px 0 0 rgb(13 148 136 / 0.5);
+.packing-calculator-page .packing-v3-progress > div:not(.packing-v3-progress-track) strong {
+  color: #0b625c;
 }
 
-.packing-calculator-page .packing-operator-complete .packing-operator-header {
-  box-shadow: inset 3px 0 0 rgb(5 150 105 / 0.55);
+.packing-calculator-page .packing-v3-launch,
+.packing-calculator-page .packing-v3-full-load-action {
+  background: #0b6b65;
 }
 
-.packing-calculator-page .packing-partial-form,
-.packing-calculator-page .packing-history li {
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+.packing-calculator-page .packing-v3-full-load-action small {
+  color: #fff;
+  opacity: 1;
 }
 
-@media (min-width: 1024px) and (min-height: 700px) {
-  .packing-calculator-page .packing-progress {
-    margin-top: 0.38rem;
-  }
+.packing-v3-launch:hover:not(:disabled),
+.packing-v3-full-load-action:hover:not(:disabled) {
+  background: #075f59;
+  box-shadow: 0 10px 24px rgb(15 159 149 / .24);
+}
 
-  .packing-calculator-page .packing-progress-label {
-    display: none;
-  }
+.packing-v3-launch:active:not(:disabled),
+.packing-v3-full-load-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
 
-  .packing-calculator-page .packing-progress-track {
-    height: 0.3rem;
-  }
+.packing-v3-stepper button:hover,
+.packing-v3-partial-controls > button:hover {
+  background: #edf8f6;
+}
 
-  .packing-calculator-page .packing-cockpit-secondary {
-    margin-top: 0.38rem;
+::view-transition-group(packing-preparation-stage),
+::view-transition-group(packing-production-stage) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(.22, .8, .28, 1);
+}
+
+::view-transition-old(packing-preparation-stage),
+::view-transition-new(packing-preparation-stage),
+::view-transition-old(packing-production-stage),
+::view-transition-new(packing-production-stage) {
+  mix-blend-mode: normal;
+}
+
+@media (max-width: 639px) {
+  .packing-v3-stage-header,
+  .packing-v3-waiting-head {
+    flex-direction: column;
+    gap: .55rem;
   }
 }
 
@@ -78,5 +112,10 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  ::view-transition-group(packing-preparation-stage),
+  ::view-transition-group(packing-production-stage) {
+    animation-duration: 0.01ms;
   }
 }

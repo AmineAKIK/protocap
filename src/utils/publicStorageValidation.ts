@@ -5,6 +5,8 @@ export interface PersistedPackingFormState {
   quantity: string;
   unitsPerCarton: string;
   cartonsPerPalette: string;
+  productionStartTime?: string;
+  referenceCadence?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,7 +112,9 @@ function isPackingFormState(value: unknown): value is PersistedPackingFormState 
   return (
     isString(value.quantity) &&
     isString(value.unitsPerCarton) &&
-    isString(value.cartonsPerPalette)
+    isString(value.cartonsPerPalette) &&
+    isOptionalString(value.productionStartTime) &&
+    isOptionalString(value.referenceCadence)
   );
 }
 

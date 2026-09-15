@@ -61,7 +61,7 @@ describe('packing active-run persistence', () => {
     expect(loadActivePackingRun(storage)).toEqual({ status: 'loaded', activeRun: run });
   });
 
-  it('does not persist derived variance or declaration totals', () => {
+  it('persists production start as source data but not derived variance or declaration totals', () => {
     const storage = new MemoryStorage();
     const run = addPackingDeclaration(createRun(), {
       id: 'declaration-1',
@@ -73,6 +73,8 @@ describe('packing active-run persistence', () => {
     persistActivePackingRun(storage, run);
     const serialized = JSON.parse(storage.getItem(PACKING_ACTIVE_RUN_STORAGE_KEY) ?? '{}');
 
+    expect(serialized.schemaVersion).toBe(2);
+    expect(serialized.activeRun.productionStartedAt).toBe('2026-09-14T20:00:00.000Z');
     expect(serialized.activeRun.varianceUnits).toBeUndefined();
     expect(serialized.activeRun.declarations[0].totalUnits).toBeUndefined();
     expect(serialized.activeRun.declarations[0]).toEqual({
@@ -80,6 +82,35 @@ describe('packing active-run persistence', () => {
       createdAt: '2026-09-14T20:10:00.000Z',
       completeCartons: 10,
       partialCartonUnits: 120,
+    });
+  });
+
+  it('migrates a V1 run by using its creation timestamp as the historical production start', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      PACKING_ACTIVE_RUN_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        activeRun: {
+          id: 'legacy-run',
+          createdAt: '2026-09-14T20:00:00.000Z',
+          requestedUnits: 400_000,
+          unitsPerCarton: 480,
+          cartonsPerLoad: 50,
+          selectedPolicy: 'round-carton',
+          plannedUnits: 400_320,
+          referenceCadenceUnitsPerMinute: 60,
+          declarations: [],
+        },
+      }),
+    );
+
+    expect(loadActivePackingRun(storage)).toMatchObject({
+      status: 'loaded',
+      activeRun: {
+        id: 'legacy-run',
+        productionStartedAt: '2026-09-14T20:00:00.000Z',
+      },
     });
   });
 
@@ -146,7 +177,7 @@ describe('packing active-run persistence', () => {
 
     storage.setItem(
       PACKING_ACTIVE_RUN_STORAGE_KEY,
-      JSON.stringify({ schemaVersion: 2, activeRun: null }),
+      JSON.stringify({ schemaVersion: 3, activeRun: null }),
     );
     expect(loadActivePackingRun(storage)).toEqual({ status: 'corrupt', activeRun: null });
 

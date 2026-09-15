@@ -10,7 +10,7 @@ function stripCssComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
-test('Packing responsive and polish rules are isolated from the global stylesheet', async () => {
+test('Packing responsive and polish rules stay isolated from the global stylesheet', async () => {
   const globalCss = await read('src/index.css');
   const packingCss = await read('src/packing-responsive.css');
   const polishCss = await read('src/packing-polish.css');
@@ -24,79 +24,77 @@ test('Packing responsive and polish rules are isolated from the global styleshee
   assert.match(polishCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('Packing density targets semantic hooks instead of DOM position discovery', async () => {
+test('Packing V3 uses semantic hooks and no positional CSS discovery', async () => {
   const css = stripCssComments(await read('src/packing-responsive.css'));
   const polishCss = stripCssComments(await read('src/packing-polish.css'));
   const page = await read('src/pages/PackingCalculatorPage.tsx');
   const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
-  const cockpit = await read('src/features/packing/components/PackingCockpitSummary.tsx');
-  const candidate = await read('src/features/packing/components/PackingPlanCandidate.tsx');
   const execution = await read('src/features/packing/components/PackingRunExecution.tsx');
 
   assert.doesNotMatch(css, /:has\(/);
   assert.doesNotMatch(css, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
   assert.doesNotMatch(polishCss, /:has\(/);
   assert.doesNotMatch(polishCss, /:(?:first|last|nth|nth-last)-(?:child|of-type)/);
-  assert.match(css, /section\[aria-label='Référence et résultat exact'\]/);
-  assert.match(css, /section\[aria-label='Plan actif et déclarations de production'\]/);
-  assert.match(css, /section\[aria-labelledby='packing-run-execution-title'\]/);
-  assert.match(css, /\.packing-plan(?:-metric)?/);
-  assert.match(polishCss, /\.packing-progress-label/);
-  assert.match(polishCss, /\.packing-progress-track/);
-  assert.match(page, /PackingPlanningRail/);
-  assert.match(page, /PackingCockpitSummary/);
+  assert.match(page, /packing-v3-is-running/);
+  assert.match(page, /PackingConductWaiting/);
+  assert.match(page, /PackingFrozenPreparation/);
   assert.match(page, /PackingRunExecution/);
-  assert.match(planning, /packing-primary-input/);
-  assert.match(candidate, /packing-plan-metrics/);
-  assert.match(cockpit, /packing-cockpit-primary/);
-  assert.match(cockpit, /packing-cockpit-secondary/);
-  assert.match(cockpit, /packing-progress-label/);
-  assert.match(cockpit, /packing-progress-track/);
-  assert.match(cockpit, /packing-progress-fill/);
-  assert.match(execution, /packing-primary-action/);
-  assert.match(execution, /packing-run-execution-title/);
-  assert.match(execution, /Déclarer une charge/);
+  assert.doesNotMatch(page, /PackingCockpitSummary|PackingPlanCandidate|packing-columns/);
+  assert.match(planning, /packing-v3-preparation/);
+  assert.match(planning, /packing-v3-strategies/);
+  assert.match(planning, /packing-v3-plan/);
+  assert.match(execution, /packing-v3-production-grid/);
+  assert.match(execution, /packing-v3-full-load-action/);
+  assert.match(execution, /packing-v3-history-scroll/);
+  assert.match(execution, /Déclarer une palette complète/);
   assert.match(execution, /Historique des déclarations/);
 });
 
-test('Packing viewport fit is height-aware, shell-owned and locally scrollable', async () => {
-  const page = await read('src/pages/PackingCalculatorPage.tsx');
-  const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
+test('Packing viewport fit is vertically stacked, shell-owned and history-scroll-only', async () => {
   const css = stripCssComments(await read('src/packing-responsive.css'));
   const polishCss = stripCssComments(await read('src/packing-polish.css'));
   const shell = await read('src/responsive-shell.css');
 
-  assert.match(page, /xl:grid-cols-\[minmax\(22rem,0\.78fr\)_minmax\(0,1\.22fr\)\]/);
-  assert.match(planning, /sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3/);
-  assert.match(css, /\.packing-calculator-page \.tabular-nums \{\s*white-space: nowrap;/s);
-  assert.doesNotMatch(css, /overflow-wrap:/);
-  assert.doesNotMatch(css, /word-break:/);
-  assert.match(css, /@media \(max-width: 479px\)/);
   assert.match(css, /@media \(min-width: 1024px\) and \(min-height: 700px\)/);
   assert.match(css, /100dvh - var\(--app-header-height\) - var\(--packing-shell-bottom-reserve\)/);
   assert.match(css, /--packing-shell-bottom-reserve: var\(--app-mobile-nav-reserve\)/);
   assert.match(css, /--packing-shell-bottom-reserve: 0px/);
-  assert.match(css, /overflow-y: auto/);
-  assert.match(css, /overscroll-behavior: contain/);
-  assert.match(polishCss, /@media \(min-width: 1024px\) and \(min-height: 700px\)/);
-  assert.match(polishCss, /\.packing-progress/);
+  assert.match(css, /\.packing-v3-is-preparing \.packing-v3-frame \{ grid-template-rows:/);
+  assert.match(css, /\.packing-v3-is-running \.packing-v3-frame \{ grid-template-rows:/);
+  assert.match(css, /\.packing-v3-history-scroll \{[^}]*overflow-y:auto/s);
+  assert.match(css, /overscroll-behavior:contain/);
+  assert.doesNotMatch(css, /overflow-wrap:/);
+  assert.doesNotMatch(css, /word-break:/);
+  assert.match(polishCss, /view-transition-name: packing-preparation-stage/);
+  assert.match(polishCss, /view-transition-name: packing-production-stage/);
+  assert.match(polishCss, /::view-transition-group\(packing-preparation-stage\)/);
   assert.match(shell, /padding-bottom: calc\(var\(--app-mobile-nav-reserve\)/);
 });
 
-test('Packing V2 closure keeps declaration history authoritative and legacy execution debt retired', async () => {
+test('Packing V3 keeps declaration history authoritative and legacy shipment debt retired', async () => {
   const page = await read('src/pages/PackingCalculatorPage.tsx');
   const planning = await read('src/features/packing/components/PackingPlanningRail.tsx');
+  const execution = await read('src/features/packing/components/PackingRunExecution.tsx');
   const packing = await read('src/utils/packing.ts');
+  const runDomain = await read('src/features/packing/domain/packingRun.ts');
   const publicStorage = await read('src/utils/publicStorageValidation.ts');
 
   await assert.rejects(read('src/utils/packingShipment.ts'), /ENOENT/);
   await assert.rejects(read('src/utils/packingShipment.test.ts'), /ENOENT/);
   assert.doesNotMatch(page, /packingShipment|getPackingShipmentProgress|getPackingShipmentLoad/);
-  assert.match(page, /summarizePackingLoads/);
+  assert.match(planning, /summarizePackingLoads/);
+  assert.match(planning, /productionStartTime: string/);
+  assert.match(planning, /referenceCadence: string/);
   const planningForm = planning.match(/export interface PackingPlanningFormState \{([\s\S]*?)\n\}/)?.[1] ?? '';
   assert.notEqual(planningForm, '');
   assert.doesNotMatch(planningForm, /\bpolicy\s*:/);
-  assert.match(packing, /summarizePackingLoads/);
+  assert.match(packing, /partialLoadCartons/);
+  assert.match(packing, /totalCartons/);
+  assert.match(runDomain, /productionStartedAt/);
+  assert.match(runDomain, /getPackingRunTiming/);
+  assert.match(execution, /addPackingDeclaration/);
+  assert.match(execution, /replacePackingDeclaration/);
+  assert.match(execution, /removePackingDeclaration/);
   assert.doesNotMatch(packing, /getPackingShipmentProgress|getPackingShipmentLoad|nextLoad|shippedLoads/);
   assert.doesNotMatch(publicStorage, /lineops\.packing\.shipment\.progress/);
   assert.doesNotMatch(publicStorage, /PersistedPackingTrackingState/);

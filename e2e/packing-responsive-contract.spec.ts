@@ -34,27 +34,32 @@ async function configurePacking(page: Page) {
   await page.goto('/packing-calculator');
   await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
   await page.reload();
-  await page.getByLabel('Quantité demandée en unités').fill('5120000000');
+
+  await page.getByLabel('Quantité demandée').fill('5120000000');
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByRole('radio', { name: /Carton/i }).click();
-  await page.getByLabel('Cadence de référence en unités par minute').fill('60');
-  await page.getByRole('button', { name: 'Activer ce run' }).click();
-  await expect(page.getByRole('heading', { name: 'État de production' })).toBeVisible();
+  await page.getByLabel('Début OC').fill('07:30');
+  await page
+    .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
+    .getByRole('radio', { name: /Carton complet/i })
+    .click();
+  await page.getByLabel('Cadence réf.').fill('60');
+  await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Conduite de production' })).toBeVisible();
+  await expect(page.getByLabel('Historique des déclarations')).toBeVisible();
 }
 
-async function expectAtomicVisibleNumber(locator: Locator) {
+async function expectVisibleNumberNotClipped(locator: Locator) {
   await expect(locator).toBeVisible();
   const state = await locator.evaluate((node) => {
     const element = node as HTMLElement;
     return {
       width: element.clientWidth,
       scrollWidth: element.scrollWidth,
-      whiteSpace: getComputedStyle(element).whiteSpace,
     };
   });
   expect(state.scrollWidth).toBeLessThanOrEqual(state.width + 1);
-  expect(state.whiteSpace).toBe('nowrap');
 }
 
 // responsive-contract:packing-responsive-contract
@@ -66,45 +71,47 @@ test('Packing dense surface stays contained and changes composition only in supp
 
       await test.step('document containment and primary action', async () => {
         await expectNoDocumentHorizontalOverflow(page);
-        await expectPrimaryActionUsable(page, page.getByRole('button', { name: 'Déclarer une charge' }));
+        await expectPrimaryActionUsable(page, page.getByRole('button', { name: /Déclarer une palette complète/i }));
       });
 
-      await test.step('business numbers remain readable and critical outputs stay atomic', async () => {
-        const clippedNumbers = await page.locator('.tabular-nums:visible').evaluateAll((nodes) =>
-          nodes
-            .map((node) => {
-              const element = node as HTMLElement;
-              return {
-                text: element.textContent?.trim() ?? '',
-                width: element.clientWidth,
-                scrollWidth: element.scrollWidth,
-              };
-            })
-            .filter((entry) => entry.text && entry.scrollWidth > entry.width + 1),
-        );
+      await test.step('business numbers remain readable and critical outputs are not clipped', async () => {
+        const clippedNumbers = await page
+          .locator(
+            '.packing-v3-primary-kpis strong:visible, .packing-v3-time-kpis strong:visible, .packing-v3-history-total strong:visible',
+          )
+          .evaluateAll((nodes) =>
+            nodes
+              .map((node) => {
+                const element = node as HTMLElement;
+                return {
+                  text: element.textContent?.trim() ?? '',
+                  width: element.clientWidth,
+                  scrollWidth: element.scrollWidth,
+                };
+              })
+              .filter((entry) => entry.text && entry.scrollWidth > entry.width + 1),
+          );
         expect(clippedNumbers).toEqual([]);
 
-        const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
-        const declarations = page.getByRole('region', { name: 'Déclarations de production', exact: true });
-        await expectAtomicVisibleNumber(execution.locator('.tabular-nums').first());
-        await expectAtomicVisibleNumber(declarations.locator('.tabular-nums').first());
+        await expectVisibleNumberNotClipped(page.locator('.packing-v3-primary-kpis strong').first());
+        await expectVisibleNumberNotClipped(page.locator('.packing-v3-history-total strong'));
       });
 
       await test.step('stacked and cockpit-fit compositions switch by available width and height', async () => {
-        const reference = page.getByRole('region', { name: 'Référence et résultat exact' });
-        const execution = page.getByRole('region', { name: 'Plan actif et déclarations de production' });
-        const referenceBox = await reference.boundingBox();
+        const execution = page.locator('.packing-v3-production-main');
+        const history = page.locator('.packing-v3-history');
         const executionBox = await execution.boundingBox();
-        expect(referenceBox).not.toBeNull();
+        const historyBox = await history.boundingBox();
         expect(executionBox).not.toBeNull();
+        expect(historyBox).not.toBeNull();
 
         const usesCockpitFit = viewport.width >= 1024 && viewport.height >= 700;
         if (usesCockpitFit) {
-          expect(executionBox!.x).toBeGreaterThan(referenceBox!.x + referenceBox!.width - 2);
-          expect(Math.abs(executionBox!.y - referenceBox!.y)).toBeLessThan(8);
+          expect(historyBox!.x).toBeGreaterThan(executionBox!.x + executionBox!.width - 2);
+          expect(Math.abs(historyBox!.y - executionBox!.y)).toBeLessThan(8);
         } else {
-          expect(Math.abs(executionBox!.x - referenceBox!.x)).toBeLessThan(8);
-          expect(executionBox!.y).toBeGreaterThan(referenceBox!.y + referenceBox!.height - 2);
+          expect(Math.abs(historyBox!.x - executionBox!.x)).toBeLessThan(8);
+          expect(historyBox!.y).toBeGreaterThan(executionBox!.y + executionBox!.height - 2);
         }
       });
     });
@@ -117,8 +124,8 @@ test('Packing active cockpit fits the target landscape and desktop viewport matr
       await useViewport(page, viewport);
       await configurePacking(page);
 
-      const cockpit = page.getByRole('region', { name: 'État de production' });
-      const primaryAction = page.getByRole('button', { name: 'Déclarer une charge' });
+      const cockpit = page.locator('.packing-v3-production');
+      const primaryAction = page.getByRole('button', { name: /Déclarer une palette complète/i });
 
       await expectNoDocumentHorizontalOverflow(page);
       await expectNoDocumentVerticalOverflow(page);
@@ -137,11 +144,11 @@ test('Packing visual hierarchy stays operational at the PR7 reference viewports 
       await useViewport(page, viewport);
       await configurePacking(page);
 
-      const cockpit = page.getByRole('region', { name: 'État de production' });
-      const actionPanel = page.locator('.packing-primary-action');
-      const progressbar = page.getByRole('progressbar', { name: 'Avancement conditionné' });
-      const progressFill = progressbar.locator('.packing-progress-fill');
-      const action = page.getByRole('button', { name: 'Déclarer une charge' });
+      const cockpit = page.locator('.packing-v3-production');
+      const actionPanel = page.locator('.packing-v3-full-load-action');
+      const progressbar = page.getByRole('progressbar', { name: 'Progression de l’ordre de conditionnement' });
+      const progressFill = progressbar.locator('.packing-v3-progress-track > span');
+      const action = page.getByRole('button', { name: /Déclarer une palette complète/i });
 
       await expect(cockpit).toBeVisible();
       await expect(actionPanel).toBeVisible();
@@ -153,9 +160,9 @@ test('Packing visual hierarchy stays operational at the PR7 reference viewports 
       await expectNoDocumentVerticalOverflow(page);
 
       const hierarchy = await page.evaluate(() => {
-        const cockpitNode = document.querySelector('.packing-cockpit') as HTMLElement;
-        const actionNode = document.querySelector('.packing-primary-action') as HTMLElement;
-        const primaryMetric = document.querySelector('.packing-cockpit-metric-priority') as HTMLElement;
+        const cockpitNode = document.querySelector('.packing-v3-production') as HTMLElement;
+        const actionNode = document.querySelector('.packing-v3-full-load-action') as HTMLElement;
+        const primaryMetric = document.querySelector('.packing-v3-remaining') as HTMLElement;
         return {
           cockpitBackground: getComputedStyle(cockpitNode).backgroundColor,
           actionBackground: getComputedStyle(actionNode).backgroundColor,
@@ -170,7 +177,7 @@ test('Packing visual hierarchy stays operational at the PR7 reference viewports 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await useViewport(page, RESPONSIVE_VIEWPORTS.laptop);
   await configurePacking(page);
-  const transitionDurationMs = await page.locator('.packing-progress-fill').evaluate((node) => {
+  const transitionDurationMs = await page.locator('.packing-v3-progress-track > span').evaluate((node) => {
     const durations = getComputedStyle(node).transitionDuration.split(',').map((value) => value.trim());
     const toMilliseconds = (value: string) => {
       if (value.endsWith('ms')) return Number.parseFloat(value);
