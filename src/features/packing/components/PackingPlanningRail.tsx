@@ -79,6 +79,7 @@ function NumericField({
       <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
         <span aria-hidden="true">{icon}</span>
         <input
+          aria-label={label}
           inputMode="numeric"
           pattern="[0-9]*"
           value={value}
@@ -97,7 +98,7 @@ function StartTimeField({ value, invalid, onChange }: { value: string; invalid: 
       <span className="packing-v3-field-label">Début OC</span>
       <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
         <Clock3 size={18} aria-hidden="true" />
-        <input type="time" value={value} aria-invalid={invalid} onChange={(event) => onChange(event.target.value)} />
+        <input aria-label="Début OC" type="time" value={value} aria-invalid={invalid} onChange={(event) => onChange(event.target.value)} />
       </span>
     </label>
   );
