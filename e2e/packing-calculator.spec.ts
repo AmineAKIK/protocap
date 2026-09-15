@@ -1,11 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const productionStart = '2026-09-15T07:30';
+
 async function configurePacking(page: Page, quantity = '30880') {
   await page.goto('/packing-calculator');
   await page.getByLabel('Quantité demandée').fill(quantity);
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByLabel('Début OC').fill('07:30');
+  await page.getByLabel('Début OC').fill(productionStart);
   await page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' }).getByRole('radio', { name: /Carton complet/i }).click();
   await page.getByLabel('Cadence réf.').fill('60');
   await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
