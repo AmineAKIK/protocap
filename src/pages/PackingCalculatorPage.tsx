@@ -6,6 +6,7 @@ import {
   type PackingPlanningFormState,
 } from '../features/packing/components/PackingPlanningRail';
 import { PackingRunExecution } from '../features/packing/components/PackingRunExecution';
+import { getPackingRunProductionStartedAt } from '../features/packing/domain/packingRun';
 import { usePackingActiveRun } from '../features/packing/usePackingActiveRun';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
@@ -134,7 +135,7 @@ export function PackingCalculatorPage() {
       const confirmed = window.confirm('Modifier la préparation supprimera les déclarations de ce run. Continuer ?');
       if (!confirmed) return;
     }
-    const started = new Date(activeRun.productionStartedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const started = new Date(getPackingRunProductionStartedAt(activeRun)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     transitionState(() => {
       setForm({
         quantity: String(activeRun.requestedUnits),
