@@ -41,22 +41,48 @@ async function expectBusinessNumbersReadable(page: Page) {
 }
 
 test.describe('Packing Calculator operator declaration flow', () => {
-  test('explains incomplete preparation without showing field errors before interaction', async ({ page }) => {
+  test('waits for a launch attempt before exposing preparation errors and keeps fields aligned', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto('/packing-calculator');
-    await expect(page.getByText(/À compléter : Quantité demandée/)).toBeVisible();
+    const launch = page.getByRole('button', { name: 'Lancer le suivi de production' });
+    const quantity = page.getByLabel('Quantité demandée');
+
+    await expect(launch).toBeEnabled();
+    await expect(page.getByText(/À compléter :/)).toHaveCount(0);
     await expect(page.getByText('Valeur obligatoire.')).toHaveCount(0);
 
-    await page.getByLabel('Quantité demandée').focus();
+    await quantity.focus();
     await page.getByLabel('Unités par carton').focus();
-    await expect(page.getByText('Valeur obligatoire.')).toBeVisible();
+    await expect(page.getByText('Valeur obligatoire.')).toHaveCount(0);
+    await expect(quantity).toHaveAttribute('aria-invalid', 'false');
+
+    const before = await page.locator('.packing-v3-field-control').evaluateAll((elements) =>
+      elements.map((element) => Math.round(element.getBoundingClientRect().top)),
+    );
+
+    await launch.click();
+
+    await expect(page.getByText('Valeur obligatoire.')).toHaveCount(5);
+    await expect(page.getByText(/À compléter : Quantité demandée/)).toBeVisible();
+    await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+    await expect(quantity).toBeFocused();
+
+    const after = await page.locator('.packing-v3-field-control').evaluateAll((elements) =>
+      elements.map((element) => Math.round(element.getBoundingClientRect().top)),
+    );
+    expect(after).toEqual(before);
   });
 
-  test('does not silently rewrite invalid numeric input', async ({ page }) => {
+  test('does not silently rewrite invalid numeric input or surface it before launch', async ({ page }) => {
     await page.goto('/packing-calculator');
     const quantity = page.getByLabel('Quantité demandée');
     await quantity.fill('12.5');
     await page.getByLabel('Unités par carton').focus();
     await expect(quantity).toHaveValue('12.5');
+    await expect(quantity).toHaveAttribute('aria-invalid', 'false');
+    await expect(page.getByText('Saisissez un entier supérieur à 0.')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
     await expect(quantity).toHaveAttribute('aria-invalid', 'true');
     await expect(page.getByText('Saisissez un entier supérieur à 0.')).toBeVisible();
   });
