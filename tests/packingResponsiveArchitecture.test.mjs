@@ -59,8 +59,8 @@ test('Packing preparation stays intrinsic while the active cockpit remains shell
   assert.match(css, /100dvh - var\(--app-header-height\) - var\(--packing-shell-bottom-reserve\)/);
   assert.match(css, /--packing-shell-bottom-reserve: var\(--app-mobile-nav-reserve\)/);
   assert.match(css, /--packing-shell-bottom-reserve: 0px/);
-  assert.doesNotMatch(css, /\.packing-v3-is-preparing \.packing-v3-frame \{[^}]*grid-template-rows:/s);
-  assert.match(css, /\.packing-v3-is-running \.packing-v3-frame \{ grid-template-rows:/);
+  assert.match(css, /\.packing-v3-is-preparing \.packing-v3-frame \{[\s\S]*?height:\s*auto;[\s\S]*?grid-template-rows:\s*auto auto;[\s\S]*?align-content:\s*start;[\s\S]*?\}/);
+  assert.match(css, /\.packing-v3-is-running \.packing-v3-frame \{[\s\S]*?height:\s*100%;[\s\S]*?grid-template-rows:\s*minmax\(0,1fr\) auto;[\s\S]*?\}/);
   assert.match(css, /\.packing-v3-history-scroll \{[^}]*overflow-y:auto/s);
   assert.match(css, /overscroll-behavior:contain/);
   assert.doesNotMatch(css, /overflow-wrap:/);
