@@ -165,6 +165,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
   });
 
   it('preserves a legacy time-only start until the operator chooses a date', async () => {
+    const user = userEvent.setup();
     localStorage.setItem(
       formStorageKey,
       JSON.stringify({
@@ -180,10 +181,14 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     const start = getProductionStartInput();
     expect(start.value).toBe('');
-    expect(screen.getByText(/Heure enregistrée précédemment : 07:30/)).toBeTruthy();
+    expect(screen.getByText(/Heure enregistrée : 07:30 · choisissez sa date\./)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /Lancer le suivi de production/i }));
+    expect(screen.getByText('Valeur obligatoire.')).toBeTruthy();
+    expect(screen.getByText(/Heure enregistrée : 07:30 · choisissez sa date\./)).toBeTruthy();
 
     fireEvent.change(start, { target: { value: productionStart } });
-    expect(screen.queryByText(/Heure enregistrée précédemment/)).toBeNull();
+    expect(screen.queryByText(/Heure enregistrée :/)).toBeNull();
   });
 
   it('rejects impossible calendar dates only after a launch attempt', async () => {
