@@ -29,19 +29,24 @@ function loadInitialValue<T>(
   initialValue: T,
   normalize?: (value: T) => T,
 ): InitialLocalStorageState<T> {
-  let value = initialValue;
-
+  let stored: string | null;
   try {
-    const stored = window.localStorage.getItem(vkey);
-    if (stored) {
+    stored = window.localStorage.getItem(vkey);
+  } catch {
+    return { value: initialValue, persistenceStatus: 'degraded' };
+  }
+
+  let value = initialValue;
+  if (stored) {
+    try {
       const parsed: unknown = JSON.parse(stored);
       if (isValidPublicStorageValue(key, parsed)) {
         const validated = parsed as T;
         value = normalize ? normalize(validated) : validated;
       }
+    } catch {
+      value = initialValue;
     }
-  } catch {
-    return { value: initialValue, persistenceStatus: 'degraded' };
   }
 
   return { value, persistenceStatus: persistValue(vkey, value) };
