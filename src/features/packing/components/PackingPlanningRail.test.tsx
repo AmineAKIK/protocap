@@ -87,11 +87,37 @@ describe('PackingPlanningRail OC start picker', () => {
     const input = screen.getByLabelText('Début OC') as HTMLInputElement;
     expect(input.type).toBe('datetime-local');
     expect(input.classList.contains('packing-v3-datetime-input')).toBe(true);
+    expect(input.classList.contains('packing-v3-datetime-input-empty')).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
 
     expect(showPicker).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(input);
+  });
+
+  it('blocks direct keyboard, paste and drop entry while keeping Tab navigation', () => {
+    renderPlanningRail();
+
+    const input = screen.getByLabelText('Début OC') as HTMLInputElement;
+
+    expect(fireEvent.keyDown(input, { key: '4' })).toBe(false);
+    expect(fireEvent.keyDown(input, { key: 'Backspace' })).toBe(false);
+    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
+    expect(fireEvent.paste(input)).toBe(false);
+    expect(fireEvent.drop(input)).toBe(false);
+  });
+
+  it('opens the picker from Enter instead of accepting manual entry', () => {
+    const showPicker = vi.fn();
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
+      configurable: true,
+      value: showPicker,
+    });
+    renderPlanningRail();
+
+    const input = screen.getByLabelText('Début OC') as HTMLInputElement;
+    expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
+    expect(showPicker).toHaveBeenCalledOnce();
   });
 
   it('falls back to clicking the datetime input when showPicker is unavailable', () => {
