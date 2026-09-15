@@ -4,6 +4,7 @@ import {
   addPackingDeclaration,
   formatPackingDuration,
   getPackingDeclarationUnits,
+  getPackingRunProductionStartedAt,
   getPackingRunProgress,
   getPackingRunTiming,
   normalizePackingDeclaration,
@@ -96,6 +97,7 @@ function Stepper({ label, value, onChange }: { label: string; value: string; onC
 
 export function PackingRunExecution({ run, persistenceStatus, onRunChange }: PackingRunExecutionProps) {
   const now = usePackingNow();
+  const productionStartedAt = getPackingRunProductionStartedAt(run);
   const progress = getPackingRunProgress(run);
   const timing = getPackingRunTiming(run, now);
   const [draft, setDraft] = useState<DeclarationDraft>(emptyDraft);
@@ -202,7 +204,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
           </div>
 
           <div className="packing-v3-time-kpis">
-            <div><span><Clock3 size={16} /> Temps écoulé</span><strong>{formatPackingDuration(timing.elapsedMinutes)}</strong><small>Depuis {formatClock(run.productionStartedAt)}</small></div>
+            <div><span><Clock3 size={16} /> Temps écoulé</span><strong>{formatPackingDuration(timing.elapsedMinutes)}</strong><small>Depuis {formatClock(productionStartedAt)}</small></div>
             <div><span><Gauge size={16} /> Temps estimé total</span><strong>{formatPackingDuration(progress.estimatedTotalMinutes)}</strong><small>À {formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</small></div>
             <div><span><Clock3 size={16} /> Temps estimé restant</span><strong>{formatPackingDuration(progress.estimatedRemainingMinutes)}</strong><small>Fin estimée {formatClock(timing.projectedFinishAt)}</small></div>
             <div className={`packing-v3-reference-gap packing-v3-reference-gap-${variance.tone}`}><span>Écart vs référence</span><strong>{variance.label}</strong><small>{timing.varianceUnitsVsReference >= 0 ? '+' : '−'}{formatNumber(Math.round(Math.abs(timing.varianceUnitsVsReference)))} unités</small></div>
