@@ -33,9 +33,33 @@ describe('packing exact integer domain', () => {
     const options = calculatePackingOptions(input);
 
     expect(options.map((option) => summarizePackingLoads(input, option))).toEqual([
-      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
-      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
-      { fullLoadCount: 6, partialLoadCount: 0, totalLoads: 6 },
+      {
+        fullLoadCount: 6,
+        partialLoadCount: 0,
+        partialLoadCartons: 0,
+        partialCartonUnits: 0,
+        totalLoads: 6,
+        totalCartons: 240,
+        unitsPerFullLoad: 5_120,
+      },
+      {
+        fullLoadCount: 6,
+        partialLoadCount: 0,
+        partialLoadCartons: 0,
+        partialCartonUnits: 0,
+        totalLoads: 6,
+        totalCartons: 240,
+        unitsPerFullLoad: 5_120,
+      },
+      {
+        fullLoadCount: 6,
+        partialLoadCount: 0,
+        partialLoadCartons: 0,
+        partialCartonUnits: 0,
+        totalLoads: 6,
+        totalCartons: 240,
+        unitsPerFullLoad: 5_120,
+      },
     ]);
   });
 
@@ -46,17 +70,29 @@ describe('packing exact integer domain', () => {
     expect(summarizePackingLoads(input, exact)).toEqual({
       fullLoadCount: 6,
       partialLoadCount: 1,
+      partialLoadCartons: 1,
+      partialCartonUnits: 32,
       totalLoads: 7,
+      totalCartons: 242,
+      unitsPerFullLoad: 5_120,
     });
     expect(summarizePackingLoads(input, roundCarton)).toEqual({
       fullLoadCount: 6,
       partialLoadCount: 1,
+      partialLoadCartons: 2,
+      partialCartonUnits: 0,
       totalLoads: 7,
+      totalCartons: 242,
+      unitsPerFullLoad: 5_120,
     });
     expect(summarizePackingLoads(input, roundPallet)).toEqual({
       fullLoadCount: 7,
       partialLoadCount: 0,
+      partialLoadCartons: 0,
+      partialCartonUnits: 0,
       totalLoads: 7,
+      totalCartons: 280,
+      unitsPerFullLoad: 5_120,
     });
   });
 
@@ -68,7 +104,11 @@ describe('packing exact integer domain', () => {
     expect(summarizePackingLoads(input, selected)).toEqual({
       fullLoadCount: 1,
       partialLoadCount: 0,
+      partialLoadCartons: 0,
+      partialCartonUnits: 0,
       totalLoads: 1,
+      totalCartons: 40,
+      unitsPerFullLoad: 5_120,
     });
   });
 
@@ -83,7 +123,11 @@ describe('packing exact integer domain', () => {
     expect(summarizePackingLoads(input, selected)).toEqual({
       fullLoadCount: 1_000_000,
       partialLoadCount: 0,
+      partialLoadCartons: 0,
+      partialCartonUnits: 0,
       totalLoads: 1_000_000,
+      totalCartons: 40_000_000,
+      unitsPerFullLoad: 5_120,
     });
   });
 
