@@ -55,6 +55,14 @@
   mix-blend-mode: normal;
 }
 
+@media (max-width: 639px) {
+  .packing-v3-stage-header,
+  .packing-v3-waiting-head {
+    flex-direction: column;
+    gap: .55rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .packing-calculator-page *,
   .packing-calculator-page *::before,
