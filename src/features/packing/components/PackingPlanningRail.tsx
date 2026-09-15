@@ -230,7 +230,6 @@ export function PackingPlanningRail({
       <button type="button" className="packing-v3-launch" disabled={!canLaunch} onClick={onLaunch}>
         <Play size={18} aria-hidden="true" />
         Lancer le suivi de production
-        <span aria-hidden="true">→</span>
       </button>
       <div className="packing-v3-preparation-reset-row">
         <button type="button" className="packing-v3-preparation-reset" onClick={onReset}>

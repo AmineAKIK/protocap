@@ -230,7 +230,6 @@
   box-shadow: 0 8px 18px rgb(15 159 149 / .2);
   cursor: pointer;
 }
-.packing-v3-launch [aria-hidden='true'] { font-size: 1.35rem; }
 .packing-v3-launch:disabled { background: #b6c4cb; box-shadow: none; cursor: not-allowed; }
 
 .packing-v3-inline-error,
@@ -335,7 +334,12 @@
   .packing-v3-stage { min-height:0; overflow:hidden; }
   .packing-v3-preparation { display:flex; flex-direction:column; padding:.85rem 1rem; }
   .packing-v3-preparation .packing-v3-stage-header { flex:0 0 auto; }
-  .packing-v3-preparation .packing-v3-inputs { margin-top:.65rem; padding:.5rem .75rem; }
+  .packing-v3-preparation .packing-v3-inputs {
+    grid-template-columns: minmax(8rem,1.05fr) minmax(7rem,.85fr) minmax(7rem,.9fr) minmax(12.5rem,1.3fr) minmax(8.5rem,.95fr);
+    gap: .75rem;
+    margin-top:.65rem;
+    padding:.5rem .75rem;
+  }
   .packing-v3-preparation .packing-v3-strategy-heading { margin-top:.6rem; }
   .packing-v3-preparation .packing-v3-strategies { margin-top:.35rem; }
   .packing-v3-preparation .packing-v3-strategy { min-height:6rem; padding:.65rem .8rem; }
