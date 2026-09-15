@@ -66,7 +66,10 @@ type ViewTransitionDocument = Document & {
 
 function transitionState(callback: () => void) {
   const transitionDocument = document as ViewTransitionDocument;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !transitionDocument.startViewTransition) {
+  const prefersReducedMotion =
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (prefersReducedMotion || !transitionDocument.startViewTransition) {
     callback();
     return;
   }
