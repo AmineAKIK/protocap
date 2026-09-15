@@ -1,8 +1,8 @@
 import {
   Box,
   Boxes,
+  CalendarClock,
   Check,
-  Clock3,
   Gauge,
   Layers3,
   PackageCheck,
@@ -97,8 +97,14 @@ function StartTimeField({ value, invalid, onChange }: { value: string; invalid: 
     <label className="packing-v3-field min-w-0">
       <span className="packing-v3-field-label">Début OC</span>
       <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
-        <Clock3 size={18} aria-hidden="true" />
-        <input aria-label="Début OC" type="time" value={value} aria-invalid={invalid} onChange={(event) => onChange(event.target.value)} />
+        <CalendarClock size={18} aria-hidden="true" />
+        <input
+          aria-label="Début OC"
+          type="datetime-local"
+          value={value}
+          aria-invalid={invalid}
+          onChange={(event) => onChange(event.target.value)}
+        />
       </span>
     </label>
   );
@@ -227,7 +233,7 @@ export function PackingFrozenPreparation({ run, onModify }: { run: PackingRun; o
   const option = calculatePackingOptions({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }).find((entry) => entry.policy === run.selectedPolicy);
   if (!option) return null;
   const plan = summarizePackingLoads({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }, option);
-  const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const policy = policyCopy[run.selectedPolicy].title;
 
   return (
