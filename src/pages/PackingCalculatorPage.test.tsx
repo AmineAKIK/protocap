@@ -65,9 +65,9 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     await launchRun(user);
 
-    expect(screen.getByLabelText('Préparation figée')).toBeTruthy();
-    expect(screen.getByText(/30\s?976/)).toBeTruthy();
-    expect(screen.getByText(/15/)).toBeTruthy();
+    const frozenPreparation = screen.getByLabelText('Préparation figée');
+    expect(within(frozenPreparation).getByText(/30\s?976 unités/)).toBeTruthy();
+    expect(within(frozenPreparation).getByText(/60 u\/min/)).toBeTruthy();
 
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(activeRunStorageKey) ?? 'null') as {
