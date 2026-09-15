@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 const ACCESS_CODE = 'e2e-access-code';
+const productionStart = '2026-09-15T07:30';
 
 async function expectNoSeriousA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -32,7 +33,7 @@ async function configurePacking(page: Page) {
   await page.getByLabel('Quantité demandée').fill('30880');
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByLabel('Début OC').fill('07:30');
+  await page.getByLabel('Début OC').fill(productionStart);
   await page
     .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
     .getByRole('radio', { name: /Carton complet/i })
