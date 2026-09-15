@@ -52,7 +52,8 @@ describe('Packing preparation persistence hardening', () => {
 
     await user.click(screen.getByRole('button', { name: 'Lancer le suivi de production' }));
     await user.click(screen.getByRole('button', { name: 'Continuer sans sauvegarde' }));
-    expect(await screen.findByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
-    expect(screen.getByText(/stockage local est indisponible/i)).toBeTruthy();
+    const productionHeading = await screen.findByRole('heading', { name: 'Conduite de production' });
+    expect(screen.getByText(/sauvegarde locale n’est pas garantie/i)).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(productionHeading));
   });
 });
