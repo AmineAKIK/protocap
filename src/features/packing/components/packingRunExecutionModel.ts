@@ -8,6 +8,11 @@ export interface DeclarationDraft {
   partialCartonUnits: string;
 }
 
+export interface PackingRemainingWork {
+  summary: string;
+  afterNextFullLoad: string | null;
+}
+
 export const emptyDeclarationDraft: DeclarationDraft = {
   completeCartons: '',
   partialCartonUnits: '',
@@ -88,4 +93,52 @@ export function formatPackingReferenceVariance(
   return minutes > 0
     ? { label: `${duration} d’avance`, tone: 'ahead' }
     : { label: `${duration} de retard`, tone: 'late' };
+}
+
+function formatRemainingComposition(
+  units: number,
+  unitsPerCarton: number,
+  cartonsPerLoad: number,
+): string {
+  if (units <= 0) return 'Conditionnement terminé';
+
+  const fullLoadUnits = unitsPerCarton * cartonsPerLoad;
+  const fullLoads = Math.floor(units / fullLoadUnits);
+  const remainderAfterLoads = units % fullLoadUnits;
+  const fullCartons = Math.floor(remainderAfterLoads / unitsPerCarton);
+  const looseUnits = remainderAfterLoads % unitsPerCarton;
+  const parts: string[] = [];
+
+  if (fullLoads > 0) {
+    parts.push(`${formatPackingNumber(fullLoads)} palette${fullLoads > 1 ? 's' : ''} complète${fullLoads > 1 ? 's' : ''}`);
+  }
+  if (fullCartons > 0) {
+    parts.push(`${formatPackingNumber(fullCartons)} carton${fullCartons > 1 ? 's' : ''}`);
+  }
+  if (looseUnits > 0) {
+    parts.push(`${formatPackingNumber(looseUnits)} unité${looseUnits > 1 ? 's' : ''} vrac`);
+  }
+
+  return parts.join(' + ');
+}
+
+export function getPackingRemainingWork(
+  remainingUnits: number,
+  unitsPerCarton: number,
+  cartonsPerLoad: number,
+): PackingRemainingWork {
+  const fullLoadUnits = unitsPerCarton * cartonsPerLoad;
+  const summary = formatRemainingComposition(remainingUnits, unitsPerCarton, cartonsPerLoad);
+
+  if (remainingUnits < fullLoadUnits) {
+    return { summary, afterNextFullLoad: null };
+  }
+
+  const afterNext = remainingUnits - fullLoadUnits;
+  return {
+    summary,
+    afterNextFullLoad: afterNext === 0
+      ? 'Après cette palette complète : conditionnement terminé'
+      : `Après cette palette complète : ${formatRemainingComposition(afterNext, unitsPerCarton, cartonsPerLoad)}`,
+  };
 }

@@ -22,6 +22,7 @@ import {
   formatPackingReferenceVariance,
   getDeclarationDraftInput,
   getPackingDeclarationErrorMessage,
+  getPackingRemainingWork,
   parseNonNegativeSafeInteger,
   type DeclarationDraft,
 } from './packingRunExecutionModel';
@@ -61,6 +62,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
   const isComplete = progress.remainingUnits === 0;
   const progressPercent = progress.progressRatio * 100;
   const variance = formatPackingReferenceVariance(timing.varianceMinutesVsReference);
+  const remainingWork = getPackingRemainingWork(progress.remainingUnits, run.unitsPerCarton, run.cartonsPerLoad);
 
   const preview = useMemo(() => {
     const input = getDeclarationDraftInput(draft);
@@ -178,6 +180,14 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
             {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); setDraft(emptyDeclarationDraft); }}>Annuler la correction</button> : null}
             {preview.error ? <p className="packing-v3-inline-error">{preview.error}</p> : null}
           </form>
+
+          <section className="packing-v3-next-work" aria-label="Suite du conditionnement">
+            <div className="packing-v3-next-work-heading">
+              <span><Layers3 size={16} aria-hidden="true" /> Suite du conditionnement</span>
+              <strong>{remainingWork.summary}</strong>
+            </div>
+            {remainingWork.afterNextFullLoad ? <p>{remainingWork.afterNextFullLoad}</p> : null}
+          </section>
 
           {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">Le stockage local est indisponible : les dernières déclarations pourront être perdues au rechargement.</p> : null}
           {errorMessage ? <div role="alert" className="packing-v3-error"><TriangleAlert size={16} />{errorMessage}</div> : null}

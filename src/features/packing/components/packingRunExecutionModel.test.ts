@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatPackingReferenceVariance } from './packingRunExecutionModel';
+import {
+  formatPackingReferenceVariance,
+  getPackingRemainingWork,
+} from './packingRunExecutionModel';
 
 describe('formatPackingReferenceVariance', () => {
   it('keeps sub-hour gaps in minutes', () => {
@@ -16,5 +19,35 @@ describe('formatPackingReferenceVariance', () => {
 
   it('keeps near-zero gaps neutral', () => {
     expect(formatPackingReferenceVariance(0.4)).toEqual({ label: 'À l’heure', tone: 'neutral' });
+  });
+});
+
+describe('getPackingRemainingWork', () => {
+  it('translates remaining units into physical packing work', () => {
+    expect(getPackingRemainingWork(4059, 99, 40)).toEqual({
+      summary: '1 palette complète + 1 carton',
+      afterNextFullLoad: 'Après cette palette complète : 1 carton',
+    });
+  });
+
+  it('keeps loose units explicit when the final carton is incomplete', () => {
+    expect(getPackingRemainingWork(4120, 99, 40)).toEqual({
+      summary: '1 palette complète + 1 carton + 61 unités vrac',
+      afterNextFullLoad: 'Après cette palette complète : 1 carton + 61 unités vrac',
+    });
+  });
+
+  it('announces completion when the next full load finishes the run', () => {
+    expect(getPackingRemainingWork(3960, 99, 40)).toEqual({
+      summary: '1 palette complète',
+      afterNextFullLoad: 'Après cette palette complète : conditionnement terminé',
+    });
+  });
+
+  it('does not invent a next full load when less than one remains', () => {
+    expect(getPackingRemainingWork(198, 99, 40)).toEqual({
+      summary: '2 cartons',
+      afterNextFullLoad: null,
+    });
   });
 });
