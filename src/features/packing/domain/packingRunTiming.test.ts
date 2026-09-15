@@ -43,7 +43,7 @@ describe('packing reference timing', () => {
       {
         id: 'complete',
         createdAt: '2026-09-15T16:00:00.000Z',
-        completeCartons: 121,
+        completeCartons: 122,
         partialCartonUnits: 0,
       },
     );
