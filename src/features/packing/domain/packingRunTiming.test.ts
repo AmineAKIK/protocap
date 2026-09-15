@@ -32,6 +32,21 @@ describe('packing reference timing', () => {
     expect(timing.projectedFinishAt).toBe('2026-09-15T16:02:16.000Z');
   });
 
+  it('keeps increasing lateness after the theoretical finish when no declaration is added', () => {
+    const at1730 = getPackingRunTiming(workflowRun(), new Date('2026-09-15T17:30:00.000Z'));
+    const at1830 = getPackingRunTiming(workflowRun(), new Date('2026-09-15T18:30:00.000Z'));
+
+    expect(at1730.elapsedMinutes).toBe(600);
+    expect(at1730.referenceExpectedUnits).toBe(36_000);
+    expect(at1730.varianceUnitsVsReference).toBe(-20_640);
+    expect(at1730.varianceMinutesVsReference).toBe(-344);
+    expect(at1730.projectedFinishAt).toBe('2026-09-15T21:50:16.000Z');
+
+    expect(at1830.referenceExpectedUnits).toBe(39_600);
+    expect(at1830.varianceMinutesVsReference).toBe(-404);
+    expect(at1830.projectedFinishAt).toBe('2026-09-15T22:50:16.000Z');
+  });
+
   it('freezes timing at the final declaration instead of letting a completed run drift', () => {
     const completed = addPackingDeclaration(
       {
