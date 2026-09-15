@@ -1,16 +1,33 @@
-import { Check, PackageCheck, Sparkles, TriangleAlert } from 'lucide-react';
-import type { PackingInput, PackingOption, PackingPolicy } from '../../../utils/packing';
+import {
+  Box,
+  Boxes,
+  Check,
+  Clock3,
+  Gauge,
+  Layers3,
+  PackageCheck,
+  Play,
+} from 'lucide-react';
+import {
+  calculatePackingOptions,
+  summarizePackingLoads,
+  type PackingInput,
+  type PackingOption,
+  type PackingPolicy,
+} from '../../../utils/packing';
+import type { PackingRun } from '../domain/packingRun';
 
 export interface PackingPlanningFormState {
   quantity: string;
   unitsPerCarton: string;
   cartonsPerPalette: string;
+  productionStartTime: string;
+  referenceCadence: string;
 }
 
 interface PackingPlanningCalculation {
-  exact: { unitsPerPalette: number };
   options: PackingOption[];
-  recommendation: PackingOption;
+  selected: PackingOption | null;
 }
 
 interface PackingPlanningRailProps {
@@ -21,117 +38,113 @@ interface PackingPlanningRailProps {
   quantityInvalid: boolean;
   unitsPerCartonInvalid: boolean;
   cartonsPerPaletteInvalid: boolean;
+  startTimeInvalid: boolean;
+  cadenceInvalid: boolean;
   combinationInvalid: boolean;
+  canLaunch: boolean;
+  persistenceDegraded: boolean;
   onFieldChange: (field: keyof PackingPlanningFormState, value: string) => void;
   onSelectPolicy: (policy: PackingPolicy) => void;
+  onLaunch: () => void;
 }
-
-const policyLabels: Record<PackingPolicy, string> = {
-  'no-overrun': 'Exact',
-  'round-carton': 'Carton',
-  'round-pallet': 'Palette',
-};
-
-const policyDescriptions: Record<PackingPolicy, string> = {
-  'no-overrun': 'Sans dépassement',
-  'round-carton': 'Cartons complets',
-  'round-pallet': 'Palettes complètes',
-};
 
 const numberFormatter = new Intl.NumberFormat('fr-FR');
+const formatNumber = (value: number) => numberFormatter.format(value);
 
-function formatNumber(value: number): string {
-  return numberFormatter.format(value);
-}
+const policyCopy: Record<PackingPolicy, { title: string; description: string }> = {
+  'no-overrun': { title: 'Sans dépassement', description: 'Quantité exacte · dernier carton potentiellement incomplet' },
+  'round-carton': { title: 'Carton complet', description: 'Arrondi au carton supérieur' },
+  'round-pallet': { title: 'Palette complète', description: 'Arrondi à la palette supérieure' },
+};
 
-function PackingField({
+function NumericField({
+  icon,
   label,
   value,
-  placeholder,
   invalid,
+  suffix,
   onChange,
-  prominent = false,
 }: {
+  icon: React.ReactNode;
   label: string;
   value: string;
-  placeholder: string;
   invalid: boolean;
+  suffix?: string;
   onChange: (value: string) => void;
-  prominent?: boolean;
 }) {
   return (
-    <label className="block min-w-0">
-      <span className="mb-2 block text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
-      <input
-        className={`w-full rounded-2xl border bg-white font-black tabular-nums text-slate-950 outline-none transition focus:ring-4 ${
-          prominent ? 'packing-primary-input min-h-16 px-4 text-2xl sm:text-3xl' : 'min-h-14 px-4 text-lg'
-        } ${
-          invalid
-            ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10'
-            : 'border-slate-200 focus:border-teal-600 focus:ring-teal-600/10'
-        }`}
-        autoComplete="off"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        aria-invalid={invalid}
-        onChange={(event) => onChange(event.target.value)}
-      />
+    <label className="packing-v3-field min-w-0">
+      <span className="packing-v3-field-label">{label}</span>
+      <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
+        <span aria-hidden="true">{icon}</span>
+        <input
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          aria-invalid={invalid}
+          onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))}
+        />
+        {suffix ? <span className="packing-v3-field-suffix">{suffix}</span> : null}
+      </span>
     </label>
   );
 }
 
-function StrategyCard({
-  option,
-  active,
-  recommended,
-  onSelect,
-}: {
-  option: PackingOption;
-  active: boolean;
-  recommended: boolean;
-  onSelect: () => void;
-}) {
-  const varianceLabel = option.variance === 0 ? 'Écart 0' : `+${formatNumber(option.variance)} unités`;
+function StartTimeField({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (value: string) => void }) {
+  return (
+    <label className="packing-v3-field min-w-0">
+      <span className="packing-v3-field-label">Début OC</span>
+      <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
+        <Clock3 size={18} aria-hidden="true" />
+        <input type="time" value={value} aria-invalid={invalid} onChange={(event) => onChange(event.target.value)} />
+      </span>
+    </label>
+  );
+}
 
+function StrategyCard({ option, active, onSelect }: { option: PackingOption; active: boolean; onSelect: () => void }) {
+  const copy = policyCopy[option.policy];
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
+      className={`packing-v3-strategy ${active ? 'packing-v3-strategy-active' : ''}`}
       onClick={onSelect}
-      className={`group min-w-0 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-700/20 ${
-        active
-          ? 'border-slate-900 bg-slate-950 text-white shadow-xl shadow-slate-950/10'
-          : 'border-slate-200 bg-white text-slate-950 hover:border-slate-300 hover:shadow-md'
-      }`}
     >
-      <div className="packing-strategy-heading grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-        <div className="min-w-0 pr-1">
-          <p className={`break-words text-[10px] font-black uppercase leading-tight tracking-[0.12em] ${active ? 'text-teal-300' : 'text-slate-400'}`}>
-            {policyDescriptions[option.policy]}
-          </p>
-          <p className="mt-1 text-base font-black">{policyLabels[option.policy]}</p>
-        </div>
-        <span className={`ml-1 grid h-7 w-7 shrink-0 place-items-center rounded-full border ${active ? 'border-teal-400 bg-teal-400 text-slate-950' : 'border-slate-200 text-transparent'}`}>
-          <Check size={15} strokeWidth={3} aria-hidden="true" />
+      <span className="packing-v3-strategy-head">
+        <span>
+          <strong>{copy.title}</strong>
+          <small>{copy.description}</small>
         </span>
-      </div>
-      <p className="mt-5 break-words text-2xl font-black tabular-nums sm:text-[1.7rem]">{formatNumber(option.totalPrepared)}</p>
-      <p className={`mt-1 text-xs font-bold ${option.variance === 0 ? (active ? 'text-emerald-300' : 'text-emerald-700') : (active ? 'text-amber-300' : 'text-amber-700')}`}>
-        {varianceLabel}
-      </p>
-      <div className={`packing-strategy-recommendation mt-4 flex min-h-6 items-center gap-1.5 text-[11px] font-black uppercase tracking-wide ${active ? 'text-slate-300' : 'text-slate-500'}`}>
-        {recommended ? (
-          <>
-            <Sparkles size={13} aria-hidden="true" />
-            Recommandé
-          </>
-        ) : null}
-      </div>
+        <span className="packing-v3-radio" aria-hidden="true">{active ? <Check size={13} strokeWidth={3} /> : null}</span>
+      </span>
+      <span className="packing-v3-strategy-result-label">Quantité résultante</span>
+      <strong className="packing-v3-strategy-result">{formatNumber(option.totalPrepared)} unités</strong>
     </button>
+  );
+}
+
+function PlanSummary({ input, selected }: { input: PackingInput; selected: PackingOption }) {
+  const plan = summarizePackingLoads(input, selected);
+  const partialText = plan.partialLoadCount
+    ? `1 palette partielle (${plan.partialLoadCartons} carton${plan.partialLoadCartons > 1 ? 's' : ''}${plan.partialCartonUnits ? ` + ${formatNumber(plan.partialCartonUnits)} unités` : ''})`
+    : 'Aucune palette partielle';
+
+  return (
+    <section className="packing-v3-plan" aria-label="Plan de conditionnement">
+      <div className="packing-v3-plan-lead">
+        <span className="packing-v3-kicker">Plan de conditionnement</span>
+        <strong>{formatNumber(plan.fullLoadCount)} palette{plan.fullLoadCount > 1 ? 's' : ''} complète{plan.fullLoadCount > 1 ? 's' : ''} + {partialText}</strong>
+        <small>{formatNumber(plan.totalLoads)} palette{plan.totalLoads > 1 ? 's' : ''} au total à envoyer</small>
+      </div>
+      <div className="packing-v3-plan-metrics">
+        <div><span>Palettes</span><strong>{formatNumber(plan.totalLoads)} palettes</strong><small>{formatNumber(plan.fullLoadCount)} complètes + {plan.partialLoadCount} partielle</small></div>
+        <div><span>Cartons</span><strong>{formatNumber(plan.totalCartons)} cartons</strong><small>Conditionnement physique</small></div>
+        <div><span>Unités planifiées</span><strong>{formatNumber(selected.totalPrepared)} unités</strong><small>{selected.variance === 0 ? 'Aucun dépassement' : `+${formatNumber(selected.variance)} vs demande`}</small></div>
+        <div className={selected.variance === 0 ? '' : 'packing-v3-variance'}><span>Écart</span><strong>{selected.variance === 0 ? '0 unité' : `+${formatNumber(selected.variance)} unités`}</strong></div>
+      </div>
+    </section>
   );
 }
 
@@ -143,67 +156,86 @@ export function PackingPlanningRail({
   quantityInvalid,
   unitsPerCartonInvalid,
   cartonsPerPaletteInvalid,
+  startTimeInvalid,
+  cadenceInvalid,
   combinationInvalid,
+  canLaunch,
+  persistenceDegraded,
   onFieldChange,
   onSelectPolicy,
+  onLaunch,
 }: PackingPlanningRailProps) {
   return (
-    <section aria-label="Préparation du run" className="min-w-0 space-y-5">
-      <section className="packing-reference-card rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Préparer</p>
-            <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Référence du run</h2>
-          </div>
-          <PackageCheck size={22} className="text-teal-700" aria-hidden="true" />
+    <section aria-labelledby="packing-preparation-title" className="packing-v3-preparation packing-v3-stage">
+      <header className="packing-v3-stage-header">
+        <div>
+          <h1 id="packing-preparation-title">Préparer l’ordre de conditionnement</h1>
+          <p>Renseignez les paramètres, choisissez la stratégie puis lancez le suivi.</p>
         </div>
-        <div className="grid gap-4">
-          <PackingField label="Quantité demandée en unités" value={form.quantity} placeholder="Ex : 30880" invalid={quantityInvalid} prominent onChange={(value) => onFieldChange('quantity', value)} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PackingField label="Unités par carton" value={form.unitsPerCarton} placeholder="Ex : 128" invalid={unitsPerCartonInvalid} onChange={(value) => onFieldChange('unitsPerCarton', value)} />
-            <PackingField label="Cartons par palette" value={form.cartonsPerPalette} placeholder="Ex : 40" invalid={cartonsPerPaletteInvalid} onChange={(value) => onFieldChange('cartonsPerPalette', value)} />
-          </div>
-        </div>
-        {combinationInvalid ? (
-          <div role="alert" className="mt-4 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium leading-6 text-rose-900">
-            <TriangleAlert size={18} className="mt-0.5 shrink-0 text-rose-600" aria-hidden="true" />
-            Cette combinaison dépasse le domaine de calcul entier exact. Réduisez la quantité ou le conditionnement.
-          </div>
-        ) : null}
-        <div className="mt-5 rounded-2xl bg-slate-950 px-4 py-4 text-white">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Capacité de référence</p>
-          {input && calculation ? (
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-2xl font-black tabular-nums">{formatNumber(calculation.exact.unitsPerPalette)}</span>
-              <span className="text-sm font-bold text-slate-300">unités / palette</span>
-              <span className="text-xs font-semibold text-slate-500">· {formatNumber(input.cartonsPerPalette)} cartons × {formatNumber(input.unitsPerCarton)}</span>
-            </div>
-          ) : (
-            <p className="mt-2 text-sm font-medium text-slate-400">Renseignez les trois valeurs pour construire le plan.</p>
-          )}
-        </div>
-      </section>
+        <span className="packing-v3-status packing-v3-status-preparing"><span /> En préparation</span>
+      </header>
 
-      <section className="packing-strategies rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.05)] sm:p-6">
-        <div className="mb-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Décider</p>
-          <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">Stratégie de préparation</h2>
-          <p className="mt-1 text-sm font-medium text-slate-500">Le choix modifie le brouillon, jamais un run déjà actif.</p>
-        </div>
-        <div role="radiogroup" aria-label="Politique opérationnelle" className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-          {calculation
-            ? calculation.options.map((option) => (
-                <StrategyCard key={option.policy} option={option} active={selectedPolicy === option.policy} recommended={calculation.recommendation.policy === option.policy} onSelect={() => onSelectPolicy(option.policy)} />
-              ))
-            : (Object.keys(policyLabels) as PackingPolicy[]).map((policy) => (
-                <button key={policy} type="button" disabled className="min-h-36 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left opacity-60">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{policyDescriptions[policy]}</p>
-                  <p className="mt-1 font-black text-slate-700">{policyLabels[policy]}</p>
-                  <p className="mt-5 text-2xl font-black text-slate-300">—</p>
-                </button>
-              ))}
-        </div>
-      </section>
+      <div className="packing-v3-inputs">
+        <NumericField icon={<Box size={18} />} label="Quantité demandée" value={form.quantity} invalid={quantityInvalid} suffix="unités" onChange={(value) => onFieldChange('quantity', value)} />
+        <NumericField icon={<Boxes size={18} />} label="Unités par carton" value={form.unitsPerCarton} invalid={unitsPerCartonInvalid} onChange={(value) => onFieldChange('unitsPerCarton', value)} />
+        <NumericField icon={<Layers3 size={18} />} label="Cartons par palette" value={form.cartonsPerPalette} invalid={cartonsPerPaletteInvalid} onChange={(value) => onFieldChange('cartonsPerPalette', value)} />
+        <StartTimeField value={form.productionStartTime} invalid={startTimeInvalid} onChange={(value) => onFieldChange('productionStartTime', value)} />
+        <NumericField icon={<Gauge size={18} />} label="Cadence réf." value={form.referenceCadence} invalid={cadenceInvalid} suffix="u/min" onChange={(value) => onFieldChange('referenceCadence', value)} />
+      </div>
+
+      {combinationInvalid ? <p className="packing-v3-inline-error">La combinaison saisie dépasse le domaine de calcul exact.</p> : null}
+
+      <div className="packing-v3-strategy-heading">
+        <strong>Stratégie de conditionnement</strong>
+        <span>Choisissez une seule logique de préparation.</span>
+      </div>
+      <div role="radiogroup" aria-label="Stratégie de conditionnement" className="packing-v3-strategies">
+        {calculation
+          ? calculation.options.map((option) => <StrategyCard key={option.policy} option={option} active={selectedPolicy === option.policy} onSelect={() => onSelectPolicy(option.policy)} />)
+          : (Object.keys(policyCopy) as PackingPolicy[]).map((policy) => (
+              <button key={policy} type="button" disabled className="packing-v3-strategy packing-v3-strategy-disabled">
+                <span className="packing-v3-strategy-head"><span><strong>{policyCopy[policy].title}</strong><small>{policyCopy[policy].description}</small></span></span>
+                <span className="packing-v3-strategy-result-label">Quantité résultante</span><strong className="packing-v3-strategy-result">—</strong>
+              </button>
+            ))}
+      </div>
+
+      {input && calculation?.selected ? <PlanSummary input={input} selected={calculation.selected} /> : null}
+
+      <button type="button" className="packing-v3-launch" disabled={!canLaunch} onClick={onLaunch}>
+        <Play size={18} aria-hidden="true" />
+        Lancer le suivi de production
+        <span aria-hidden="true">→</span>
+      </button>
+      {persistenceDegraded ? <p className="packing-v3-persistence-warning">Le stockage local est indisponible : le run pourra ne pas survivre à un rechargement.</p> : null}
+    </section>
+  );
+}
+
+export function PackingConductWaiting() {
+  return (
+    <section aria-label="Conduite de production en attente" className="packing-v3-waiting packing-v3-stage">
+      <div className="packing-v3-waiting-head"><div><strong>Conduite de production</strong><span>Le suivi s’active après le lancement.</span></div><span className="packing-v3-status"><span /> En attente</span></div>
+      <div className="packing-v3-waiting-metrics"><span>Quantité restante <b>—</b></span><span>Progression <b>—</b></span><span>Temps restant <b>—</b></span><span>Écart vs référence <b>—</b></span></div>
+    </section>
+  );
+}
+
+export function PackingFrozenPreparation({ run, onModify }: { run: PackingRun; onModify: () => void }) {
+  const option = calculatePackingOptions({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }).find((entry) => entry.policy === run.selectedPolicy);
+  if (!option) return null;
+  const plan = summarizePackingLoads({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }, option);
+  const start = new Date(run.productionStartedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const policy = policyCopy[run.selectedPolicy].title;
+
+  return (
+    <section aria-label="Préparation figée" className="packing-v3-frozen">
+      <div className="packing-v3-frozen-title"><PackageCheck size={16} aria-hidden="true" /><div><strong>Préparation figée</strong><small>Référence du run actif</small></div></div>
+      <div className="packing-v3-frozen-values">
+        <span>{formatNumber(run.requestedUnits)} demandées</span><i>·</i><span>{formatNumber(run.unitsPerCarton)} u/carton</span><i>·</i><span>{formatNumber(run.cartonsPerLoad)} cartons/palette</span><i>·</i><span>{start}</span><i>·</i><span>{formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</span><i>·</i><span>{policy}</span>
+      </div>
+      <div className="packing-v3-frozen-plan"><strong>Plan :</strong> {formatNumber(plan.fullLoadCount)} pal. compl. + {plan.partialLoadCount ? `1 partielle (${formatNumber(plan.partialLoadCartons)} cart.)` : 'aucune partielle'} · {formatNumber(plan.totalLoads)} palettes · {formatNumber(plan.totalCartons)} cartons · {formatNumber(run.plannedUnits)} unités · {run.varianceUnits === 0 ? 'écart 0' : `+${formatNumber(run.varianceUnits)} vs dem.`}</div>
+      <button type="button" onClick={onModify}>Modifier la préparation</button>
     </section>
   );
 }
