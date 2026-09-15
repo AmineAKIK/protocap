@@ -135,18 +135,17 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect((screen.getByRole('button', { name: /Réinitialiser la préparation/i }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('supports arrow-key navigation inside the strategy radio group', async () => {
-    const user = userEvent.setup();
+  it('supports arrow-key navigation inside the strategy radio group', () => {
     storePackingForm();
     render(<PackingCalculatorPage />);
 
     const group = screen.getByRole('radiogroup', { name: 'Stratégie de conditionnement' });
     const exact = within(group).getByRole('radio', { name: /Sans dépassement/i });
     exact.focus();
-    await user.keyboard('{ArrowRight}');
+    fireEvent.keyDown(exact, { key: 'ArrowRight' });
 
     const carton = within(group).getByRole('radio', { name: /Carton complet/i });
-    await waitFor(() => expect(carton.getAttribute('aria-checked')).toBe('true'));
+    expect(carton.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(carton);
   });
 
