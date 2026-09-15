@@ -8,6 +8,7 @@ import {
   PackageCheck,
   Play,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
   calculatePackingOptions,
   summarizePackingLoads,
@@ -15,7 +16,7 @@ import {
   type PackingOption,
   type PackingPolicy,
 } from '../../../utils/packing';
-import type { PackingRun } from '../domain/packingRun';
+import { getPackingRunProductionStartedAt, type PackingRun } from '../domain/packingRun';
 
 export interface PackingPlanningFormState {
   quantity: string;
@@ -65,7 +66,7 @@ function NumericField({
   suffix,
   onChange,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   invalid: boolean;
@@ -225,7 +226,7 @@ export function PackingFrozenPreparation({ run, onModify }: { run: PackingRun; o
   const option = calculatePackingOptions({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }).find((entry) => entry.policy === run.selectedPolicy);
   if (!option) return null;
   const plan = summarizePackingLoads({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }, option);
-  const start = new Date(run.productionStartedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const policy = policyCopy[run.selectedPolicy].title;
 
   return (
