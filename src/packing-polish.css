@@ -110,22 +110,22 @@
   outline-offset: 2px;
 }
 
-.packing-v3-datetime-input {
+.packing-v3-field-control input.packing-v3-datetime-input {
   color-scheme: light;
   font-size: 1rem;
   cursor: pointer;
 }
 
-.packing-v3-datetime-input-empty {
+.packing-v3-field-control input.packing-v3-datetime-input-empty {
   color: transparent;
   caret-color: transparent;
 }
 
-.packing-v3-datetime-input-empty::-webkit-datetime-edit {
+.packing-v3-field-control input.packing-v3-datetime-input-empty::-webkit-datetime-edit {
   color: transparent;
 }
 
-.packing-v3-datetime-input::-webkit-calendar-picker-indicator {
+.packing-v3-field-control input.packing-v3-datetime-input::-webkit-calendar-picker-indicator {
   width: 0;
   margin: 0;
   padding: 0;
