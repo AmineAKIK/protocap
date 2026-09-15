@@ -74,7 +74,8 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect((screen.getByLabelText(/Cartons par palette/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Cadence réf/i) as HTMLInputElement).value).toBe('');
-    expect(screen.getByRole('button', { name: /Lancer le suivi de production/i })).toBeDisabled();
+    const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
+    expect(launch.disabled).toBe(true);
   });
 
   it('preserves a legacy time-only start until the operator chooses a date', async () => {
