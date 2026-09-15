@@ -77,7 +77,7 @@
   color: #334155;
 }
 
-.packing-calculator-page .packing-v3-waiting-head span {
+.packing-calculator-page .packing-v3-waiting-head > div > span {
   color: #64748b;
 }
 
