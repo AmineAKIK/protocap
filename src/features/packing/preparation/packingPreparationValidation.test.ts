@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validatePackingPreparation } from './packingPreparationValidation';
+import { parsePackingProductionStart, validatePackingPreparation } from './packingPreparationValidation';
 
 const validValues = {
   quantity: '30880',
@@ -9,6 +9,12 @@ const validValues = {
   referenceCadence: '60',
 };
 const afterProductionStart = new Date('2026-09-15T12:00:00');
+
+function europeParis2026Offset(epochMs: number): number {
+  const summerStarts = Date.parse('2026-03-29T01:00:00.000Z');
+  const summerEnds = Date.parse('2026-10-25T01:00:00.000Z');
+  return epochMs >= summerStarts && epochMs < summerEnds ? -120 : -60;
+}
 
 describe('validatePackingPreparation', () => {
   it('reports required fields without inventing business constraints', () => {
@@ -59,5 +65,20 @@ describe('validatePackingPreparation', () => {
     });
     expect(result.canLaunch).toBe(false);
     expect(result.launchGuidance).toContain('Début OC');
+  });
+});
+
+describe('parsePackingProductionStart DST semantics', () => {
+  it('rejects the repeated Europe/Paris wall-clock hour during the autumn DST fold', () => {
+    expect(parsePackingProductionStart('2026-10-25T02:30', europeParis2026Offset)).toBeNull();
+  });
+
+  it('rejects the nonexistent Europe/Paris wall-clock hour during the spring DST gap', () => {
+    expect(parsePackingProductionStart('2026-03-29T02:30', europeParis2026Offset)).toBeNull();
+  });
+
+  it('resolves an unambiguous Europe/Paris wall-clock time to the exact instant', () => {
+    expect(parsePackingProductionStart('2026-10-25T03:30', europeParis2026Offset)?.toISOString())
+      .toBe('2026-10-25T02:30:00.000Z');
   });
 });
