@@ -38,6 +38,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('PackingPlanningRail preparation semantics', () => {
+  it('keeps unavailable strategies as disabled radios inside the radio group', () => {
+    renderPlanningRail();
+
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(3);
+    for (const radio of radios) {
+      expect((radio as HTMLButtonElement).disabled).toBe(true);
+      expect(radio.getAttribute('aria-checked')).toBe('false');
+      expect(radio.getAttribute('tabindex')).toBe('-1');
+    }
+  });
+});
+
 describe('PackingPlanningRail OC start picker', () => {
   it('uses the styled left trigger to open the native datetime picker', () => {
     const showPicker = vi.fn();
