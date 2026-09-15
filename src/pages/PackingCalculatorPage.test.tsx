@@ -28,7 +28,7 @@ async function chooseStrategy(user: ReturnType<typeof userEvent.setup>, name: Re
 async function launchRun(user: ReturnType<typeof userEvent.setup>, strategy: RegExp = /Carton complet/i) {
   await chooseStrategy(user, strategy);
   await user.click(screen.getByRole('button', { name: /Lancer le suivi de production/i }));
-  expect(screen.getByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
 }
 
 afterEach(() => {
@@ -159,7 +159,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     confirm.mockReturnValue(true);
     await user.click(screen.getByRole('button', { name: 'Modifier la préparation' }));
-    expect(screen.getByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('30880');
   });
 });
