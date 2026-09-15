@@ -26,9 +26,50 @@
     transform 150ms ease;
 }
 
+/* Keep the V3 cockpit palette readable at WCAG AA contrast levels. */
+.packing-calculator-page .packing-v3-status {
+  color: #475569;
+}
+
+.packing-calculator-page .packing-v3-status-preparing {
+  color: #92400e;
+}
+
+.packing-calculator-page .packing-v3-status-running {
+  color: #065f58;
+}
+
+.packing-calculator-page .packing-v3-field-label,
+.packing-calculator-page .packing-v3-strategy-result-label,
+.packing-calculator-page .packing-v3-plan-metrics span,
+.packing-calculator-page .packing-v3-primary-kpis span,
+.packing-calculator-page .packing-v3-time-kpis > div > span,
+.packing-calculator-page .packing-v3-partial-heading > div > span {
+  color: #475569;
+}
+
+.packing-calculator-page .packing-v3-primary-kpis small,
+.packing-calculator-page .packing-v3-time-kpis small {
+  color: #475569;
+}
+
+.packing-calculator-page .packing-v3-progress > div:not(.packing-v3-progress-track) strong {
+  color: #0b625c;
+}
+
+.packing-calculator-page .packing-v3-launch,
+.packing-calculator-page .packing-v3-full-load-action {
+  background: #0b6b65;
+}
+
+.packing-calculator-page .packing-v3-full-load-action small {
+  color: #fff;
+  opacity: 1;
+}
+
 .packing-v3-launch:hover:not(:disabled),
 .packing-v3-full-load-action:hover:not(:disabled) {
-  background: #0b8a82;
+  background: #075f59;
   box-shadow: 0 10px 24px rgb(15 159 149 / .24);
 }
 
