@@ -45,15 +45,40 @@ function parsePackingInput(form: PackingPlanningFormState): PackingInput | null 
   return isValidPackingInput(input) ? input : null;
 }
 
+function parseProductionStart(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText, hourText, minuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+  if (
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day ||
+    parsed.getHours() !== hour ||
+    parsed.getMinutes() !== minute
+  ) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function isValidProductionStart(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return false;
-  const parsed = new Date(value);
-  return Number.isFinite(parsed.getTime());
+  return parseProductionStart(value) !== null;
 }
 
 function resolveProductionStartedAt(value: string): string {
-  if (!isValidProductionStart(value)) throw new RangeError('Production start must include a valid date and time.');
-  return new Date(value).toISOString();
+  const parsed = parseProductionStart(value);
+  if (!parsed) throw new RangeError('Production start must include a valid date and time.');
+  return parsed.toISOString();
 }
 
 function toLocalDateTimeInputValue(value: string): string {
