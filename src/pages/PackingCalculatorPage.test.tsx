@@ -59,6 +59,24 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(launch.disabled).toBe(false);
   });
 
+  it('clears the preparation fields and selected strategy in one action', async () => {
+    const user = userEvent.setup();
+    storePackingForm();
+    render(<PackingCalculatorPage />);
+
+    await chooseStrategy(user);
+    expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('true');
+
+    await user.click(screen.getByRole('button', { name: /Réinitialiser la préparation/i }));
+
+    expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Unités par carton/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Cartons par palette/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Cadence réf/i) as HTMLInputElement).value).toBe('');
+    expect(screen.getByRole('button', { name: /Lancer le suivi de production/i })).toBeDisabled();
+  });
+
   it('preserves a legacy time-only start until the operator chooses a date', async () => {
     localStorage.setItem(
       formStorageKey,
