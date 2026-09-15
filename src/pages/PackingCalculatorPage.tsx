@@ -378,7 +378,7 @@ export function PackingCalculatorPage() {
         {activeRun ? (
           <>
             <PackingRunExecution run={activeRun} persistenceStatus={persistenceStatus} onRunChange={updateRun} />
-            <PackingFrozenPreparation run={activeRun} onModify={requestModifyPreparation} />
+            <PackingFrozenPreparation run={activeRun} onModify={requestModifyPreparation} draftRecovered={draftRecovered} />
           </>
         ) : (
           <>
