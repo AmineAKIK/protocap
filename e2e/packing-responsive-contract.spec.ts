@@ -162,7 +162,7 @@ test('Packing dense surface stays contained and changes composition only in supp
           expect(Math.abs(historyBox!.y - executionBox!.y)).toBeLessThan(8);
         } else {
           expect(Math.abs(historyBox!.x - executionBox!.x)).toBeLessThan(8);
-          expect(historyBox!.y).toBeGreaterThan(operationsBox!.y + operationsBox!.height - 2);
+          expect(historyBox!.y).toBeGreaterThan(executionBox!.y + executionBox!.height - 2);
         }
       });
     });
