@@ -59,6 +59,41 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(launch.disabled).toBe(false);
   });
 
+  it('preserves a legacy time-only start until the operator chooses a date', async () => {
+    localStorage.setItem(
+      formStorageKey,
+      JSON.stringify({
+        quantity: '30880',
+        unitsPerCarton: '128',
+        cartonsPerPalette: '40',
+        productionStartTime: '07:30',
+        referenceCadence: '60',
+      }),
+    );
+
+    render(<PackingCalculatorPage />);
+
+    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    expect(start.value).toBe('');
+    expect(screen.getByText(/Heure enregistrée précédemment : 07:30/)).toBeTruthy();
+
+    fireEvent.change(start, { target: { value: productionStart } });
+    expect(screen.queryByText(/Heure enregistrée précédemment/)).toBeNull();
+  });
+
+  it('rejects impossible calendar dates instead of normalizing them', async () => {
+    const user = userEvent.setup();
+    storePackingForm({ productionStartTime: '2026-02-31T07:30' });
+    render(<PackingCalculatorPage />);
+
+    await chooseStrategy(user);
+    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
+
+    expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(launch.disabled).toBe(true);
+  });
+
   it('launches an immutable run snapshot and turns preparation into a frozen reference', async () => {
     const user = userEvent.setup();
     storePackingForm();
