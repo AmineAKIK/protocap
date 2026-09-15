@@ -1,4 +1,5 @@
 import {
+  getPackingRunProductionStartedAt,
   validatePackingRun,
   type PackingDeclaration,
   type PackingRun,
@@ -56,7 +57,7 @@ export interface NewPackingRunInput {
   selectedPolicy: PackingPolicy;
   plannedUnits: number;
   referenceCadenceUnitsPerMinute: number;
-  productionStartedAt: string;
+  productionStartedAt?: string;
 }
 
 export interface PackingRunIdentityFactory {
@@ -84,10 +85,12 @@ export function createNewPackingRun(
   input: NewPackingRunInput,
   identityFactory: PackingRunIdentityFactory = getDefaultIdentityFactory(),
 ): PackingRun {
+  const createdAt = identityFactory.nowIso();
   const run: PackingRun = {
     ...input,
+    productionStartedAt: input.productionStartedAt ?? createdAt,
     id: identityFactory.createId(),
-    createdAt: identityFactory.nowIso(),
+    createdAt,
     varianceUnits: input.plannedUnits - input.requestedUnits,
     declarations: [],
   };
@@ -132,7 +135,7 @@ function serializeRun(run: PackingRun): PersistedPackingRunV2 {
   return {
     id: run.id,
     createdAt: run.createdAt,
-    productionStartedAt: run.productionStartedAt,
+    productionStartedAt: getPackingRunProductionStartedAt(run),
     requestedUnits: run.requestedUnits,
     unitsPerCarton: run.unitsPerCarton,
     cartonsPerLoad: run.cartonsPerLoad,
