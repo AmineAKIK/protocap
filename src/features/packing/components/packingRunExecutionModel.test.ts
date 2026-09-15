@@ -4,6 +4,7 @@ import { formatPackingReferenceVariance } from './packingRunExecutionModel';
 describe('formatPackingReferenceVariance', () => {
   it('keeps sub-hour gaps in minutes', () => {
     expect(formatPackingReferenceVariance(-59)).toEqual({ label: '59 min de retard', tone: 'late' });
+    expect(formatPackingReferenceVariance(-59.5)).toEqual({ label: '60 min de retard', tone: 'late' });
     expect(formatPackingReferenceVariance(12)).toEqual({ label: '12 min d’avance', tone: 'ahead' });
   });
 
