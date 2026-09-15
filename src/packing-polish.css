@@ -126,13 +126,23 @@
   color: #b91c1c;
 }
 
-.packing-v3-field-error {
+.packing-v3-field-message {
   display: block;
+  min-height: .9rem;
   margin-top: .05rem;
-  color: #b91c1c;
+  color: #64748b;
   font-size: .68rem;
-  font-weight: 700;
   line-height: 1.3;
+}
+
+.packing-v3-field-error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.packing-v3-legacy-time {
+  color: #64748b;
+  font-weight: 600;
 }
 
 .packing-v3-launch-guidance {
