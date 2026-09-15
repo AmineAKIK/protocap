@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import {
   PackingConductWaiting,
@@ -41,7 +41,7 @@ function normalizePackingPlanningForm(form: PackingPlanningFormState): PackingPl
 
 function resolveProductionStartedAt(value: string): string {
   const parsed = parsePackingProductionStart(value);
-  if (!parsed) throw new RangeError('Production start must include a valid date and time.');
+  if (!parsed) throw new RangeError('Production start must include a valid, unambiguous date and time.');
   return parsed.toISOString();
 }
 
@@ -130,11 +130,31 @@ export function PackingCalculatorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDegradedLaunchConfirm, setShowDegradedLaunchConfirm] = useState(false);
   const [showModifyConfirm, setShowModifyConfirm] = useState(false);
+  const [showDegradedModifyConfirm, setShowDegradedModifyConfirm] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
-  const { activeRun, persistenceStatus, probePersistence, startRun, updateRun, clearRun } = usePackingActiveRun();
+  const [validationNow, setValidationNow] = useState(() => new Date());
+  const {
+    activeRun,
+    persistenceStatus,
+    probePersistence,
+    tryStartRun,
+    startRun,
+    updateRun,
+    tryClearRun,
+    clearRun,
+  } = usePackingActiveRun();
 
-  const validation = useMemo(() => validatePackingPreparation(form, selectedPolicy), [form, selectedPolicy]);
+  useEffect(() => {
+    if (activeRun) return;
+    const timer = window.setInterval(() => setValidationNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [activeRun]);
+
+  const validation = useMemo(
+    () => validatePackingPreparation(form, selectedPolicy, validationNow),
+    [form, selectedPolicy, validationNow],
+  );
   const input = validation.input;
   const calculation = useMemo(() => {
     if (!input) return null;
@@ -162,9 +182,11 @@ export function PackingCalculatorPage() {
     selectedPolicy,
   );
   const persistenceDegraded = formPersistenceStatus === 'degraded' || persistenceStatus === 'degraded';
+  const draftRecovered = formPersistenceStatus === 'recovered';
 
   function updateField(field: keyof PackingPlanningFormState, value: string) {
     setLaunchError(null);
+    setValidationNow(new Date());
     setForm((current) =>
       field === 'productionStartTime'
         ? { ...current, productionStartTime: value, legacyProductionStartTime: undefined }
@@ -173,6 +195,7 @@ export function PackingCalculatorPage() {
   }
 
   function markFieldTouched(field: PackingPreparationField) {
+    setValidationNow(new Date());
     setTouchedFields((current) => ({ ...current, [field]: true }));
   }
 
@@ -183,28 +206,49 @@ export function PackingCalculatorPage() {
       setSelectedPolicy(null);
       setTouchedFields({});
       setLaunchError(null);
+      setValidationNow(new Date());
       focusAfterRender('#packing-quantity');
     });
   }
 
-  function performLaunch() {
-    if (isLaunching || !validation.canLaunch || !input || !calculation?.selected || !selectedPolicy) return;
+  function getLaunchInput() {
+    if (!input || !calculation?.selected || !selectedPolicy) return null;
     const cadence = parsePositiveIntegerInput(form.referenceCadence);
-    if (cadence === null) return;
-    const productionStartedAt = resolveProductionStartedAt(form.productionStartTime);
+    if (cadence === null) return null;
+    return {
+      requestedUnits: input.quantity,
+      unitsPerCarton: input.unitsPerCarton,
+      cartonsPerLoad: input.cartonsPerPalette,
+      selectedPolicy,
+      plannedUnits: calculation.selected.totalPrepared,
+      referenceCadenceUnitsPerMinute: cadence,
+      productionStartedAt: resolveProductionStartedAt(form.productionStartTime),
+    };
+  }
+
+  function performLaunch(allowDegraded: boolean) {
+    const freshValidation = validatePackingPreparation(form, selectedPolicy, new Date());
+    if (isLaunching || !freshValidation.canLaunch) {
+      setValidationNow(new Date());
+      return;
+    }
+    const launchInput = getLaunchInput();
+    if (!launchInput) return;
+
     setIsLaunching(true);
     setLaunchError(null);
     transitionState(() => {
       try {
-        startRun({
-          requestedUnits: input.quantity,
-          unitsPerCarton: input.unitsPerCarton,
-          cartonsPerLoad: input.cartonsPerPalette,
-          selectedPolicy,
-          plannedUnits: calculation.selected!.totalPrepared,
-          referenceCadenceUnitsPerMinute: cadence,
-          productionStartedAt,
-        });
+        if (allowDegraded) {
+          startRun(launchInput);
+        } else {
+          const attempt = tryStartRun(launchInput);
+          if (attempt.status === 'degraded') {
+            setIsLaunching(false);
+            setShowDegradedLaunchConfirm(true);
+            return;
+          }
+        }
         setIsLaunching(false);
         focusAfterRender('#packing-production-title');
       } catch {
@@ -215,35 +259,68 @@ export function PackingCalculatorPage() {
   }
 
   function requestLaunch() {
-    if (!validation.canLaunch || isLaunching) return;
+    const freshNow = new Date();
+    setValidationNow(freshNow);
+    const freshValidation = validatePackingPreparation(form, selectedPolicy, freshNow);
+    if (!freshValidation.canLaunch || isLaunching) return;
     if (persistenceDegraded || probePersistence() === 'degraded') {
       setShowDegradedLaunchConfirm(true);
       return;
     }
-    performLaunch();
+    performLaunch(false);
   }
 
   function continueWithoutPersistence() {
     setShowDegradedLaunchConfirm(false);
-    performLaunch();
+    performLaunch(true);
   }
 
-  function performModifyPreparation() {
+  function getRestoredPreparation(): PackingPlanningFormState | null {
+    if (!activeRun) return null;
+    return {
+      quantity: String(activeRun.requestedUnits),
+      unitsPerCarton: String(activeRun.unitsPerCarton),
+      cartonsPerPalette: String(activeRun.cartonsPerLoad),
+      productionStartTime: toLocalDateTimeInputValue(getPackingRunProductionStartedAt(activeRun)),
+      referenceCadence: String(activeRun.referenceCadenceUnitsPerMinute),
+    };
+  }
+
+  function finishModifyPreparation(policy: PackingPolicy) {
+    setSelectedPolicy(policy);
+    setTouchedFields({});
+    setLaunchError(null);
+    setValidationNow(new Date());
+    focusAfterRender('#packing-quantity');
+  }
+
+  function performModifyPreparation(allowDegraded: boolean) {
     if (!activeRun) return;
-    const started = toLocalDateTimeInputValue(getPackingRunProductionStartedAt(activeRun));
+    const restored = getRestoredPreparation();
+    if (!restored) return;
+    const policy = activeRun.selectedPolicy;
     setShowModifyConfirm(false);
+    setShowDegradedModifyConfirm(false);
+
     transitionState(() => {
-      setForm({
-        quantity: String(activeRun.requestedUnits),
-        unitsPerCarton: String(activeRun.unitsPerCarton),
-        cartonsPerPalette: String(activeRun.cartonsPerLoad),
-        productionStartTime: started,
-        referenceCadence: String(activeRun.referenceCadenceUnitsPerMinute),
-      });
-      setSelectedPolicy(activeRun.selectedPolicy);
-      setTouchedFields({});
-      clearRun();
-      focusAfterRender('#packing-quantity');
+      if (allowDegraded) {
+        setForm(restored);
+        clearRun();
+        finishModifyPreparation(policy);
+        return;
+      }
+
+      const draftWrite = setForm(restored);
+      if (draftWrite === 'degraded') {
+        setShowDegradedModifyConfirm(true);
+        return;
+      }
+      const clearResult = tryClearRun();
+      if (clearResult.status === 'degraded') {
+        setShowDegradedModifyConfirm(true);
+        return;
+      }
+      finishModifyPreparation(policy);
     });
   }
 
@@ -253,7 +330,7 @@ export function PackingCalculatorPage() {
       setShowModifyConfirm(true);
       return;
     }
-    performModifyPreparation();
+    performModifyPreparation(false);
   }
 
   return (
@@ -270,7 +347,7 @@ export function PackingCalculatorPage() {
       {showDegradedLaunchConfirm ? (
         <ConfirmDialog
           title="Sauvegarde locale indisponible"
-          description="La sauvegarde du suivi n’est pas garantie. Un rechargement de la page peut faire perdre la progression."
+          description="L’écriture réelle du suivi n’a pas pu être garantie. Un rechargement de la page peut faire perdre la progression."
           confirmLabel="Continuer sans sauvegarde"
           tone="warning"
           onCancel={() => setShowDegradedLaunchConfirm(false)}
@@ -283,7 +360,17 @@ export function PackingCalculatorPage() {
           description="Les déclarations déjà enregistrées pour ce run seront supprimées."
           confirmLabel="Modifier et supprimer"
           onCancel={() => setShowModifyConfirm(false)}
-          onConfirm={performModifyPreparation}
+          onConfirm={() => performModifyPreparation(false)}
+        />
+      ) : null}
+      {showDegradedModifyConfirm ? (
+        <ConfirmDialog
+          title="Préparation non sauvegardée"
+          description="La préparation de remplacement ou la suppression du run actif n’a pas pu être garantie dans le stockage local. Le run reste conservé tant que vous n’acceptez pas de continuer sans sauvegarde."
+          confirmLabel="Continuer sans sauvegarde"
+          tone="warning"
+          onCancel={() => setShowDegradedModifyConfirm(false)}
+          onConfirm={() => performModifyPreparation(true)}
         />
       ) : null}
 
@@ -316,6 +403,7 @@ export function PackingCalculatorPage() {
               onLaunch={requestLaunch}
               onReset={() => setShowResetConfirm(true)}
             />
+            {draftRecovered ? <p role="status" className="packing-v3-frame-error">Une préparation locale invalide a été ignorée et remplacée par un brouillon sûr. Vérifiez les paramètres avant de continuer.</p> : null}
             {launchError ? <p role="alert" className="packing-v3-frame-error">{launchError}</p> : null}
             <PackingConductWaiting />
           </>
