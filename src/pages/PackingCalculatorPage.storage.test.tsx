@@ -10,15 +10,19 @@ describe('PackingCalculatorPage persisted-state recovery', () => {
 
     render(<PackingCalculatorPage />);
 
-    expect((screen.getByLabelText('Quantité demandée en unités') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Quantité demandée') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Unités par carton') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Cartons par palette') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Début OC') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Cadence réf.') as HTMLInputElement).value).toBe('');
 
     await waitFor(() => {
       expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
         quantity: '',
         unitsPerCarton: '',
         cartonsPerPalette: '',
+        productionStartTime: '',
+        referenceCadence: '',
       });
     });
   });
@@ -33,15 +37,19 @@ describe('PackingCalculatorPage persisted-state recovery', () => {
 
     render(<PackingCalculatorPage />);
 
-    expect((screen.getByLabelText('Quantité demandée en unités') as HTMLInputElement).value).toBe('30880');
+    expect((screen.getByLabelText('Quantité demandée') as HTMLInputElement).value).toBe('30880');
     expect((screen.getByLabelText('Unités par carton') as HTMLInputElement).value).toBe('128');
     expect((screen.getByLabelText('Cartons par palette') as HTMLInputElement).value).toBe('40');
+    expect((screen.getByLabelText('Début OC') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Cadence réf.') as HTMLInputElement).value).toBe('');
 
     await waitFor(() => {
       expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
         quantity: '30880',
         unitsPerCarton: '128',
         cartonsPerPalette: '40',
+        productionStartTime: '',
+        referenceCadence: '',
       });
     });
   });
