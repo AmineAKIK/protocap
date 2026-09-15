@@ -17,7 +17,8 @@
 .packing-v3-stepper button,
 .packing-v3-partial-controls > button,
 .packing-v3-history-row button,
-.packing-v3-preparation-reset {
+.packing-v3-preparation-reset,
+.packing-v3-datetime-trigger {
   transition:
     border-color 150ms ease,
     background-color 150ms ease,
@@ -66,6 +67,47 @@
 .packing-calculator-page .packing-v3-full-load-action small {
   color: #fff;
   opacity: 1;
+}
+
+.packing-v3-datetime-control {
+  gap: .35rem;
+}
+
+.packing-v3-datetime-trigger {
+  display: inline-grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #cbd5df;
+  border-radius: .5rem;
+  background: #f8fafb;
+  color: #475569;
+  cursor: pointer;
+}
+
+.packing-v3-datetime-trigger:hover {
+  border-color: #8fbdb8;
+  background: #edf8f6;
+  color: #0b625c;
+}
+
+.packing-v3-datetime-trigger:focus-visible {
+  outline: 3px solid rgb(15 159 149 / .2);
+  outline-offset: 2px;
+}
+
+.packing-v3-datetime-input {
+  color-scheme: light;
+}
+
+.packing-v3-datetime-input::-webkit-calendar-picker-indicator {
+  width: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .packing-v3-preparation-reset-row {

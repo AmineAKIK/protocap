@@ -1,6 +1,7 @@
 import {
   Box,
   Boxes,
+  CalendarDays,
   Check,
   Gauge,
   Layers3,
@@ -8,7 +9,7 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import {
   calculatePackingOptions,
   summarizePackingLoads,
@@ -105,22 +106,47 @@ function StartTimeField({
   invalid: boolean;
   onChange: (value: string) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function openPicker() {
+    const input = inputRef.current;
+    if (!input) return;
+
+    input.focus();
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  }
+
   return (
-    <label className="packing-v3-field min-w-0">
-      <span className="packing-v3-field-label">Début OC</span>
-      <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
+    <div className="packing-v3-field min-w-0">
+      <label className="packing-v3-field-label" htmlFor="packing-production-start">Début OC</label>
+      <div className={`packing-v3-field-control packing-v3-datetime-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
+        <button
+          type="button"
+          className="packing-v3-datetime-trigger"
+          aria-label="Choisir la date et l’heure de début OC"
+          onClick={openPicker}
+        >
+          <CalendarDays size={17} aria-hidden="true" />
+        </button>
         <input
+          ref={inputRef}
+          id="packing-production-start"
+          className="packing-v3-datetime-input"
           aria-label="Début OC"
           type="datetime-local"
           value={value}
           aria-invalid={invalid}
           onChange={(event) => onChange(event.target.value)}
         />
-      </span>
+      </div>
       {legacyTime ? (
         <small className="packing-v3-legacy-time">Heure enregistrée précédemment : {legacyTime}. Choisissez la date correspondante.</small>
       ) : null}
-    </label>
+    </div>
   );
 }
 

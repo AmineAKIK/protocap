@@ -21,6 +21,10 @@ function storePackingForm(overrides: Record<string, string> = {}) {
   );
 }
 
+function getProductionStartInput(): HTMLInputElement {
+  return screen.getByLabelText('Début OC', { selector: 'input' }) as HTMLInputElement;
+}
+
 async function chooseStrategy(user: ReturnType<typeof userEvent.setup>, name: RegExp = /Carton complet/i) {
   const group = screen.getByRole('radiogroup', { name: 'Stratégie de conditionnement' });
   await user.click(within(group).getByRole('radio', { name }));
@@ -54,7 +58,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await chooseStrategy(user);
     expect(launch.disabled).toBe(true);
 
-    fireEvent.change(screen.getByLabelText(/Début OC/i), { target: { value: productionStart } });
+    fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
     await user.type(screen.getByLabelText(/Cadence réf/i), '60');
     expect(launch.disabled).toBe(false);
   });
@@ -72,7 +76,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Unités par carton/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Cartons par palette/i) as HTMLInputElement).value).toBe('');
-    expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe('');
+    expect(getProductionStartInput().value).toBe('');
     expect((screen.getByLabelText(/Cadence réf/i) as HTMLInputElement).value).toBe('');
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
     expect(launch.disabled).toBe(true);
@@ -80,7 +84,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await user.type(screen.getByLabelText(/Quantité demandée/i), '30880');
     await user.type(screen.getByLabelText(/Unités par carton/i), '128');
     await user.type(screen.getByLabelText(/Cartons par palette/i), '40');
-    fireEvent.change(screen.getByLabelText(/Début OC/i), { target: { value: productionStart } });
+    fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
     await user.type(screen.getByLabelText(/Cadence réf/i), '60');
 
     expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('false');
@@ -101,7 +105,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     render(<PackingCalculatorPage />);
 
-    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    const start = getProductionStartInput();
     expect(start.value).toBe('');
     expect(screen.getByText(/Heure enregistrée précédemment : 07:30/)).toBeTruthy();
 
@@ -115,7 +119,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     render(<PackingCalculatorPage />);
 
     await chooseStrategy(user);
-    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    const start = getProductionStartInput();
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
 
     expect(start.getAttribute('aria-invalid')).toBe('true');
@@ -222,6 +226,6 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(confirm).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('30880');
-    expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe(productionStart);
+    expect(getProductionStartInput().value).toBe(productionStart);
   });
 });

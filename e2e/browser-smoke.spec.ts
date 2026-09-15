@@ -57,7 +57,7 @@ test.describe('browser and responsive smoke', () => {
     await page.getByLabel('Quantité demandée').fill('30880');
     await page.getByLabel('Unités par carton').fill('128');
     await page.getByLabel('Cartons par palette').fill('40');
-    await page.getByLabel('Début OC').fill(productionStart);
+    await page.getByRole('textbox', { name: 'Début OC' }).fill(productionStart);
     await page
       .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
       .getByRole('radio', { name: /Carton complet/i })
