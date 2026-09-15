@@ -52,6 +52,10 @@ function toLocalDateTimeInputValue(value: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function focusAfterRender(selector: string) {
+  window.requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus());
+}
+
 type ViewTransitionDocument = Document & {
   startViewTransition?: (callback: () => void) => { finished: Promise<void> };
 };
@@ -84,6 +88,13 @@ function ConfirmDialog({
   onConfirm: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef(true);
+
+  function handleConfirm() {
+    restoreFocusRef.current = false;
+    onConfirm();
+  }
+
   return (
     <AccessibleDialog
       title={title}
@@ -91,6 +102,7 @@ function ConfirmDialog({
       onClose={onCancel}
       hideCloseButton
       initialFocusRef={cancelRef}
+      restoreFocusRef={restoreFocusRef}
       className="max-w-sm"
       contentClassName="p-6"
     >
@@ -98,7 +110,7 @@ function ConfirmDialog({
         <button ref={cancelRef} type="button" onClick={onCancel} className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-700/20">
           {cancelLabel}
         </button>
-        <button type="button" onClick={onConfirm} className={`flex-1 rounded-xl py-3 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-4 ${tone === 'danger' ? 'bg-red-700 hover:bg-red-600 focus-visible:ring-red-700/20' : 'bg-amber-700 hover:bg-amber-600 focus-visible:ring-amber-700/20'}`}>
+        <button type="button" onClick={handleConfirm} className={`flex-1 rounded-xl py-3 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-4 ${tone === 'danger' ? 'bg-red-700 hover:bg-red-600 focus-visible:ring-red-700/20' : 'bg-amber-700 hover:bg-amber-600 focus-visible:ring-amber-700/20'}`}>
           {confirmLabel}
         </button>
       </div>
@@ -170,6 +182,7 @@ export function PackingCalculatorPage() {
       setSelectedPolicy(null);
       setTouchedFields({});
       setLaunchError(null);
+      focusAfterRender('#packing-quantity');
     });
   }
 
@@ -191,6 +204,8 @@ export function PackingCalculatorPage() {
           referenceCadenceUnitsPerMinute: cadence,
           productionStartedAt,
         });
+        setIsLaunching(false);
+        focusAfterRender('#packing-production-title');
       } catch {
         setIsLaunching(false);
         setLaunchError('Le suivi n’a pas pu démarrer. Réessayez ou vérifiez la disponibilité du navigateur.');
@@ -227,6 +242,7 @@ export function PackingCalculatorPage() {
       setSelectedPolicy(activeRun.selectedPolicy);
       setTouchedFields({});
       clearRun();
+      focusAfterRender('#packing-quantity');
     });
   }
 
