@@ -36,7 +36,12 @@ export interface PackingDeclaration {
 export interface PackingRun {
   id: string;
   createdAt: string;
-  productionStartedAt: string;
+  /**
+   * Business start time of the production order. Optional only for in-memory
+   * compatibility with V1 fixtures; newly created and persisted V2 runs always
+   * materialize it explicitly.
+   */
+  productionStartedAt?: string;
   requestedUnits: number;
   unitsPerCarton: number;
   cartonsPerLoad: number;
@@ -63,6 +68,10 @@ export interface PackingRunTiming {
   varianceMinutesVsReference: number;
   projectedFinishAt: string;
   effectiveNow: string;
+}
+
+export function getPackingRunProductionStartedAt(run: PackingRun): string {
+  return run.productionStartedAt ?? run.createdAt;
 }
 
 function isPositiveSafeInteger(value: number): boolean {
@@ -179,7 +188,7 @@ function getExpectedSelectedPlan(run: PackingRun): { totalPrepared: number; vari
 export function validatePackingRun(run: PackingRun): void {
   assertIdentity(run.id, 'run.id');
   assertTimestamp(run.createdAt, 'run.createdAt');
-  assertTimestamp(run.productionStartedAt, 'run.productionStartedAt');
+  assertTimestamp(getPackingRunProductionStartedAt(run), 'run.productionStartedAt');
   assertPositiveSafeInteger(run.requestedUnits, 'requestedUnits');
   assertPositiveSafeInteger(run.unitsPerCarton, 'unitsPerCarton');
   assertPositiveSafeInteger(run.cartonsPerLoad, 'cartonsPerLoad');
@@ -236,7 +245,7 @@ export function getPackingRunProgress(run: PackingRun): PackingRunProgress {
 
 export function getPackingRunTiming(run: PackingRun, now: Date = new Date()): PackingRunTiming {
   const progress = getPackingRunProgress(run);
-  const startMs = Date.parse(run.productionStartedAt);
+  const startMs = Date.parse(getPackingRunProductionStartedAt(run));
   const lastDeclaration = run.declarations[run.declarations.length - 1];
   const effectiveNowMs = progress.remainingUnits === 0 && lastDeclaration
     ? Date.parse(lastDeclaration.createdAt)
