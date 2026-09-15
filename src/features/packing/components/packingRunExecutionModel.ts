@@ -68,12 +68,23 @@ export function formatPackingClock(iso: string): string {
   });
 }
 
+function formatPackingDurationMinutes(minutes: number): string {
+  const rounded = Math.round(Math.abs(minutes));
+  if (rounded < 60) return `${rounded} min`;
+
+  const hours = Math.floor(rounded / 60);
+  const remainingMinutes = rounded % 60;
+  return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
+}
+
 export function formatPackingReferenceVariance(
   minutes: number,
 ): { label: string; tone: 'ahead' | 'late' | 'neutral' } {
   const rounded = Math.round(Math.abs(minutes));
   if (rounded < 1) return { label: 'À l’heure', tone: 'neutral' };
+
+  const duration = formatPackingDurationMinutes(minutes);
   return minutes > 0
-    ? { label: `${rounded} min d’avance`, tone: 'ahead' }
-    : { label: `${rounded} min de retard`, tone: 'late' };
+    ? { label: `${duration} d’avance`, tone: 'ahead' }
+    : { label: `${duration} de retard`, tone: 'late' };
 }
