@@ -7,7 +7,7 @@ async function configurePacking(page: Page, quantity = '30880') {
   await page.getByLabel('Quantité demandée').fill(quantity);
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByLabel('Début OC').fill(productionStart);
+  await page.getByRole('textbox', { name: 'Début OC' }).fill(productionStart);
   await page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' }).getByRole('radio', { name: /Carton complet/i }).click();
   await page.getByLabel('Cadence réf.').fill('60');
   await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
