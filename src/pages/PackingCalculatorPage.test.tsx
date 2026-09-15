@@ -1,11 +1,24 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
 
 const formStorageKey = 'lineops.packing.form.inputs.v8';
 const activeRunStorageKey = 'lineops.packing.active-run.v1';
 const productionStart = '2026-09-15T07:30';
+
+function installDialogPolyfill() {
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute('open', '');
+    };
+  }
+  if (!HTMLDialogElement.prototype.close) {
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute('open');
+    };
+  }
+}
 
 function storePackingForm(overrides: Record<string, string> = {}) {
   localStorage.setItem(
@@ -36,6 +49,10 @@ async function launchRun(user: ReturnType<typeof userEvent.setup>, strategy: Reg
   expect(await screen.findByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
 }
 
+beforeEach(() => {
+  installDialogPolyfill();
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -54,6 +71,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByText('Conduite de production')).toBeTruthy();
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
     expect(launch.disabled).toBe(true);
+    expect(screen.getByText(/À compléter : Début OC · Cadence réf\./)).toBeTruthy();
 
     await chooseStrategy(user);
     expect(launch.disabled).toBe(true);
@@ -63,32 +81,72 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(launch.disabled).toBe(false);
   });
 
-  it('clears the preparation fields and selected strategy in one action', async () => {
+  it('preserves invalid numeric input and explains the error after interaction', async () => {
+    const user = userEvent.setup();
+    render(<PackingCalculatorPage />);
+
+    const quantity = screen.getByLabelText('Quantité demandée') as HTMLInputElement;
+    await user.type(quantity, '12.5');
+    await user.tab();
+
+    expect(quantity.value).toBe('12.5');
+    expect(quantity.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Saisissez un entier supérieur à 0.')).toBeTruthy();
+    expect(screen.getByText(/Corrigez : Quantité demandée/)).toBeTruthy();
+  });
+
+  it('shows required feedback only after a field has been visited', async () => {
+    const user = userEvent.setup();
+    render(<PackingCalculatorPage />);
+
+    expect(screen.queryByText('Valeur obligatoire.')).toBeNull();
+    const quantity = screen.getByLabelText('Quantité demandée');
+    await user.click(quantity);
+    await user.tab();
+    expect(screen.getByText('Valeur obligatoire.')).toBeTruthy();
+  });
+
+  it('protects reset with an accessible confirmation and restores focus when cancelled', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
 
     await chooseStrategy(user);
-    expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('true');
+    const reset = screen.getByRole('button', { name: /Réinitialiser la préparation/i });
+    await user.click(reset);
 
-    await user.click(screen.getByRole('button', { name: /Réinitialiser la préparation/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Réinitialiser la préparation ?' });
+    expect(dialog).toBeTruthy();
+    const cancel = screen.getByRole('button', { name: 'Annuler' });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    await user.click(cancel);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(reset);
+    expect((screen.getByLabelText('Quantité demandée') as HTMLInputElement).value).toBe('30880');
+
+    await user.click(reset);
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser', exact: true }));
 
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Unités par carton/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Cartons par palette/i) as HTMLInputElement).value).toBe('');
     expect(getProductionStartInput().value).toBe('');
     expect((screen.getByLabelText(/Cadence réf/i) as HTMLInputElement).value).toBe('');
-    const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
-    expect(launch.disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /Réinitialiser la préparation/i }) as HTMLButtonElement).disabled).toBe(true);
+  });
 
-    await user.type(screen.getByLabelText(/Quantité demandée/i), '30880');
-    await user.type(screen.getByLabelText(/Unités par carton/i), '128');
-    await user.type(screen.getByLabelText(/Cartons par palette/i), '40');
-    fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
-    await user.type(screen.getByLabelText(/Cadence réf/i), '60');
+  it('supports arrow-key navigation inside the strategy radio group', async () => {
+    const user = userEvent.setup();
+    storePackingForm();
+    render(<PackingCalculatorPage />);
 
-    expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('false');
-    expect(launch.disabled).toBe(true);
+    const group = screen.getByRole('radiogroup', { name: 'Stratégie de conditionnement' });
+    const exact = within(group).getByRole('radio', { name: /Sans dépassement/i });
+    exact.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(within(group).getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(within(group).getByRole('radio', { name: /Carton complet/i }));
   });
 
   it('preserves a legacy time-only start until the operator chooses a date', async () => {
@@ -120,9 +178,11 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     await chooseStrategy(user);
     const start = getProductionStartInput();
+    fireEvent.blur(start);
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
 
     expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Choisissez une date et une heure valides.')).toBeTruthy();
     expect(launch.disabled).toBe(true);
   });
 
@@ -214,16 +274,17 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByText('Aucune production déclarée pour le moment.')).toBeTruthy();
   });
 
-  it('preserves the full OC start date when returning to preparation', async () => {
+  it('protects destructive return to preparation and preserves the full OC start date', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
     await launchRun(user);
     await user.click(screen.getByRole('button', { name: /Déclarer une palette complète/i }));
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     await user.click(screen.getByRole('button', { name: 'Modifier la préparation' }));
-    expect(confirm).toHaveBeenCalledOnce();
+    expect(screen.getByRole('dialog', { name: 'Modifier la préparation ?' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Modifier et supprimer' }));
+
     expect(await screen.findByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('30880');
     expect(getProductionStartInput().value).toBe(productionStart);
