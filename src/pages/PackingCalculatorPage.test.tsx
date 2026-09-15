@@ -74,8 +74,16 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect((screen.getByLabelText(/Cartons par palette/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Cadence réf/i) as HTMLInputElement).value).toBe('');
-    expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('false');
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
+    expect(launch.disabled).toBe(true);
+
+    await user.type(screen.getByLabelText(/Quantité demandée/i), '30880');
+    await user.type(screen.getByLabelText(/Unités par carton/i), '128');
+    await user.type(screen.getByLabelText(/Cartons par palette/i), '40');
+    fireEvent.change(screen.getByLabelText(/Début OC/i), { target: { value: productionStart } });
+    await user.type(screen.getByLabelText(/Cadence réf/i), '60');
+
+    expect(screen.getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('false');
     expect(launch.disabled).toBe(true);
   });
 
