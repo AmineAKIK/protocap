@@ -27,11 +27,15 @@ const defaultForm: PackingPlanningFormState = {
 
 function normalizePackingPlanningForm(form: PackingPlanningFormState): PackingPlanningFormState {
   const legacy = form as Partial<PackingPlanningFormState>;
+  const storedStart = typeof legacy.productionStartTime === 'string' ? legacy.productionStartTime : '';
+  const legacyTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(storedStart) ? storedStart : undefined;
   return {
     quantity: typeof legacy.quantity === 'string' ? legacy.quantity : '',
     unitsPerCarton: typeof legacy.unitsPerCarton === 'string' ? legacy.unitsPerCarton : '',
     cartonsPerPalette: typeof legacy.cartonsPerPalette === 'string' ? legacy.cartonsPerPalette : '',
-    productionStartTime: typeof legacy.productionStartTime === 'string' ? legacy.productionStartTime : '',
+    productionStartTime: legacyTime ? '' : storedStart,
+    legacyProductionStartTime:
+      legacyTime ?? (typeof legacy.legacyProductionStartTime === 'string' ? legacy.legacyProductionStartTime : undefined),
     referenceCadence: typeof legacy.referenceCadence === 'string' ? legacy.referenceCadence : '',
   };
 }
@@ -122,7 +126,11 @@ export function PackingCalculatorPage() {
   }, [input, selectedPolicy]);
 
   function updateField(field: keyof PackingPlanningFormState, value: string) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) =>
+      field === 'productionStartTime'
+        ? { ...current, productionStartTime: value, legacyProductionStartTime: undefined }
+        : { ...current, [field]: value },
+    );
   }
 
   function numericState(value: string) {
