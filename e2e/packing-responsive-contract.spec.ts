@@ -39,7 +39,7 @@ async function configurePacking(page: Page) {
   await page.getByLabel('Quantité demandée').fill('5120000000');
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByLabel('Début OC').fill(productionStart);
+  await page.getByRole('textbox', { name: 'Début OC' }).fill(productionStart);
   await page
     .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
     .getByRole('radio', { name: /Carton complet/i })
@@ -69,10 +69,11 @@ test('Packing preparation fields stay separated at the 1024px cockpit-fit bounda
   await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
   await page.reload();
 
-  await page.getByLabel('Début OC').fill(productionStart);
+  const startInput = page.getByRole('textbox', { name: 'Début OC' });
+  await startInput.fill(productionStart);
   await page.getByLabel('Cadence réf.').fill('60');
 
-  const startField = page.getByLabel('Début OC').locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " packing-v3-field ")][1]');
+  const startField = startInput.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " packing-v3-field ")][1]');
   const cadenceField = page.getByLabel('Cadence réf.').locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " packing-v3-field ")][1]');
   const startBox = await startField.boundingBox();
   const cadenceBox = await cadenceField.boundingBox();
@@ -81,7 +82,7 @@ test('Packing preparation fields stay separated at the 1024px cockpit-fit bounda
   expect(cadenceBox).not.toBeNull();
   expect(startBox!.x + startBox!.width).toBeLessThanOrEqual(cadenceBox!.x + 1);
 
-  const startInputFit = await page.getByLabel('Début OC').evaluate((node) => {
+  const startInputFit = await startInput.evaluate((node) => {
     const element = node as HTMLInputElement;
     return { width: element.clientWidth, scrollWidth: element.scrollWidth };
   });
