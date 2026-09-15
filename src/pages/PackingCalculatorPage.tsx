@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import {
   PackingConductWaiting,
@@ -89,6 +89,7 @@ function ConfirmDialog({
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef(true);
+  const shouldRestoreFocus = useCallback(() => restoreFocusRef.current, []);
 
   function handleConfirm() {
     restoreFocusRef.current = false;
@@ -102,7 +103,7 @@ function ConfirmDialog({
       onClose={onCancel}
       hideCloseButton
       initialFocusRef={cancelRef}
-      restoreFocusRef={restoreFocusRef}
+      shouldRestoreFocus={shouldRestoreFocus}
       className="max-w-sm"
       contentClassName="p-6"
     >
