@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PackingPlanningRail, type PackingPlanningFormState } from './PackingPlanningRail';
+import type { PackingRun } from '../domain/packingRun';
+import { PackingFrozenPreparation, PackingPlanningRail, type PackingPlanningFormState } from './PackingPlanningRail';
 
 const form: PackingPlanningFormState = {
   quantity: '',
@@ -49,6 +50,27 @@ describe('PackingPlanningRail preparation semantics', () => {
       expect(radio.getAttribute('aria-checked')).toBe('false');
       expect(radio.getAttribute('tabindex')).toBe('-1');
     }
+  });
+
+  it('keeps the incomplete-carton quantity visible in the frozen run reference', () => {
+    const run: PackingRun = {
+      id: 'run-partial-detail',
+      createdAt: '2026-09-15T07:30:00.000Z',
+      productionStartedAt: '2026-09-15T07:30:00.000Z',
+      requestedUnits: 1_050,
+      unitsPerCarton: 100,
+      cartonsPerLoad: 8,
+      selectedPolicy: 'no-overrun',
+      plannedUnits: 1_050,
+      varianceUnits: 0,
+      referenceCadenceUnitsPerMinute: 60,
+      declarations: [],
+    };
+
+    render(<PackingFrozenPreparation run={run} onModify={vi.fn()} />);
+
+    expect(screen.getByLabelText('Préparation figée').textContent)
+      .toContain('1 partielle (2 cartons complets + 1 carton incomplet de 50 unités)');
   });
 });
 
