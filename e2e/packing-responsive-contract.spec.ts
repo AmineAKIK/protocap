@@ -9,6 +9,7 @@ import {
 } from './responsive-harness';
 
 const PACKING_ACTIVE_RUN_STORAGE_KEY = 'lineops.packing.active-run.v1';
+const productionStart = '2026-09-15T07:30';
 
 const PACKING_VIEWPORTS = [
   RESPONSIVE_VIEWPORTS.phoneMin,
@@ -38,7 +39,7 @@ async function configurePacking(page: Page) {
   await page.getByLabel('Quantité demandée').fill('5120000000');
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
-  await page.getByLabel('Début OC').fill('07:30');
+  await page.getByLabel('Début OC').fill(productionStart);
   await page
     .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
     .getByRole('radio', { name: /Carton complet/i })
