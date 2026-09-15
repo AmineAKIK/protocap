@@ -1,9 +1,11 @@
-import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { Clock3, Gauge, Layers3, Pencil, Trash2, TriangleAlert } from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   addPackingDeclaration,
+  formatPackingDuration,
   getPackingDeclarationUnits,
   getPackingRunProgress,
+  getPackingRunTiming,
   normalizePackingDeclaration,
   PackingRunDomainError,
   removePackingDeclaration,
@@ -17,7 +19,6 @@ interface PackingRunExecutionProps {
   run: PackingRun;
   persistenceStatus: PackingPersistenceStatus;
   onRunChange: (run: PackingRun) => void;
-  onNewRun: () => void;
 }
 
 interface DeclarationDraft {
@@ -25,16 +26,10 @@ interface DeclarationDraft {
   partialCartonUnits: string;
 }
 
-const emptyDraft: DeclarationDraft = {
-  completeCartons: '',
-  partialCartonUnits: '',
-};
-
+const emptyDraft: DeclarationDraft = { completeCartons: '', partialCartonUnits: '' };
 const numberFormatter = new Intl.NumberFormat('fr-FR');
-
-function formatNumber(value: number): string {
-  return numberFormatter.format(value);
-}
+const percentFormatter = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const formatNumber = (value: number) => numberFormatter.format(value);
 
 function parseNonNegativeSafeInteger(value: string): number | null {
   if (value.trim() === '') return 0;
@@ -52,45 +47,71 @@ function getDraftInput(draft: DeclarationDraft): PackingDeclarationInput | null 
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof PackingRunDomainError) {
-    if (error.code === 'OVER_DECLARATION') {
-      return 'Cette déclaration dépasse le volume restant du run actif.';
-    }
-    if (error.code === 'ZERO_DECLARATION') {
-      return 'Saisissez au moins un carton complet ou une unité partielle.';
-    }
+    if (error.code === 'OVER_DECLARATION') return 'Cette déclaration dépasse le volume restant du run actif.';
+    if (error.code === 'ZERO_DECLARATION') return 'Saisissez au moins un carton complet ou une unité dans le carton incomplet.';
     return error.message;
   }
   return 'La déclaration n’a pas pu être enregistrée.';
 }
 
 function createDeclarationIdentity(): { id: string; createdAt: string } {
-  if (typeof globalThis.crypto?.randomUUID !== 'function') {
-    throw new Error('Secure declaration identity generation is unavailable.');
-  }
+  if (typeof globalThis.crypto?.randomUUID !== 'function') throw new Error('Secure declaration identity generation is unavailable.');
   return { id: globalThis.crypto.randomUUID(), createdAt: new Date().toISOString() };
 }
 
-export function PackingRunExecution({
-  run,
-  persistenceStatus,
-  onRunChange,
-  onNewRun,
-}: PackingRunExecutionProps) {
+function usePackingNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
+  return now;
+}
+
+function formatClock(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatVariance(minutes: number): { label: string; tone: 'ahead' | 'late' | 'neutral' } {
+  const rounded = Math.round(Math.abs(minutes));
+  if (rounded < 1) return { label: 'À l’heure', tone: 'neutral' };
+  return minutes > 0
+    ? { label: `${rounded} min d’avance`, tone: 'ahead' }
+    : { label: `${rounded} min de retard`, tone: 'late' };
+}
+
+function Stepper({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const parsed = parseNonNegativeSafeInteger(value) ?? 0;
+  return (
+    <div className="packing-v3-stepper">
+      <span>{label}</span>
+      <div>
+        <button type="button" aria-label={`Diminuer ${label}`} onClick={() => onChange(String(Math.max(0, parsed - 1)))}>−</button>
+        <input inputMode="numeric" pattern="[0-9]*" value={value} onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))} />
+        <button type="button" aria-label={`Augmenter ${label}`} onClick={() => onChange(String(parsed + 1))}>+</button>
+      </div>
+    </div>
+  );
+}
+
+export function PackingRunExecution({ run, persistenceStatus, onRunChange }: PackingRunExecutionProps) {
+  const now = usePackingNow();
   const progress = getPackingRunProgress(run);
+  const timing = getPackingRunTiming(run, now);
   const [draft, setDraft] = useState<DeclarationDraft>(emptyDraft);
   const [editingDeclarationId, setEditingDeclarationId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-
+  const [feedback, setFeedback] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const fullLoadUnits = run.unitsPerCarton * run.cartonsPerLoad;
   const canDeclareFullLoad = progress.remainingUnits >= fullLoadUnits;
   const isComplete = progress.remainingUnits === 0;
+  const progressPercent = progress.progressRatio * 100;
+  const variance = formatVariance(timing.varianceMinutesVsReference);
 
   const preview = useMemo(() => {
     const input = getDraftInput(draft);
     if (!input) return { units: null, error: 'Saisissez uniquement des nombres entiers positifs ou zéro.' };
     if (input.completeCartons === 0 && input.partialCartonUnits === 0) return { units: 0, error: '' };
-
     try {
       const normalized = normalizePackingDeclaration(input, run.unitsPerCarton);
       return { units: getPackingDeclarationUnits(normalized, run.unitsPerCarton), error: '' };
@@ -112,7 +133,7 @@ export function PackingRunExecution({
         completeCartons: run.cartonsPerLoad,
         partialCartonUnits: 0,
       });
-      commitRun(nextRun, `${formatNumber(fullLoadUnits)} unités déclarées produites.`);
+      commitRun(nextRun, `${formatNumber(fullLoadUnits)} unités déclarées.`);
     } catch (error) {
       setFeedback('');
       setErrorMessage(getErrorMessage(error));
@@ -123,27 +144,15 @@ export function PackingRunExecution({
     event.preventDefault();
     const input = getDraftInput(draft);
     if (!input) {
-      setFeedback('');
       setErrorMessage('Saisissez uniquement des nombres entiers positifs ou zéro.');
       return;
     }
-
     try {
-      if (editingDeclarationId) {
-        const nextRun = replacePackingDeclaration(run, editingDeclarationId, input);
-        commitRun(nextRun, 'Déclaration corrigée.');
-        setEditingDeclarationId(null);
-      } else {
-        const nextRun = addPackingDeclaration(run, {
-          ...createDeclarationIdentity(),
-          ...input,
-        });
-        const declaration = nextRun.declarations[nextRun.declarations.length - 1];
-        commitRun(
-          nextRun,
-          `${formatNumber(getPackingDeclarationUnits(declaration, run.unitsPerCarton))} unités déclarées produites.`,
-        );
-      }
+      const nextRun = editingDeclarationId
+        ? replacePackingDeclaration(run, editingDeclarationId, input)
+        : addPackingDeclaration(run, { ...createDeclarationIdentity(), ...input });
+      commitRun(nextRun, editingDeclarationId ? 'Déclaration corrigée.' : `${formatNumber(preview.units ?? 0)} unités déclarées.`);
+      setEditingDeclarationId(null);
       setDraft(emptyDraft);
     } catch (error) {
       setFeedback('');
@@ -155,198 +164,91 @@ export function PackingRunExecution({
     const declaration = run.declarations.find((entry) => entry.id === declarationId);
     if (!declaration) return;
     setEditingDeclarationId(declarationId);
-    setDraft({
-      completeCartons: String(declaration.completeCartons),
-      partialCartonUnits: String(declaration.partialCartonUnits),
-    });
+    setDraft({ completeCartons: String(declaration.completeCartons), partialCartonUnits: String(declaration.partialCartonUnits) });
     setFeedback('');
     setErrorMessage('');
   }
 
-  function cancelCorrection() {
-    setEditingDeclarationId(null);
-    setDraft(emptyDraft);
-    setErrorMessage('');
-  }
-
-  function removeDeclaration(declarationId: string) {
+  function deleteDeclaration(declarationId: string) {
     try {
-      const nextRun = removePackingDeclaration(run, declarationId);
-      commitRun(nextRun, 'Déclaration supprimée et progression recalculée.');
-      if (editingDeclarationId === declarationId) cancelCorrection();
+      commitRun(removePackingDeclaration(run, declarationId), 'Déclaration supprimée et progression recalculée.');
+      if (editingDeclarationId === declarationId) {
+        setEditingDeclarationId(null);
+        setDraft(emptyDraft);
+      }
     } catch (error) {
-      setFeedback('');
       setErrorMessage(getErrorMessage(error));
     }
   }
 
   return (
-    <section
-      aria-labelledby="packing-run-execution-title"
-      className={`packing-operator-panel overflow-hidden rounded-[1.75rem] border bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ${isComplete ? 'packing-operator-complete border-emerald-200' : 'border-slate-200'}`}
-    >
-      <div className={`packing-operator-header border-b px-5 py-4 sm:px-6 ${isComplete ? 'border-emerald-200 bg-emerald-50/80' : 'border-slate-200 bg-white'}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Agir · opérateur</p>
-            <h2 id="packing-run-execution-title" className="mt-0.5 text-lg font-black tracking-tight text-slate-950">
-              Déclarations de production
-            </h2>
-            <p className="mt-1 text-xs font-semibold text-slate-500">Déclarer, corriger ou retirer uniquement ce qui a réellement été conditionné.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${persistenceStatus === 'persisted' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>
-              {persistenceStatus === 'persisted' ? 'Enregistré localement' : 'Persistance locale dégradée'}
-            </span>
-            <button
-              type="button"
-              onClick={onNewRun}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              <RotateCcw size={13} aria-hidden="true" />
-              Nouveau run
-            </button>
-          </div>
-        </div>
-      </div>
+    <section aria-labelledby="packing-production-title" className="packing-v3-production packing-v3-stage">
+      <header className="packing-v3-stage-header">
+        <div><h1 id="packing-production-title">Conduite de production</h1><p>Suivez l’avancement et déclarez ce qui est réellement conditionné.</p></div>
+        <span className="packing-v3-status packing-v3-status-running"><span /> Production en cours</span>
+      </header>
 
-      <div className="packing-operator-body p-5 sm:p-6">
-        <div className={`packing-primary-action rounded-2xl border p-4 sm:p-5 ${isComplete ? 'border-emerald-200 bg-emerald-50/70' : 'border-teal-200 bg-teal-50/70'}`}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${isComplete ? 'text-emerald-700' : 'text-teal-700'}`}>{isComplete ? 'Production terminée' : 'Action principale'}</p>
-              <p className="mt-1 text-sm font-bold text-slate-800">
-                Charge complète · {formatNumber(run.cartonsPerLoad)} cartons · {formatNumber(fullLoadUnits)} unités
-              </p>
+      <div className="packing-v3-production-grid">
+        <div className="packing-v3-production-main">
+          <div className="packing-v3-primary-kpis">
+            <div><span>Quantité planifiée</span><strong>{formatNumber(run.plannedUnits)}</strong><small>{formatNumber(Math.ceil(run.plannedUnits / run.unitsPerCarton))} cartons</small></div>
+            <div><span>Quantité déclarée</span><strong>{formatNumber(progress.declaredUnits)}</strong><small>{progress.declarationCount} déclaration{progress.declarationCount > 1 ? 's' : ''}</small></div>
+            <div className="packing-v3-remaining"><span>Quantité restante</span><strong>{formatNumber(progress.remainingUnits)} unités</strong><small>{percentFormatter.format(Math.max(0, 100 - progressPercent))} % du plan restant</small></div>
+          </div>
+
+          <div className="packing-v3-progress" role="progressbar" aria-label="Progression de l’ordre de conditionnement" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPercent)}>
+            <div><span>Progression de l’ordre de conditionnement</span><strong>{percentFormatter.format(progressPercent)} %</strong></div>
+            <div className="packing-v3-progress-track"><span style={{ width: `${Math.min(100, progressPercent)}%` }} /></div>
+          </div>
+
+          <div className="packing-v3-time-kpis">
+            <div><span><Clock3 size={16} /> Temps écoulé</span><strong>{formatPackingDuration(timing.elapsedMinutes)}</strong><small>Depuis {formatClock(run.productionStartedAt)}</small></div>
+            <div><span><Gauge size={16} /> Temps estimé total</span><strong>{formatPackingDuration(progress.estimatedTotalMinutes)}</strong><small>À {formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</small></div>
+            <div><span><Clock3 size={16} /> Temps estimé restant</span><strong>{formatPackingDuration(progress.estimatedRemainingMinutes)}</strong><small>Fin estimée {formatClock(timing.projectedFinishAt)}</small></div>
+            <div className={`packing-v3-reference-gap packing-v3-reference-gap-${variance.tone}`}><span>Écart vs référence</span><strong>{variance.label}</strong><small>{timing.varianceUnitsVsReference >= 0 ? '+' : '−'}{formatNumber(Math.round(Math.abs(timing.varianceUnitsVsReference)))} unités</small></div>
+          </div>
+
+          <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={declareFullLoad}>
+            <span><Layers3 size={20} aria-hidden="true" /><strong>{isComplete ? 'Production terminée' : 'Déclarer une palette complète'}</strong></span>
+            <small>{formatNumber(run.cartonsPerLoad)} cartons · {formatNumber(fullLoadUnits)} unités</small>
+            <b aria-hidden="true">→</b>
+          </button>
+
+          <form className="packing-v3-partial" onSubmit={submitPartialDeclaration}>
+            <div className="packing-v3-partial-heading"><div><strong>{editingDeclarationId ? 'Corriger la déclaration' : 'Palette partielle'}</strong><span>Cartons + unités du carton incomplet</span></div><div><span>Aperçu</span><strong>{preview.units === null ? '—' : formatNumber(preview.units)} unités</strong>{preview.units ? <small>({draft.completeCartons || '0'} × {formatNumber(run.unitsPerCarton)} + {draft.partialCartonUnits || '0'})</small> : null}</div></div>
+            <div className="packing-v3-partial-controls">
+              <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => setDraft((current) => ({ ...current, completeCartons: value }))} />
+              <Stepper label="Unités dans le carton incomplet" value={draft.partialCartonUnits} onChange={(value) => setDraft((current) => ({ ...current, partialCartonUnits: value }))} />
+              <button type="submit" disabled={isComplete && !editingDeclarationId}>{editingDeclarationId ? 'Enregistrer la correction' : 'Enregistrer la palette partielle'} <span aria-hidden="true">→</span></button>
             </div>
-            <button
-              type="button"
-              disabled={!canDeclareFullLoad || isComplete}
-              onClick={declareFullLoad}
-              className={`packing-primary-action-button inline-flex min-h-14 min-w-48 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-black text-white shadow-sm transition disabled:cursor-not-allowed disabled:shadow-none ${isComplete ? 'bg-emerald-700 disabled:bg-emerald-600' : 'bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300'}`}
-            >
-              {isComplete ? <CheckCircle2 size={18} aria-hidden="true" /> : <Plus size={18} aria-hidden="true" />}
-              {isComplete ? 'Run terminé' : 'Déclarer une charge'}
-            </button>
-          </div>
-          {!isComplete && !canDeclareFullLoad ? (
-            <p className="mt-3 text-xs font-bold text-amber-800">
-              Le restant est inférieur à une charge complète. Utilisez la déclaration partielle.
-            </p>
-          ) : null}
+            {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); setDraft(emptyDraft); }}>Annuler la correction</button> : null}
+            {preview.error ? <p className="packing-v3-inline-error">{preview.error}</p> : null}
+          </form>
+
+          {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">Le stockage local est indisponible : les dernières déclarations pourront être perdues au rechargement.</p> : null}
+          {errorMessage ? <div role="alert" className="packing-v3-error"><TriangleAlert size={16} />{errorMessage}</div> : null}
+          {feedback ? <p role="status" aria-live="polite" className="packing-v3-feedback">{feedback}</p> : null}
         </div>
 
-        <form onSubmit={submitPartialDeclaration} className="packing-partial-form mt-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                {editingDeclarationId ? 'Correction' : 'Déclaration partielle'}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-600">Cartons complets + unités dans le carton partiel final.</p>
-            </div>
-            {editingDeclarationId ? (
-              <button type="button" onClick={cancelCorrection} className="min-h-9 rounded-xl px-3 text-xs font-bold text-slate-500 transition hover:bg-slate-100">
-                Annuler
-              </button>
-            ) : null}
+        <aside className="packing-v3-history" aria-label="Historique des déclarations">
+          <div className="packing-v3-history-head"><div><strong>Historique des déclarations</strong><span>{run.declarations.length} déclaration{run.declarations.length > 1 ? 's' : ''} enregistrée{run.declarations.length > 1 ? 's' : ''}</span></div></div>
+          <div className="packing-v3-history-scroll">
+            {run.declarations.length === 0 ? <p className="packing-v3-history-empty">Aucune production déclarée pour le moment.</p> : [...run.declarations].reverse().map((declaration) => {
+              const units = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
+              const fullPalette = declaration.completeCartons === run.cartonsPerLoad && declaration.partialCartonUnits === 0;
+              return (
+                <div className="packing-v3-history-row" key={declaration.id}>
+                  <time dateTime={declaration.createdAt}>{formatClock(declaration.createdAt)}</time>
+                  <span><Layers3 size={14} aria-hidden="true" />{fullPalette ? 'Palette complète' : 'Palette partielle'}</span>
+                  <strong>{formatNumber(units)} unités</strong>
+                  <button type="button" onClick={() => beginCorrection(declaration.id)} aria-label={`Corriger la déclaration de ${formatNumber(units)} unités`}><Pencil size={14} />Corriger</button>
+                  <button type="button" className="packing-v3-history-delete" onClick={() => deleteDeclaration(declaration.id)} aria-label={`Supprimer la déclaration de ${formatNumber(units)} unités`}><Trash2 size={14} /></button>
+                </div>
+              );
+            })}
           </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-black text-slate-600">Cartons complets</span>
-              <input
-                aria-label="Cartons complets à déclarer"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={draft.completeCartons}
-                onChange={(event) => setDraft((current) => ({ ...current, completeCartons: event.target.value.replace(/\D/g, '') }))}
-                className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-black tabular-nums outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-black text-slate-600">Unités du carton partiel</span>
-              <input
-                aria-label="Unités du carton partiel à déclarer"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={draft.partialCartonUnits}
-                onChange={(event) => setDraft((current) => ({ ...current, partialCartonUnits: event.target.value.replace(/\D/g, '') }))}
-                className="min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-black tabular-nums outline-none transition focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10"
-              />
-            </label>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
-            <p className="text-sm font-bold text-slate-600">
-              Aperçu : <span className="font-black tabular-nums text-slate-950">{preview.units === null ? '—' : formatNumber(preview.units)} unités</span>
-            </p>
-            <button
-              type="submit"
-              disabled={isComplete && !editingDeclarationId}
-              className="min-h-11 rounded-xl border border-slate-900 bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300"
-            >
-              {editingDeclarationId ? 'Enregistrer la correction' : 'Déclarer ce volume'}
-            </button>
-          </div>
-          {preview.error ? <p className="mt-2 text-xs font-bold text-rose-700">{preview.error}</p> : null}
-        </form>
-
-        {errorMessage ? (
-          <div role="alert" className="packing-error-state mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-900">
-            <TriangleAlert size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-            {errorMessage}
-          </div>
-        ) : null}
-        {feedback ? (
-          <p role="status" aria-live="polite" className="packing-feedback-state mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
-            {feedback}
-          </p>
-        ) : null}
-
-        <div className="packing-history mt-6 border-t border-slate-200 pt-5">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-black text-slate-950">Historique du run</h3>
-            <span className="text-xs font-bold text-slate-500">{run.declarations.length} déclaration{run.declarations.length > 1 ? 's' : ''}</span>
-          </div>
-
-          {run.declarations.length === 0 ? (
-            <p className="mt-3 text-sm font-medium text-slate-500">Aucune production déclarée pour ce run.</p>
-          ) : (
-            <ul className="mt-3 space-y-2" aria-label="Historique des déclarations">
-              {run.declarations.map((declaration, index) => {
-                const units = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
-                return (
-                  <li key={declaration.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
-                    <div>
-                      <p className="text-sm font-black tabular-nums text-slate-950">#{index + 1} · {formatNumber(units)} unités</p>
-                      <p className="mt-0.5 text-xs font-semibold text-slate-500">
-                        {formatNumber(declaration.completeCartons)} cartons + {formatNumber(declaration.partialCartonUnits)} unités partielles
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        aria-label={`Corriger la déclaration ${index + 1}`}
-                        onClick={() => beginCorrection(declaration.id)}
-                        className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
-                      >
-                        <Pencil size={16} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Supprimer la déclaration ${index + 1}`}
-                        onClick={() => removeDeclaration(declaration.id)}
-                        className="grid h-10 w-10 place-items-center rounded-xl text-rose-600 transition hover:bg-rose-50"
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+          <div className="packing-v3-history-total"><span>Total déclaré</span><strong>{formatNumber(progress.declaredUnits)} unités</strong></div>
+        </aside>
       </div>
     </section>
   );
