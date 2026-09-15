@@ -53,16 +53,19 @@ test.describe('browser and responsive smoke', () => {
 
   test('Packing Calculator keeps its primary declaration action usable without horizontal overflow', async ({ page }) => {
     await page.goto('/packing-calculator');
-    await page.getByLabel('Quantité demandée en unités').fill('30880');
+    await page.getByLabel('Quantité demandée').fill('30880');
     await page.getByLabel('Unités par carton').fill('128');
     await page.getByLabel('Cartons par palette').fill('40');
-    await page.getByRole('radio', { name: /Carton/i }).click();
-    await page.getByLabel('Cadence de référence en unités par minute').fill('60');
-    await page.getByRole('button', { name: 'Activer ce run' }).click();
+    await page.getByLabel('Début OC').fill('07:30');
+    await page
+      .getByRole('radiogroup', { name: 'Stratégie de conditionnement' })
+      .getByRole('radio', { name: /Carton complet/i })
+      .click();
+    await page.getByLabel('Cadence réf.').fill('60');
+    await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
 
-    const execution = page.getByRole('region', { name: 'Déclarations de production', exact: true });
-    await expect(execution).toBeVisible();
-    const primaryAction = execution.getByRole('button', { name: 'Déclarer une charge' });
+    await expect(page.getByRole('heading', { name: 'Conduite de production' })).toBeVisible();
+    const primaryAction = page.getByRole('button', { name: /Déclarer une palette complète/i });
     await primaryAction.scrollIntoViewIfNeeded();
     await expect(primaryAction).toBeVisible();
     await expectNoHorizontalOverflow(page);
