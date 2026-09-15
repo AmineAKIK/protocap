@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 describe('PackingCalculatorPage V3 operator workflow', () => {
-  it('keeps preparation active until all source inputs and a strategy are explicit', async () => {
+  it('reveals missing preparation only when launch is attempted', async () => {
     const user = userEvent.setup();
     localStorage.setItem(
       formStorageKey,
@@ -70,18 +70,24 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
     expect(screen.getByText('Conduite de production')).toBeTruthy();
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
-    expect(launch.disabled).toBe(true);
+    expect(launch.disabled).toBe(false);
+    expect(screen.queryByText(/À compléter :/)).toBeNull();
+    expect(screen.queryByText('Valeur obligatoire.')).toBeNull();
+
+    await user.click(launch);
+
     expect(screen.getByText(/À compléter : Début OC · Cadence réf\./)).toBeTruthy();
+    expect(getProductionStartInput().getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(getProductionStartInput());
 
     await chooseStrategy(user);
-    expect(launch.disabled).toBe(true);
-
     fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
     await user.type(screen.getByLabelText(/Cadence réf/i), '60');
+    expect(screen.queryByText(/À compléter :/)).toBeNull();
     expect(launch.disabled).toBe(false);
   });
 
-  it('preserves invalid numeric input and explains the error after interaction', async () => {
+  it('preserves invalid numeric input but waits for launch before surfacing the error', async () => {
     const user = userEvent.setup();
     render(<PackingCalculatorPage />);
 
@@ -90,20 +96,29 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await user.tab();
 
     expect(quantity.value).toBe('12.5');
+    expect(quantity.getAttribute('aria-invalid')).toBe('false');
+    expect(screen.queryByText('Saisissez un entier supérieur à 0.')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Lancer le suivi de production/i }));
+
     expect(quantity.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Saisissez un entier supérieur à 0.')).toBeTruthy();
     expect(screen.getByText(/Corrigez : Quantité demandée/)).toBeTruthy();
+    expect(document.activeElement).toBe(quantity);
   });
 
-  it('shows required feedback only after a field has been visited', async () => {
+  it('does not show required feedback on focus and blur alone', async () => {
     const user = userEvent.setup();
     render(<PackingCalculatorPage />);
 
-    expect(screen.queryByText('Valeur obligatoire.')).toBeNull();
     const quantity = screen.getByLabelText('Quantité demandée');
     await user.click(quantity);
     await user.tab();
-    expect(screen.getByText('Valeur obligatoire.')).toBeTruthy();
+    expect(screen.queryByText('Valeur obligatoire.')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Lancer le suivi de production/i }));
+    expect(screen.getAllByText('Valeur obligatoire.')).toHaveLength(5);
+    expect(document.activeElement).toBe(quantity);
   });
 
   it('protects reset with an accessible confirmation and restores focus when cancelled', async () => {
@@ -171,7 +186,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.queryByText(/Heure enregistrée précédemment/)).toBeNull();
   });
 
-  it('rejects impossible calendar dates instead of normalizing them', async () => {
+  it('rejects impossible calendar dates only after a launch attempt', async () => {
     const user = userEvent.setup();
     storePackingForm({ productionStartTime: '2026-02-31T07:30' });
     render(<PackingCalculatorPage />);
@@ -181,9 +196,14 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     fireEvent.blur(start);
     const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
 
+    expect(start.getAttribute('aria-invalid')).toBe('false');
+    expect(screen.queryByText('Choisissez une date et une heure valides.')).toBeNull();
+    expect(launch.disabled).toBe(false);
+
+    await user.click(launch);
     expect(start.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Choisissez une date et une heure valides.')).toBeTruthy();
-    expect(launch.disabled).toBe(true);
+    expect(document.activeElement).toBe(start);
   });
 
   it('launches an immutable run snapshot and turns preparation into a frozen reference', async () => {
