@@ -133,6 +133,13 @@ export function PackingCalculatorPage() {
     );
   }
 
+  function resetPreparation() {
+    transitionState(() => {
+      setForm(defaultForm);
+      setSelectedPolicy(null);
+    });
+  }
+
   function numericState(value: string) {
     if (value.trim() === '') return 'empty';
     return parsePositiveIntegerInput(value) === null ? 'invalid' : 'valid';
@@ -214,6 +221,7 @@ export function PackingCalculatorPage() {
               onFieldChange={updateField}
               onSelectPolicy={setSelectedPolicy}
               onLaunch={launchRun}
+              onReset={resetPreparation}
             />
             <PackingConductWaiting />
           </>
