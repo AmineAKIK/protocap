@@ -101,24 +101,30 @@ export async function expectNotCoveredAtCenter(page: Page, locator: Locator) {
   await locator.scrollIntoViewIfNeeded();
   await expect(locator).toBeVisible();
 
-  const result = await locator.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const x = Math.min(window.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
-    const y = Math.min(window.innerHeight - 1, Math.max(0, rect.top + rect.height / 2));
-    const topElement = document.elementFromPoint(x, y);
-    return {
-      x,
-      y,
-      covered: topElement !== element && !element.contains(topElement),
-      coveringTag: topElement?.tagName ?? null,
-      coveringText: topElement?.textContent?.trim().slice(0, 120) ?? null,
-    };
-  });
+  await expect
+    .poll(
+      async () => {
+        const result = await locator.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const x = Math.min(window.innerWidth - 1, Math.max(0, rect.left + rect.width / 2));
+          const y = Math.min(window.innerHeight - 1, Math.max(0, rect.top + rect.height / 2));
+          const topElement = document.elementFromPoint(x, y);
+          return {
+            x,
+            y,
+            covered: topElement !== element && !element.contains(topElement),
+            coveringTag: topElement?.tagName ?? null,
+            coveringText: topElement?.textContent?.trim().slice(0, 120) ?? null,
+          };
+        });
 
-  expect(
-    result.covered,
-    `locator center (${result.x}, ${result.y}) is covered by ${result.coveringTag ?? 'unknown'} ${result.coveringText ?? ''}`,
-  ).toBe(false);
+        return result.covered
+          ? `locator center (${result.x}, ${result.y}) is covered by ${result.coveringTag ?? 'unknown'} ${result.coveringText ?? ''}`
+          : 'clear';
+      },
+      { timeout: 2_000 },
+    )
+    .toBe('clear');
 }
 
 export async function expectPrimaryActionUsable(page: Page, locator: Locator) {
