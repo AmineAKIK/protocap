@@ -1,7 +1,6 @@
 import {
   Box,
   Boxes,
-  CalendarClock,
   Check,
   Gauge,
   Layers3,
@@ -110,7 +109,6 @@ function StartTimeField({
     <label className="packing-v3-field min-w-0">
       <span className="packing-v3-field-label">Début OC</span>
       <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
-        <CalendarClock size={18} aria-hidden="true" />
         <input
           aria-label="Début OC"
           type="datetime-local"
