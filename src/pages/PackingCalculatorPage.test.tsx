@@ -90,8 +90,9 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByRole('status').textContent).toMatch(/5\s?120 unités déclarées/);
 
     const history = screen.getByLabelText('Historique des déclarations');
-    expect(within(history).getByText('Palette complète')).toBeTruthy();
-    expect(within(history).getByText(/5\s?120 unités/)).toBeTruthy();
+    const completePallet = within(history).getByText('Palette complète').closest('.packing-v3-history-row');
+    expect(completePallet).toBeTruthy();
+    expect(within(completePallet as HTMLElement).getByText(/5\s?120 unités/)).toBeTruthy();
 
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem(activeRunStorageKey) ?? 'null') as { activeRun?: { declarations?: unknown[] } };
