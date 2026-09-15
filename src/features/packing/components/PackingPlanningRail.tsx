@@ -23,6 +23,7 @@ export interface PackingPlanningFormState {
   unitsPerCarton: string;
   cartonsPerPalette: string;
   productionStartTime: string;
+  legacyProductionStartTime?: string;
   referenceCadence: string;
 }
 
@@ -92,7 +93,17 @@ function NumericField({
   );
 }
 
-function StartTimeField({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (value: string) => void }) {
+function StartTimeField({
+  value,
+  legacyTime,
+  invalid,
+  onChange,
+}: {
+  value: string;
+  legacyTime?: string;
+  invalid: boolean;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="packing-v3-field min-w-0">
       <span className="packing-v3-field-label">Début OC</span>
@@ -106,6 +117,9 @@ function StartTimeField({ value, invalid, onChange }: { value: string; invalid: 
           onChange={(event) => onChange(event.target.value)}
         />
       </span>
+      {legacyTime ? (
+        <small className="packing-v3-legacy-time">Heure enregistrée précédemment : {legacyTime}. Choisissez la date correspondante.</small>
+      ) : null}
     </label>
   );
 }
@@ -187,7 +201,7 @@ export function PackingPlanningRail({
         <NumericField icon={<Box size={18} />} label="Quantité demandée" value={form.quantity} invalid={quantityInvalid} suffix="unités" onChange={(value) => onFieldChange('quantity', value)} />
         <NumericField icon={<Boxes size={18} />} label="Unités par carton" value={form.unitsPerCarton} invalid={unitsPerCartonInvalid} onChange={(value) => onFieldChange('unitsPerCarton', value)} />
         <NumericField icon={<Layers3 size={18} />} label="Cartons par palette" value={form.cartonsPerPalette} invalid={cartonsPerPaletteInvalid} onChange={(value) => onFieldChange('cartonsPerPalette', value)} />
-        <StartTimeField value={form.productionStartTime} invalid={startTimeInvalid} onChange={(value) => onFieldChange('productionStartTime', value)} />
+        <StartTimeField value={form.productionStartTime} legacyTime={form.legacyProductionStartTime} invalid={startTimeInvalid} onChange={(value) => onFieldChange('productionStartTime', value)} />
         <NumericField icon={<Gauge size={18} />} label="Cadence réf." value={form.referenceCadence} invalid={cadenceInvalid} suffix="u/min" onChange={(value) => onFieldChange('referenceCadence', value)} />
       </div>
 
