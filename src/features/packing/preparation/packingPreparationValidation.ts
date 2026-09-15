@@ -38,6 +38,8 @@ interface LocalDateTimeParts {
   minute: number;
 }
 
+type TimezoneOffsetResolver = (epochMs: number) => number;
+
 const fieldLabels: Record<PackingPreparationField, string> = {
   quantity: 'Quantité demandée',
   unitsPerCarton: 'Unités par carton',
@@ -58,59 +60,70 @@ function parseLocalDateTimeParts(value: string): LocalDateTimeParts | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
   if (!match) return null;
   const [, yearText, monthText, dayText, hourText, minuteText] = match;
-  return {
+  const parts = {
     year: Number(yearText),
     month: Number(monthText),
     day: Number(dayText),
     hour: Number(hourText),
     minute: Number(minuteText),
   };
+  const calendarCheck = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute));
+  if (
+    calendarCheck.getUTCFullYear() !== parts.year ||
+    calendarCheck.getUTCMonth() !== parts.month - 1 ||
+    calendarCheck.getUTCDate() !== parts.day ||
+    calendarCheck.getUTCHours() !== parts.hour ||
+    calendarCheck.getUTCMinutes() !== parts.minute
+  ) return null;
+  return parts;
 }
 
-function matchesLocalParts(date: Date, parts: LocalDateTimeParts): boolean {
-  return (
-    date.getFullYear() === parts.year &&
-    date.getMonth() === parts.month - 1 &&
-    date.getDate() === parts.day &&
-    date.getHours() === parts.hour &&
-    date.getMinutes() === parts.minute
-  );
+function browserTimezoneOffset(epochMs: number): number {
+  return new Date(epochMs).getTimezoneOffset();
 }
 
-function parseUnambiguousLocalDateTime(value: string): { date: Date; ambiguous: boolean } | null {
+function resolveLocalDateTime(
+  value: string,
+  getTimezoneOffset: TimezoneOffsetResolver,
+): { date: Date | null; ambiguous: boolean } | null {
   const parts = parseLocalDateTimeParts(value);
   if (!parts) return null;
-  const parsed = new Date(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0, 0);
-  if (!Number.isFinite(parsed.getTime()) || !matchesLocalParts(parsed, parts)) return null;
 
   const wallClockUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, 0, 0);
   const offsets = new Set<number>();
   for (const hours of [-36, -24, -12, 0, 12, 24, 36]) {
-    offsets.add(new Date(parsed.getTime() + hours * 60 * 60 * 1000).getTimezoneOffset());
+    const offset = getTimezoneOffset(wallClockUtc + hours * 60 * 60 * 1000);
+    if (Number.isFinite(offset)) offsets.add(offset);
   }
-  const ambiguous = Array.from(offsets).some((offsetMinutes) => {
-    const candidate = new Date(wallClockUtc + offsetMinutes * 60_000);
-    return candidate.getTime() !== parsed.getTime() && matchesLocalParts(candidate, parts);
-  });
 
-  return { date: parsed, ambiguous };
+  const candidates = Array.from(offsets)
+    .map((offsetMinutes) => wallClockUtc + offsetMinutes * 60_000)
+    .filter((candidateMs) => getTimezoneOffset(candidateMs) === (candidateMs - wallClockUtc) / 60_000);
+
+  const uniqueCandidates = Array.from(new Set(candidates));
+  if (uniqueCandidates.length === 0) return { date: null, ambiguous: false };
+  if (uniqueCandidates.length > 1) return { date: null, ambiguous: true };
+  return { date: new Date(uniqueCandidates[0]), ambiguous: false };
 }
 
-export function parsePackingProductionStart(value: string): Date | null {
-  const parsed = parseUnambiguousLocalDateTime(value);
+export function parsePackingProductionStart(
+  value: string,
+  getTimezoneOffset: TimezoneOffsetResolver = browserTimezoneOffset,
+): Date | null {
+  const parsed = resolveLocalDateTime(value, getTimezoneOffset);
   return parsed && !parsed.ambiguous ? parsed.date : null;
 }
 
 function validateStart(value: string, now: Date): PackingPreparationFieldValidation {
   if (value.trim() === '') return { state: 'empty', message: 'Valeur obligatoire.' };
-  const parsed = parseUnambiguousLocalDateTime(value);
-  if (!parsed) {
+  const parsed = resolveLocalDateTime(value, browserTimezoneOffset);
+  if (!parsed || (!parsed.date && !parsed.ambiguous)) {
     return { state: 'invalid', message: 'Choisissez une date et une heure valides.' };
   }
   if (parsed.ambiguous) {
     return { state: 'invalid', message: 'Cette heure est ambiguë lors du changement d’heure. Choisissez une heure non ambiguë.' };
   }
-  if (!Number.isFinite(now.getTime())) {
+  if (!parsed.date || !Number.isFinite(now.getTime())) {
     return { state: 'invalid', message: 'Impossible de vérifier l’heure de début. Réessayez.' };
   }
   if (parsed.date.getTime() > now.getTime()) {
