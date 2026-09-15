@@ -145,8 +145,9 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     exact.focus();
     await user.keyboard('{ArrowRight}');
 
-    expect(within(group).getByRole('radio', { name: /Carton complet/i }).getAttribute('aria-checked')).toBe('true');
-    expect(document.activeElement).toBe(within(group).getByRole('radio', { name: /Carton complet/i }));
+    const carton = within(group).getByRole('radio', { name: /Carton complet/i });
+    await waitFor(() => expect(carton.getAttribute('aria-checked')).toBe('true'));
+    expect(document.activeElement).toBe(carton);
   });
 
   it('preserves a legacy time-only start until the operator chooses a date', async () => {
