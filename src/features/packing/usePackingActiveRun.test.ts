@@ -26,6 +26,7 @@ describe('usePackingActiveRun storage acquisition', () => {
 
     expect(result.current.activeRun).toBeNull();
     expect(result.current.persistenceStatus).toBe('degraded');
+    expect(result.current.probePersistence()).toBe('degraded');
 
     let startedRun: PackingRun | null = null;
     expect(() => {
@@ -59,5 +60,15 @@ describe('usePackingActiveRun storage acquisition', () => {
     }).not.toThrow();
     expect(result.current.activeRun).toBeNull();
     expect(result.current.persistenceStatus).toBe('degraded');
+  });
+
+  it('probes persistence without touching the active run key', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+    const { result } = renderHook(() => usePackingActiveRun());
+
+    expect(result.current.probePersistence()).toBe('persisted');
+    expect(setItem).toHaveBeenCalledWith('lineops.packing.persistence-probe.v1', '1');
+    expect(removeItem).toHaveBeenCalledWith('lineops.packing.persistence-probe.v1');
   });
 });
