@@ -193,8 +193,18 @@ function StrategyCard({
 
 function PlanSummary({ input, selected }: { input: PackingInput; selected: PackingOption }) {
   const plan = summarizePackingLoads(input, selected);
+  let partialDetail = '';
+  if (plan.partialLoadCount) {
+    const completeCartons = plan.partialLoadCartons > 0
+      ? `${plan.partialLoadCartons} carton${plan.partialLoadCartons > 1 ? 's' : ''} complet${plan.partialLoadCartons > 1 ? 's' : ''}`
+      : '';
+    const incompleteCarton = plan.partialCartonUnits > 0
+      ? `1 carton incomplet de ${formatNumber(plan.partialCartonUnits)} unité${plan.partialCartonUnits > 1 ? 's' : ''}`
+      : '';
+    partialDetail = [completeCartons, incompleteCarton].filter(Boolean).join(' + ');
+  }
   const partialText = plan.partialLoadCount
-    ? `1 palette partielle (${plan.partialLoadCartons} carton${plan.partialLoadCartons > 1 ? 's' : ''}${plan.partialCartonUnits ? ` + ${formatNumber(plan.partialCartonUnits)} unités` : ''})`
+    ? `1 palette partielle (${partialDetail})`
     : 'Aucune palette partielle';
   return (
     <section className="packing-v3-plan" aria-label="Plan de conditionnement">
