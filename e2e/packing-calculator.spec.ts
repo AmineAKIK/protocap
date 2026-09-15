@@ -40,8 +40,8 @@ test.describe('Packing Calculator operator declaration flow', () => {
     const execution = page.locator('.packing-v3-production');
     await execution.getByRole('button', { name: /Déclarer une palette complète/i }).click();
     await expect(execution.getByRole('status')).toContainText(/5\s?120 unités déclarées/);
-    await execution.getByLabel('Cartons complets').fill('10');
-    await execution.getByLabel('Unités dans le carton incomplet').fill('120');
+    await execution.getByLabel('Cartons complets', { exact: true }).fill('10');
+    await execution.getByLabel('Unités dans le carton incomplet', { exact: true }).fill('120');
     await expect(execution.locator('.packing-v3-partial')).toContainText(/1\s?400 unités/);
     await execution.getByRole('button', { name: /Enregistrer la palette partielle/i }).click();
     const history = page.getByLabel('Historique des déclarations');
@@ -56,7 +56,7 @@ test.describe('Packing Calculator operator declaration flow', () => {
     const history = page.getByLabel('Historique des déclarations');
     await execution.getByRole('button', { name: /Déclarer une palette complète/i }).click();
     await history.getByRole('button', { name: /Corriger la déclaration/i }).click();
-    await execution.getByLabel('Cartons complets').fill('10');
+    await execution.getByLabel('Cartons complets', { exact: true }).fill('10');
     await execution.getByRole('button', { name: /Enregistrer la correction/i }).click();
     await expect(history).toContainText(/1\s?280 unités/);
     await history.getByRole('button', { name: /Supprimer la déclaration/i }).click();
