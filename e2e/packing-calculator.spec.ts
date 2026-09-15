@@ -2,14 +2,18 @@ import { expect, test, type Page } from '@playwright/test';
 
 const productionStart = '2026-09-15T07:30';
 
-async function configurePacking(page: Page, quantity = '30880') {
+async function fillPackingPreparation(page: Page, quantity = '30880') {
   await page.goto('/packing-calculator');
   await page.getByLabel('Quantité demandée').fill(quantity);
   await page.getByLabel('Unités par carton').fill('128');
   await page.getByLabel('Cartons par palette').fill('40');
   await page.getByRole('textbox', { name: 'Début OC' }).fill(productionStart);
-  await page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' }).getByRole('radio', { name: /Carton complet/i }).click();
   await page.getByLabel('Cadence réf.').fill('60');
+}
+
+async function configurePacking(page: Page, quantity = '30880') {
+  await fillPackingPreparation(page, quantity);
+  await page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' }).getByRole('radio', { name: /Carton complet/i }).click();
   await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
   await expect(page.getByRole('heading', { name: 'Conduite de production' })).toBeVisible();
   await expect(page.getByLabel('Historique des déclarations')).toBeVisible();
@@ -37,6 +41,45 @@ async function expectBusinessNumbersReadable(page: Page) {
 }
 
 test.describe('Packing Calculator operator declaration flow', () => {
+  test('explains incomplete preparation without showing field errors before interaction', async ({ page }) => {
+    await page.goto('/packing-calculator');
+    await expect(page.getByText(/À compléter : Quantité demandée/)).toBeVisible();
+    await expect(page.getByText('Valeur obligatoire.')).toHaveCount(0);
+
+    await page.getByLabel('Quantité demandée').focus();
+    await page.getByLabel('Unités par carton').focus();
+    await expect(page.getByText('Valeur obligatoire.')).toBeVisible();
+  });
+
+  test('does not silently rewrite invalid numeric input', async ({ page }) => {
+    await page.goto('/packing-calculator');
+    const quantity = page.getByLabel('Quantité demandée');
+    await quantity.fill('12.5');
+    await page.getByLabel('Unités par carton').focus();
+    await expect(quantity).toHaveValue('12.5');
+    await expect(quantity).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('Saisissez un entier supérieur à 0.')).toBeVisible();
+  });
+
+  test('protects reset and keeps cancellation non-destructive', async ({ page }) => {
+    await fillPackingPreparation(page);
+    await page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' }).getByRole('radio', { name: /Carton complet/i }).click();
+
+    const reset = page.getByRole('button', { name: 'Réinitialiser la préparation' });
+    await reset.click();
+    const dialog = page.getByRole('dialog', { name: 'Réinitialiser la préparation ?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Annuler' })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByLabel('Quantité demandée')).toHaveValue('30880');
+    await expect(reset).toBeFocused();
+
+    await reset.click();
+    await page.getByRole('dialog', { name: 'Réinitialiser la préparation ?' }).getByRole('button', { name: 'Réinitialiser' }).click();
+    await expect(page.getByLabel('Quantité demandée')).toHaveValue('');
+    await expect(reset).toBeDisabled();
+  });
+
   test('declares full and partial production with exact history', async ({ page }) => {
     await configurePacking(page);
     const execution = page.locator('.packing-v3-production');
@@ -65,16 +108,17 @@ test.describe('Packing Calculator operator declaration flow', () => {
     await expect(history).toContainText('Aucune production déclarée pour le moment.');
   });
 
-  test('keeps keyboard strategy selection usable before activation', async ({ page }) => {
-    await page.goto('/packing-calculator');
-    await page.getByLabel('Quantité demandée').fill('30880');
-    await page.getByLabel('Unités par carton').fill('128');
-    await page.getByLabel('Cartons par palette').fill('40');
+  test('supports keyboard strategy selection and arrow navigation before activation', async ({ page }) => {
+    await fillPackingPreparation(page);
     const group = page.getByRole('radiogroup', { name: 'Stratégie de conditionnement' });
     const exact = group.getByRole('radio', { name: /Sans dépassement/i });
     await exact.focus();
     await page.keyboard.press('Space');
     await expect(exact).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('ArrowRight');
+    const carton = group.getByRole('radio', { name: /Carton complet/i });
+    await expect(carton).toHaveAttribute('aria-checked', 'true');
+    await expect(carton).toBeFocused();
   });
 
   for (const viewport of [

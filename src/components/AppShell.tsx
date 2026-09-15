@@ -28,7 +28,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell min-h-screen bg-slate-50" style={shellGeometry} data-app-shell>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
         <PageFrame className="app-shell-header-inner grid grid-cols-[auto_minmax(0,1fr)] items-center gap-6">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+          <Link to="/" aria-label="Accueil ProtoCap" className="flex shrink-0 items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-white">
               <Boxes size={18} />
             </span>
@@ -73,7 +73,7 @@ export function AppShell({ children }: AppShellProps) {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `app-shell-mobile-nav-item flex min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors ${
-                  isActive ? 'text-teal-700' : 'text-slate-400'
+                  isActive ? 'text-teal-700' : 'text-slate-600'
                 }`
               }
             >

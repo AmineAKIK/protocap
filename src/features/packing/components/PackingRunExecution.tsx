@@ -140,7 +140,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
   return (
     <section aria-labelledby="packing-production-title" className="packing-v3-production packing-v3-stage">
       <header className="packing-v3-stage-header">
-        <div><h1 id="packing-production-title">Conduite de production</h1><p>Suivez l’avancement et déclarez ce qui est réellement conditionné.</p></div>
+        <div><h1 id="packing-production-title" tabIndex={-1}>Conduite de production</h1><p>Suivez l’avancement et déclarez ce qui est réellement conditionné.</p></div>
         <span className="packing-v3-status packing-v3-status-running"><span /> Production en cours</span>
       </header>
 
@@ -189,7 +189,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
             {remainingWork.afterNextFullLoad ? <p>{remainingWork.afterNextFullLoad}</p> : null}
           </section>
 
-          {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">Le stockage local est indisponible : les dernières déclarations pourront être perdues au rechargement.</p> : null}
+          {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">La sauvegarde locale n’est pas garantie : les dernières déclarations pourront être perdues au rechargement.</p> : null}
           {errorMessage ? <div role="alert" className="packing-v3-error"><TriangleAlert size={16} />{errorMessage}</div> : null}
           {feedback ? <p role="status" aria-live="polite" className="packing-v3-feedback">{feedback}</p> : null}
         </div>

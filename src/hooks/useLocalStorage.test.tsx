@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useLocalStorage } from './useLocalStorage';
 
 const packingFormKey = 'lineops.packing.form.inputs.v8';
@@ -22,6 +22,10 @@ function expectStoredDefault() {
     expect(JSON.parse(localStorage.getItem(packingFormKey) ?? 'null')).toEqual(defaultPackingForm);
   });
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('useLocalStorage hydration', () => {
   it('falls back and self-heals when stored JSON has the wrong registered schema', async () => {
@@ -70,5 +74,18 @@ describe('useLocalStorage hydration', () => {
         cartonsPerPalette: '40',
       });
     });
+  });
+
+  it('reports degraded persistence when a browser write is rejected', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Blocked', 'SecurityError');
+    });
+
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
+    );
+
+    await waitFor(() => expect(result.current[2]).toBe('degraded'));
+    expect(result.current[0]).toEqual(defaultPackingForm);
   });
 });

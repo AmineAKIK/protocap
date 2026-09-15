@@ -17,6 +17,8 @@ interface InitialActiveRunState {
   persistenceStatus: PackingPersistenceStatus;
 }
 
+const PACKING_PERSISTENCE_PROBE_KEY = 'lineops.packing.persistence-probe.v1';
+
 function getBrowserPackingStorage(): PackingStorageLike | null {
   try {
     return window.localStorage;
@@ -51,6 +53,18 @@ const degradedWriteResult: PackingRunWriteResult = { status: 'degraded' };
 export function usePackingActiveRun() {
   const [state, setState] = useState<InitialActiveRunState>(loadInitialActiveRun);
 
+  const probePersistence = useCallback((): PackingPersistenceStatus => {
+    const storage = getBrowserPackingStorage();
+    if (!storage) return 'degraded';
+    try {
+      storage.setItem(PACKING_PERSISTENCE_PROBE_KEY, '1');
+      storage.removeItem(PACKING_PERSISTENCE_PROBE_KEY);
+      return 'persisted';
+    } catch {
+      return 'degraded';
+    }
+  }, []);
+
   const startRun = useCallback((input: NewPackingRunInput): PackingRun => {
     const run = createNewPackingRun(input);
     const storage = getBrowserPackingStorage();
@@ -76,6 +90,7 @@ export function usePackingActiveRun() {
   return {
     activeRun: state.activeRun,
     persistenceStatus: state.persistenceStatus,
+    probePersistence,
     startRun,
     updateRun,
     clearRun,

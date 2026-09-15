@@ -19,6 +19,7 @@ interface AccessibleDialogProps {
   closeLabel?: string;
   hideCloseButton?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  shouldRestoreFocus?: () => boolean;
 }
 
 export function AccessibleDialog({
@@ -33,6 +34,7 @@ export function AccessibleDialog({
   closeLabel = 'Fermer',
   hideCloseButton = false,
   initialFocusRef,
+  shouldRestoreFocus,
 }: AccessibleDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -68,9 +70,13 @@ export function AccessibleDialog({
       window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       if (dialog.open) dialog.close();
-      previousFocusRef.current?.focus();
+
+      const previousFocus = previousFocusRef.current;
+      if ((shouldRestoreFocus?.() ?? true) && previousFocus?.isConnected) {
+        previousFocus.focus();
+      }
     };
-  }, [initialFocusRef]);
+  }, [initialFocusRef, shouldRestoreFocus]);
 
   return (
     <dialog

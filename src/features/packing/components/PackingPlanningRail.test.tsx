@@ -17,15 +17,15 @@ function renderPlanningRail() {
       input={null}
       calculation={null}
       selectedPolicy={null}
-      quantityInvalid={false}
-      unitsPerCartonInvalid={false}
-      cartonsPerPaletteInvalid={false}
-      startTimeInvalid={false}
-      cadenceInvalid={false}
+      fieldErrors={{}}
       combinationInvalid={false}
       canLaunch={false}
+      launchGuidance="À compléter : Quantité demandée"
+      isLaunching={false}
+      hasPreparationData={false}
       persistenceDegraded={false}
       onFieldChange={vi.fn()}
+      onFieldBlur={vi.fn()}
       onSelectPolicy={vi.fn()}
       onLaunch={vi.fn()}
       onReset={vi.fn()}
@@ -36,6 +36,20 @@ function renderPlanningRail() {
 afterEach(() => {
   Reflect.deleteProperty(HTMLInputElement.prototype, 'showPicker');
   vi.restoreAllMocks();
+});
+
+describe('PackingPlanningRail preparation semantics', () => {
+  it('keeps unavailable strategies as disabled radios inside the radio group', () => {
+    renderPlanningRail();
+
+    const radios = screen.getAllByRole('radio');
+    expect(radios).toHaveLength(3);
+    for (const radio of radios) {
+      expect((radio as HTMLButtonElement).disabled).toBe(true);
+      expect(radio.getAttribute('aria-checked')).toBe('false');
+      expect(radio.getAttribute('tabindex')).toBe('-1');
+    }
+  });
 });
 
 describe('PackingPlanningRail OC start picker', () => {

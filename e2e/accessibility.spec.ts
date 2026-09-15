@@ -51,6 +51,22 @@ test.describe('critical accessibility smoke', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('Packing preparation errors and reset confirmation have no serious automated WCAG violations', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/packing-calculator');
+
+    await page.getByLabel('Quantité demandée').fill('12.5');
+    await page.getByLabel('Unités par carton').focus();
+    await expect(page.getByText('Saisissez un entier supérieur à 0.')).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByRole('button', { name: 'Réinitialiser la préparation' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Réinitialiser la préparation ?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Annuler' })).toBeFocused();
+    await expectNoSeriousA11yViolations(page);
+  });
+
   test('Packing Calculator filled workshop state has no serious automated WCAG violations', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await configurePacking(page);
