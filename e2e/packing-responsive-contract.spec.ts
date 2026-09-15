@@ -63,6 +63,32 @@ async function expectVisibleNumberNotClipped(locator: Locator) {
   expect(state.scrollWidth).toBeLessThanOrEqual(state.width + 1);
 }
 
+test('Packing preparation fields stay separated at the 1024px cockpit-fit boundary', async ({ page }) => {
+  await useViewport(page, RESPONSIVE_VIEWPORTS.tabletLandscape);
+  await page.goto('/packing-calculator');
+  await page.evaluate((storageKey) => localStorage.removeItem(storageKey), PACKING_ACTIVE_RUN_STORAGE_KEY);
+  await page.reload();
+
+  await page.getByLabel('Début OC').fill(productionStart);
+  await page.getByLabel('Cadence réf.').fill('60');
+
+  const startField = page.getByLabel('Début OC').locator('xpath=ancestor::label[1]');
+  const cadenceField = page.getByLabel('Cadence réf.').locator('xpath=ancestor::label[1]');
+  const startBox = await startField.boundingBox();
+  const cadenceBox = await cadenceField.boundingBox();
+
+  expect(startBox).not.toBeNull();
+  expect(cadenceBox).not.toBeNull();
+  expect(startBox!.x + startBox!.width).toBeLessThanOrEqual(cadenceBox!.x + 1);
+
+  const startInputFit = await page.getByLabel('Début OC').evaluate((node) => {
+    const element = node as HTMLInputElement;
+    return { width: element.clientWidth, scrollWidth: element.scrollWidth };
+  });
+  expect(startInputFit.scrollWidth).toBeLessThanOrEqual(startInputFit.width + 1);
+  await expectNoDocumentHorizontalOverflow(page);
+});
+
 // responsive-contract:packing-responsive-contract
 test('Packing dense surface stays contained and changes composition only in supported regimes', async ({ page }) => {
   for (const viewport of PACKING_VIEWPORTS) {
