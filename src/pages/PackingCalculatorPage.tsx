@@ -25,6 +25,14 @@ const defaultForm: PackingPlanningFormState = {
   referenceCadence: '',
 };
 
+const preparationFieldSelectors: Record<PackingPreparationField, string> = {
+  quantity: '#packing-quantity',
+  unitsPerCarton: '#packing-unitsPerCarton',
+  cartonsPerPalette: '#packing-cartonsPerPalette',
+  productionStartTime: '#packing-production-start',
+  referenceCadence: '#packing-referenceCadence',
+};
+
 function normalizePackingPlanningForm(form: PackingPlanningFormState): PackingPlanningFormState {
   const legacy = form as Partial<PackingPlanningFormState>;
   const storedStart = typeof legacy.productionStartTime === 'string' ? legacy.productionStartTime : '';
@@ -126,7 +134,7 @@ export function PackingCalculatorPage() {
     normalizePackingPlanningForm,
   );
   const [selectedPolicy, setSelectedPolicy] = useState<PackingPolicy | null>(null);
-  const [touchedFields, setTouchedFields] = useState<Partial<Record<PackingPreparationField, boolean>>>({});
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDegradedLaunchConfirm, setShowDegradedLaunchConfirm] = useState(false);
   const [showModifyConfirm, setShowModifyConfirm] = useState(false);
@@ -165,12 +173,13 @@ export function PackingCalculatorPage() {
 
   const fieldErrors = useMemo(() => {
     const errors: Partial<Record<PackingPreparationField, string>> = {};
+    if (!validationAttempted) return errors;
     (Object.keys(validation.fields) as PackingPreparationField[]).forEach((field) => {
       const message = validation.fields[field].message;
-      if (touchedFields[field] && message) errors[field] = message;
+      if (message) errors[field] = message;
     });
     return errors;
-  }, [touchedFields, validation.fields]);
+  }, [validationAttempted, validation.fields]);
 
   const hasPreparationData = Boolean(
     form.quantity.trim() ||
@@ -194,9 +203,8 @@ export function PackingCalculatorPage() {
     );
   }
 
-  function markFieldTouched(field: PackingPreparationField) {
+  function refreshValidationClock() {
     setValidationNow(new Date());
-    setTouchedFields((current) => ({ ...current, [field]: true }));
   }
 
   function confirmResetPreparation() {
@@ -204,7 +212,7 @@ export function PackingCalculatorPage() {
     transitionState(() => {
       setForm(defaultForm);
       setSelectedPolicy(null);
-      setTouchedFields({});
+      setValidationAttempted(false);
       setLaunchError(null);
       setValidationNow(new Date());
       focusAfterRender('#packing-quantity');
@@ -259,10 +267,23 @@ export function PackingCalculatorPage() {
   }
 
   function requestLaunch() {
+    if (isLaunching) return;
     const freshNow = new Date();
     setValidationNow(freshNow);
+    setValidationAttempted(true);
     const freshValidation = validatePackingPreparation(form, selectedPolicy, freshNow);
-    if (!freshValidation.canLaunch || isLaunching) return;
+    if (!freshValidation.canLaunch) {
+      const firstInvalidField = (Object.keys(freshValidation.fields) as PackingPreparationField[])
+        .find((field) => freshValidation.fields[field].state !== 'valid');
+      if (firstInvalidField) {
+        focusAfterRender(preparationFieldSelectors[firstInvalidField]);
+      } else if (!freshValidation.input || freshValidation.combinationInvalid) {
+        focusAfterRender('#packing-quantity');
+      } else if (!selectedPolicy) {
+        focusAfterRender('[role="radiogroup"] [role="radio"]:not(:disabled)');
+      }
+      return;
+    }
     if (persistenceDegraded || probePersistence() === 'degraded') {
       setShowDegradedLaunchConfirm(true);
       return;
@@ -288,7 +309,7 @@ export function PackingCalculatorPage() {
 
   function finishModifyPreparation(policy: PackingPolicy) {
     setSelectedPolicy(policy);
-    setTouchedFields({});
+    setValidationAttempted(false);
     setLaunchError(null);
     setValidationNow(new Date());
     focusAfterRender('#packing-quantity');
@@ -388,14 +409,14 @@ export function PackingCalculatorPage() {
               calculation={calculation}
               selectedPolicy={selectedPolicy}
               fieldErrors={fieldErrors}
-              combinationInvalid={validation.combinationInvalid}
+              combinationInvalid={validationAttempted && validation.combinationInvalid}
               canLaunch={validation.canLaunch}
-              launchGuidance={validation.launchGuidance}
+              launchGuidance={validationAttempted ? validation.launchGuidance : null}
               isLaunching={isLaunching}
               hasPreparationData={hasPreparationData}
               persistenceDegraded={persistenceDegraded}
               onFieldChange={updateField}
-              onFieldBlur={markFieldTouched}
+              onFieldBlur={refreshValidationClock}
               onSelectPolicy={(policy) => {
                 setLaunchError(null);
                 setSelectedPolicy(policy);

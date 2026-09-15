@@ -111,7 +111,13 @@ function NumericField({
         />
         {suffix ? <span className="packing-v3-field-suffix">{suffix}</span> : null}
       </span>
-      {error ? <small id={errorId} className="packing-v3-field-error">{error}</small> : null}
+      <small
+        id={error ? errorId : undefined}
+        className="packing-v3-field-message"
+        aria-hidden={error ? undefined : true}
+      >
+        {error ? <span className="packing-v3-field-error">{error}</span> : '\u00a0'}
+      </small>
     </div>
   );
 }
@@ -130,9 +136,8 @@ function StartTimeField({
   onBlur: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const errorId = 'packing-production-start-error';
-  const legacyId = 'packing-production-start-legacy';
-  const describedBy = [error ? errorId : null, legacyTime ? legacyId : null].filter(Boolean).join(' ') || undefined;
+  const messageId = 'packing-production-start-message';
+  const hasMessage = Boolean(error || legacyTime);
 
   function openPicker() {
     const input = inputRef.current;
@@ -158,13 +163,21 @@ function StartTimeField({
           value={value}
           required
           aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
+          aria-describedby={hasMessage ? messageId : undefined}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
         />
       </div>
-      {error ? <small id={errorId} className="packing-v3-field-error">{error}</small> : null}
-      {legacyTime ? <small id={legacyId} className="packing-v3-legacy-time">Heure enregistrée précédemment : {legacyTime}. Choisissez la date correspondante.</small> : null}
+      <small
+        id={hasMessage ? messageId : undefined}
+        className="packing-v3-field-message"
+        aria-hidden={hasMessage ? undefined : true}
+      >
+        {error ? <span className="packing-v3-field-error">{error}</span> : null}
+        {error && legacyTime ? <span aria-hidden="true"> · </span> : null}
+        {legacyTime ? <span className="packing-v3-legacy-time">Heure enregistrée : {legacyTime} · choisissez sa date.</span> : null}
+        {!hasMessage ? '\u00a0' : null}
+      </small>
     </div>
   );
 }
@@ -307,7 +320,7 @@ export function PackingPlanningRail({
 
       {input && calculation?.selected ? <PlanSummary input={input} selected={calculation.selected} /> : null}
 
-      <button type="button" className="packing-v3-launch" disabled={!canLaunch || isLaunching} onClick={onLaunch}>
+      <button type="button" className="packing-v3-launch" disabled={isLaunching} onClick={onLaunch}>
         <Play size={18} aria-hidden="true" />
         {isLaunching ? 'Lancement…' : 'Lancer le suivi de production'}
       </button>

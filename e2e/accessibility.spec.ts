@@ -57,7 +57,11 @@ test.describe('critical accessibility smoke', () => {
 
     await page.getByLabel('Quantité demandée').fill('12.5');
     await page.getByLabel('Unités par carton').focus();
+    await expect(page.getByText('Saisissez un entier supérieur à 0.')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Lancer le suivi de production' }).click();
     await expect(page.getByText('Saisissez un entier supérieur à 0.')).toBeVisible();
+    await expect(page.getByLabel('Quantité demandée')).toBeFocused();
     await expectNoSeriousA11yViolations(page);
 
     await page.getByRole('button', { name: 'Réinitialiser la préparation' }).click();
