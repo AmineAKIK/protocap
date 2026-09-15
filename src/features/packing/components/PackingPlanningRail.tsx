@@ -7,6 +7,7 @@ import {
   Layers3,
   PackageCheck,
   Play,
+  RotateCcw,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -48,6 +49,7 @@ interface PackingPlanningRailProps {
   onFieldChange: (field: keyof PackingPlanningFormState, value: string) => void;
   onSelectPolicy: (policy: PackingPolicy) => void;
   onLaunch: () => void;
+  onReset: () => void;
 }
 
 const numberFormatter = new Intl.NumberFormat('fr-FR');
@@ -186,6 +188,7 @@ export function PackingPlanningRail({
   onFieldChange,
   onSelectPolicy,
   onLaunch,
+  onReset,
 }: PackingPlanningRailProps) {
   return (
     <section aria-labelledby="packing-preparation-title" className="packing-v3-preparation packing-v3-stage">
@@ -229,6 +232,12 @@ export function PackingPlanningRail({
         Lancer le suivi de production
         <span aria-hidden="true">→</span>
       </button>
+      <div className="packing-v3-preparation-reset-row">
+        <button type="button" className="packing-v3-preparation-reset" onClick={onReset}>
+          <RotateCcw size={14} aria-hidden="true" />
+          Réinitialiser la préparation
+        </button>
+      </div>
       {persistenceDegraded ? <p className="packing-v3-persistence-warning">Le stockage local est indisponible : le run pourra ne pas survivre à un rechargement.</p> : null}
     </section>
   );
