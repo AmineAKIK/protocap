@@ -18,10 +18,10 @@ function runInput() {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  localStorage.clear();
   if (originalLocalStorageDescriptor) {
     Object.defineProperty(window, 'localStorage', originalLocalStorageDescriptor);
   }
+  localStorage.clear();
 });
 
 describe('usePackingActiveRun storage acquisition', () => {
