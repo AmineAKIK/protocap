@@ -255,9 +255,9 @@ export function getPackingRunTiming(run: PackingRun, now: Date = new Date()): Pa
   }
 
   const elapsedMinutes = Math.max(0, (effectiveNowMs - startMs) / 60_000);
-  const referenceExpectedUnits = elapsedMinutes * run.referenceCadenceUnitsPerMinute;
+  const referenceExpectedUnits = Math.min(run.plannedUnits, elapsedMinutes * run.referenceCadenceUnitsPerMinute);
   const varianceUnitsVsReference = progress.declaredUnits - referenceExpectedUnits;
-  const varianceMinutesVsReference = varianceUnitsVsReference / run.referenceCadenceUnitsPerMinute;
+  const varianceMinutesVsReference = (progress.declaredUnits / run.referenceCadenceUnitsPerMinute) - elapsedMinutes;
   const projectedFinishAt = new Date(effectiveNowMs + progress.estimatedRemainingMinutes * 60_000).toISOString();
 
   return {
