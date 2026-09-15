@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { isValidPublicStorageValue } from '../utils/publicStorageValidation';
 
 const DATA_VERSION = 'v8';
@@ -14,25 +14,37 @@ interface InitialLocalStorageState<T> {
   persistenceStatus: LocalStoragePersistenceStatus;
 }
 
+function persistValue<T>(vkey: string, value: T): LocalStoragePersistenceStatus {
+  try {
+    window.localStorage.setItem(vkey, JSON.stringify(value));
+    return 'persisted';
+  } catch {
+    return 'degraded';
+  }
+}
+
 function loadInitialValue<T>(
   key: string,
   vkey: string,
   initialValue: T,
   normalize?: (value: T) => T,
 ): InitialLocalStorageState<T> {
+  let value = initialValue;
+
   try {
     const stored = window.localStorage.getItem(vkey);
-    if (!stored) return { value: initialValue, persistenceStatus: 'persisted' };
-    const parsed: unknown = JSON.parse(stored);
-    if (!isValidPublicStorageValue(key, parsed)) return { value: initialValue, persistenceStatus: 'persisted' };
-    const validated = parsed as T;
-    return {
-      value: normalize ? normalize(validated) : validated,
-      persistenceStatus: 'persisted',
-    };
+    if (stored) {
+      const parsed: unknown = JSON.parse(stored);
+      if (isValidPublicStorageValue(key, parsed)) {
+        const validated = parsed as T;
+        value = normalize ? normalize(validated) : validated;
+      }
+    }
   } catch {
     return { value: initialValue, persistenceStatus: 'degraded' };
   }
+
+  return { value, persistenceStatus: persistValue(vkey, value) };
 }
 
 export function useLocalStorage<T>(
@@ -41,28 +53,25 @@ export function useLocalStorage<T>(
   normalize?: (value: T) => T,
 ) {
   const vkey = versionedKey(key);
-  const initialRef = useRef<InitialLocalStorageState<T> | null>(null);
-  if (initialRef.current === null) {
-    initialRef.current = loadInitialValue(key, vkey, initialValue, normalize);
-  }
-
-  const [value, setValue] = useState<T>(initialRef.current.value);
-  const [persistenceStatus, setPersistenceStatus] = useState<LocalStoragePersistenceStatus>(
-    initialRef.current.persistenceStatus,
+  const [initialState] = useState<InitialLocalStorageState<T>>(() =>
+    loadInitialValue(key, vkey, initialValue, normalize),
   );
+  const [value, setValueState] = useState<T>(initialState.value);
+  const [persistenceStatus, setPersistenceStatus] = useState<LocalStoragePersistenceStatus>(
+    initialState.persistenceStatus,
+  );
+  const valueRef = useRef(value);
 
-  const persist = useCallback((nextValue: T) => {
-    try {
-      window.localStorage.setItem(vkey, JSON.stringify(nextValue));
-      setPersistenceStatus('persisted');
-    } catch {
-      setPersistenceStatus('degraded');
-    }
+  const setValue = useCallback<Dispatch<SetStateAction<T>>>((action) => {
+    const currentValue = valueRef.current;
+    const nextValue = typeof action === 'function'
+      ? (action as (previous: T) => T)(currentValue)
+      : action;
+
+    valueRef.current = nextValue;
+    setValueState(nextValue);
+    setPersistenceStatus(persistValue(vkey, nextValue));
   }, [vkey]);
-
-  useEffect(() => {
-    persist(value);
-  }, [persist, value]);
 
   return [value, setValue, persistenceStatus] as const;
 }
