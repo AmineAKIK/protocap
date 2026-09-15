@@ -280,7 +280,15 @@ export function PackingPlanningRail({
               />
             ))
           : (Object.keys(policyCopy) as PackingPolicy[]).map((policy) => (
-              <button key={policy} type="button" disabled className="packing-v3-strategy packing-v3-strategy-disabled">
+              <button
+                key={policy}
+                type="button"
+                role="radio"
+                aria-checked={false}
+                tabIndex={-1}
+                disabled
+                className="packing-v3-strategy packing-v3-strategy-disabled"
+              >
                 <span className="packing-v3-strategy-head"><span><strong>{policyCopy[policy].title}</strong><small>{policyCopy[policy].description}</small></span></span>
                 <span className="packing-v3-strategy-result-label">Quantité résultante</span><strong className="packing-v3-strategy-result">—</strong>
               </button>
