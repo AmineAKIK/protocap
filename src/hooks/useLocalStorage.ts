@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, useState, type SetStateAction } from 'react';
 import { isValidPublicStorageValue } from '../utils/publicStorageValidation';
 
 const DATA_VERSION = 'v8';
 
-export type LocalStoragePersistenceStatus = 'persisted' | 'degraded';
+export type LocalStoragePersistenceStatus = 'persisted' | 'degraded' | 'recovered';
 
 function versionedKey(key: string) {
   return `${key}.${DATA_VERSION}`;
@@ -14,7 +14,7 @@ interface InitialLocalStorageState<T> {
   persistenceStatus: LocalStoragePersistenceStatus;
 }
 
-function persistValue<T>(vkey: string, value: T): LocalStoragePersistenceStatus {
+function persistValue<T>(vkey: string, value: T): Exclude<LocalStoragePersistenceStatus, 'recovered'> {
   try {
     window.localStorage.setItem(vkey, JSON.stringify(value));
     return 'persisted';
@@ -37,19 +37,25 @@ function loadInitialValue<T>(
   }
 
   let value = initialValue;
+  let recovered = false;
   if (stored) {
     try {
       const parsed: unknown = JSON.parse(stored);
       if (isValidPublicStorageValue(key, parsed)) {
         const validated = parsed as T;
         value = normalize ? normalize(validated) : validated;
+      } else {
+        recovered = true;
       }
     } catch {
+      recovered = true;
       value = initialValue;
     }
   }
 
-  return { value, persistenceStatus: persistValue(vkey, value) };
+  const writeStatus = persistValue(vkey, value);
+  if (writeStatus === 'degraded') return { value, persistenceStatus: 'degraded' };
+  return { value, persistenceStatus: recovered ? 'recovered' : 'persisted' };
 }
 
 export function useLocalStorage<T>(
@@ -67,7 +73,7 @@ export function useLocalStorage<T>(
   );
   const valueRef = useRef(value);
 
-  const setValue = useCallback<Dispatch<SetStateAction<T>>>((action) => {
+  const setValue = useCallback((action: SetStateAction<T>): Exclude<LocalStoragePersistenceStatus, 'recovered'> => {
     const currentValue = valueRef.current;
     const nextValue = typeof action === 'function'
       ? (action as (previous: T) => T)(currentValue)
@@ -75,7 +81,9 @@ export function useLocalStorage<T>(
 
     valueRef.current = nextValue;
     setValueState(nextValue);
-    setPersistenceStatus(persistValue(vkey, nextValue));
+    const status = persistValue(vkey, nextValue);
+    setPersistenceStatus(status);
+    return status;
   }, [vkey]);
 
   return [value, setValue, persistenceStatus] as const;
