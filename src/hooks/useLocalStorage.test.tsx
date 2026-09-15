@@ -52,6 +52,18 @@ describe('useLocalStorage hydration', () => {
     await expectStoredDefault();
   });
 
+  it('treats an empty stored payload as corrupt and reports recovery', async () => {
+    localStorage.setItem(packingFormKey, '');
+
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
+    );
+
+    expect(result.current[0]).toEqual(defaultPackingForm);
+    expect(result.current[2]).toBe('recovered');
+    await expectStoredDefault();
+  });
+
   it('normalizes accepted legacy values before repersisting them', async () => {
     localStorage.setItem(packingFormKey, JSON.stringify({
       quantity: '30880',
