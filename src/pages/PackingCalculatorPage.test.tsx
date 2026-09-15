@@ -1,10 +1,11 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
 
 const formStorageKey = 'lineops.packing.form.inputs.v8';
 const activeRunStorageKey = 'lineops.packing.active-run.v1';
+const productionStart = '2026-09-15T07:30';
 
 function storePackingForm(overrides: Record<string, string> = {}) {
   localStorage.setItem(
@@ -13,7 +14,7 @@ function storePackingForm(overrides: Record<string, string> = {}) {
       quantity: '30880',
       unitsPerCarton: '128',
       cartonsPerPalette: '40',
-      productionStartTime: '07:30',
+      productionStartTime: productionStart,
       referenceCadence: '60',
       ...overrides,
     }),
@@ -53,9 +54,44 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await chooseStrategy(user);
     expect(launch.disabled).toBe(true);
 
-    await user.type(screen.getByLabelText(/Début OC/i), '0730');
+    fireEvent.change(screen.getByLabelText(/Début OC/i), { target: { value: productionStart } });
     await user.type(screen.getByLabelText(/Cadence réf/i), '60');
     expect(launch.disabled).toBe(false);
+  });
+
+  it('preserves a legacy time-only start until the operator chooses a date', async () => {
+    localStorage.setItem(
+      formStorageKey,
+      JSON.stringify({
+        quantity: '30880',
+        unitsPerCarton: '128',
+        cartonsPerPalette: '40',
+        productionStartTime: '07:30',
+        referenceCadence: '60',
+      }),
+    );
+
+    render(<PackingCalculatorPage />);
+
+    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    expect(start.value).toBe('');
+    expect(screen.getByText(/Heure enregistrée précédemment : 07:30/)).toBeTruthy();
+
+    fireEvent.change(start, { target: { value: productionStart } });
+    expect(screen.queryByText(/Heure enregistrée précédemment/)).toBeNull();
+  });
+
+  it('rejects impossible calendar dates instead of normalizing them', async () => {
+    const user = userEvent.setup();
+    storePackingForm({ productionStartTime: '2026-02-31T07:30' });
+    render(<PackingCalculatorPage />);
+
+    await chooseStrategy(user);
+    const start = screen.getByLabelText(/Début OC/i) as HTMLInputElement;
+    const launch = screen.getByRole('button', { name: /Lancer le suivi de production/i }) as HTMLButtonElement;
+
+    expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(launch.disabled).toBe(true);
   });
 
   it('launches an immutable run snapshot and turns preparation into a frozen reference', async () => {
@@ -75,7 +111,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
         activeRun?: { productionStartedAt?: string; selectedPolicy?: string };
       };
       expect(stored.schemaVersion).toBe(2);
-      expect(stored.activeRun?.productionStartedAt).toBeTruthy();
+      expect(stored.activeRun?.productionStartedAt).toBe(new Date(productionStart).toISOString());
       expect(stored.activeRun?.selectedPolicy).toBe('round-carton');
     });
   });
@@ -146,21 +182,18 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByText('Aucune production déclarée pour le moment.')).toBeTruthy();
   });
 
-  it('requires confirmation before returning to preparation when declarations exist', async () => {
+  it('preserves the full OC start date when returning to preparation', async () => {
     const user = userEvent.setup();
     storePackingForm();
     render(<PackingCalculatorPage />);
     await launchRun(user);
     await user.click(screen.getByRole('button', { name: /Déclarer une palette complète/i }));
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     await user.click(screen.getByRole('button', { name: 'Modifier la préparation' }));
     expect(confirm).toHaveBeenCalledOnce();
-    expect(screen.getByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
-
-    confirm.mockReturnValue(true);
-    await user.click(screen.getByRole('button', { name: 'Modifier la préparation' }));
     expect(await screen.findByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('30880');
+    expect((screen.getByLabelText(/Début OC/i) as HTMLInputElement).value).toBe(productionStart);
   });
 });

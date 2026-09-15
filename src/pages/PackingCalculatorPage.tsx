@@ -27,11 +27,15 @@ const defaultForm: PackingPlanningFormState = {
 
 function normalizePackingPlanningForm(form: PackingPlanningFormState): PackingPlanningFormState {
   const legacy = form as Partial<PackingPlanningFormState>;
+  const storedStart = typeof legacy.productionStartTime === 'string' ? legacy.productionStartTime : '';
+  const legacyTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(storedStart) ? storedStart : undefined;
   return {
     quantity: typeof legacy.quantity === 'string' ? legacy.quantity : '',
     unitsPerCarton: typeof legacy.unitsPerCarton === 'string' ? legacy.unitsPerCarton : '',
     cartonsPerPalette: typeof legacy.cartonsPerPalette === 'string' ? legacy.cartonsPerPalette : '',
-    productionStartTime: typeof legacy.productionStartTime === 'string' ? legacy.productionStartTime : '',
+    productionStartTime: legacyTime ? '' : storedStart,
+    legacyProductionStartTime:
+      legacyTime ?? (typeof legacy.legacyProductionStartTime === 'string' ? legacy.legacyProductionStartTime : undefined),
     referenceCadence: typeof legacy.referenceCadence === 'string' ? legacy.referenceCadence : '',
   };
 }
@@ -45,19 +49,47 @@ function parsePackingInput(form: PackingPlanningFormState): PackingInput | null 
   return isValidPackingInput(input) ? input : null;
 }
 
-function isValidTime(value: string): boolean {
-  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+function parseProductionStart(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText, hourText, minuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+  if (
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day ||
+    parsed.getHours() !== hour ||
+    parsed.getMinutes() !== minute
+  ) {
+    return null;
+  }
+
+  return parsed;
 }
 
-function resolveProductionStartedAt(time: string, now = new Date()): string {
-  if (!isValidTime(time)) throw new RangeError('Production start time must use HH:mm.');
-  const [hours, minutes] = time.split(':').map(Number);
-  const candidate = new Date(now);
-  candidate.setHours(hours, minutes, 0, 0);
-  if (candidate.getTime() - now.getTime() > 6 * 60 * 60 * 1000) {
-    candidate.setDate(candidate.getDate() - 1);
-  }
-  return candidate.toISOString();
+function isValidProductionStart(value: string): boolean {
+  return parseProductionStart(value) !== null;
+}
+
+function resolveProductionStartedAt(value: string): string {
+  const parsed = parseProductionStart(value);
+  if (!parsed) throw new RangeError('Production start must include a valid date and time.');
+  return parsed.toISOString();
+}
+
+function toLocalDateTimeInputValue(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 type ViewTransitionDocument = Document & {
@@ -94,7 +126,11 @@ export function PackingCalculatorPage() {
   }, [input, selectedPolicy]);
 
   function updateField(field: keyof PackingPlanningFormState, value: string) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) =>
+      field === 'productionStartTime'
+        ? { ...current, productionStartTime: value, legacyProductionStartTime: undefined }
+        : { ...current, [field]: value },
+    );
   }
 
   function numericState(value: string) {
@@ -106,7 +142,7 @@ export function PackingCalculatorPage() {
   const unitsPerCartonState = numericState(form.unitsPerCarton);
   const cartonsPerPaletteState = numericState(form.cartonsPerPalette);
   const cadenceState = numericState(form.referenceCadence);
-  const startTimeValid = isValidTime(form.productionStartTime);
+  const startTimeValid = isValidProductionStart(form.productionStartTime);
   const combinationInvalid =
     quantityState === 'valid' &&
     unitsPerCartonState === 'valid' &&
@@ -138,7 +174,7 @@ export function PackingCalculatorPage() {
       const confirmed = window.confirm('Modifier la préparation supprimera les déclarations de ce run. Continuer ?');
       if (!confirmed) return;
     }
-    const started = new Date(getPackingRunProductionStartedAt(activeRun)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const started = toLocalDateTimeInputValue(getPackingRunProductionStartedAt(activeRun));
     transitionState(() => {
       setForm({
         quantity: String(activeRun.requestedUnits),

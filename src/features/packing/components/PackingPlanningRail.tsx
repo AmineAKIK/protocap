@@ -1,8 +1,8 @@
 import {
   Box,
   Boxes,
+  CalendarClock,
   Check,
-  Clock3,
   Gauge,
   Layers3,
   PackageCheck,
@@ -23,6 +23,7 @@ export interface PackingPlanningFormState {
   unitsPerCarton: string;
   cartonsPerPalette: string;
   productionStartTime: string;
+  legacyProductionStartTime?: string;
   referenceCadence: string;
 }
 
@@ -92,14 +93,33 @@ function NumericField({
   );
 }
 
-function StartTimeField({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (value: string) => void }) {
+function StartTimeField({
+  value,
+  legacyTime,
+  invalid,
+  onChange,
+}: {
+  value: string;
+  legacyTime?: string;
+  invalid: boolean;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="packing-v3-field min-w-0">
       <span className="packing-v3-field-label">Début OC</span>
       <span className={`packing-v3-field-control ${invalid ? 'packing-v3-field-invalid' : ''}`}>
-        <Clock3 size={18} aria-hidden="true" />
-        <input aria-label="Début OC" type="time" value={value} aria-invalid={invalid} onChange={(event) => onChange(event.target.value)} />
+        <CalendarClock size={18} aria-hidden="true" />
+        <input
+          aria-label="Début OC"
+          type="datetime-local"
+          value={value}
+          aria-invalid={invalid}
+          onChange={(event) => onChange(event.target.value)}
+        />
       </span>
+      {legacyTime ? (
+        <small className="packing-v3-legacy-time">Heure enregistrée précédemment : {legacyTime}. Choisissez la date correspondante.</small>
+      ) : null}
     </label>
   );
 }
@@ -181,7 +201,7 @@ export function PackingPlanningRail({
         <NumericField icon={<Box size={18} />} label="Quantité demandée" value={form.quantity} invalid={quantityInvalid} suffix="unités" onChange={(value) => onFieldChange('quantity', value)} />
         <NumericField icon={<Boxes size={18} />} label="Unités par carton" value={form.unitsPerCarton} invalid={unitsPerCartonInvalid} onChange={(value) => onFieldChange('unitsPerCarton', value)} />
         <NumericField icon={<Layers3 size={18} />} label="Cartons par palette" value={form.cartonsPerPalette} invalid={cartonsPerPaletteInvalid} onChange={(value) => onFieldChange('cartonsPerPalette', value)} />
-        <StartTimeField value={form.productionStartTime} invalid={startTimeInvalid} onChange={(value) => onFieldChange('productionStartTime', value)} />
+        <StartTimeField value={form.productionStartTime} legacyTime={form.legacyProductionStartTime} invalid={startTimeInvalid} onChange={(value) => onFieldChange('productionStartTime', value)} />
         <NumericField icon={<Gauge size={18} />} label="Cadence réf." value={form.referenceCadence} invalid={cadenceInvalid} suffix="u/min" onChange={(value) => onFieldChange('referenceCadence', value)} />
       </div>
 
@@ -227,7 +247,7 @@ export function PackingFrozenPreparation({ run, onModify }: { run: PackingRun; o
   const option = calculatePackingOptions({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }).find((entry) => entry.policy === run.selectedPolicy);
   if (!option) return null;
   const plan = summarizePackingLoads({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }, option);
-  const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const policy = policyCopy[run.selectedPolicy].title;
 
   return (
