@@ -269,8 +269,13 @@ export function PackingPlanningRail({
 export function PackingConductWaiting() {
   return (
     <section aria-label="Conduite de production en attente" className="packing-v3-waiting packing-v3-stage">
-      <div className="packing-v3-waiting-head"><div><strong>Conduite de production</strong><span>Le suivi s’active après le lancement.</span></div><span className="packing-v3-status"><span /> En attente</span></div>
-      <div className="packing-v3-waiting-metrics"><span>Quantité restante <b>—</b></span><span>Progression <b>—</b></span><span>Temps restant <b>—</b></span><span>Écart vs référence <b>—</b></span></div>
+      <div className="packing-v3-waiting-head">
+        <div>
+          <strong>Conduite de production</strong>
+          <span>La progression, le temps restant et les déclarations apparaîtront après le lancement.</span>
+        </div>
+        <span className="packing-v3-status"><span /> En attente</span>
+      </div>
     </section>
   );
 }
