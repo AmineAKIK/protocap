@@ -17,6 +17,11 @@ interface InitialActiveRunState {
   persistenceStatus: PackingPersistenceStatus;
 }
 
+export interface PackingRunStartAttempt {
+  run: PackingRun;
+  status: PackingPersistenceStatus;
+}
+
 const PACKING_PERSISTENCE_PROBE_KEY = 'lineops.packing.persistence-probe.v1';
 
 function getBrowserPackingStorage(): PackingStorageLike | null {
@@ -65,6 +70,16 @@ export function usePackingActiveRun() {
     }
   }, []);
 
+  const tryStartRun = useCallback((input: NewPackingRunInput): PackingRunStartAttempt => {
+    const run = createNewPackingRun(input);
+    const storage = getBrowserPackingStorage();
+    const result = storage ? persistActivePackingRun(storage, run) : degradedWriteResult;
+    const status = toPersistenceStatus(result);
+    if (status === 'persisted') setState({ activeRun: run, persistenceStatus: status });
+    else setState((current) => ({ ...current, persistenceStatus: status }));
+    return { run, status };
+  }, []);
+
   const startRun = useCallback((input: NewPackingRunInput): PackingRun => {
     const run = createNewPackingRun(input);
     const storage = getBrowserPackingStorage();
@@ -80,6 +95,14 @@ export function usePackingActiveRun() {
     return result;
   }, []);
 
+  const tryClearRun = useCallback((): PackingRunWriteResult => {
+    const storage = getBrowserPackingStorage();
+    const result = storage ? clearActivePackingRun(storage) : degradedWriteResult;
+    if (result.status === 'persisted') setState({ activeRun: null, persistenceStatus: 'persisted' });
+    else setState((current) => ({ ...current, persistenceStatus: 'degraded' }));
+    return result;
+  }, []);
+
   const clearRun = useCallback((): PackingRunWriteResult => {
     const storage = getBrowserPackingStorage();
     const result = storage ? clearActivePackingRun(storage) : degradedWriteResult;
@@ -91,8 +114,10 @@ export function usePackingActiveRun() {
     activeRun: state.activeRun,
     persistenceStatus: state.persistenceStatus,
     probePersistence,
+    tryStartRun,
     startRun,
     updateRun,
+    tryClearRun,
     clearRun,
   };
 }

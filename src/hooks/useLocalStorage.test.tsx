@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useLocalStorage } from './useLocalStorage';
 
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe('useLocalStorage hydration', () => {
-  it('falls back and self-heals when stored JSON has the wrong registered schema', async () => {
+  it('falls back, self-heals and reports recovery when stored JSON has the wrong registered schema', async () => {
     localStorage.setItem(packingFormKey, JSON.stringify({ quantity: 30880 }));
 
     const { result } = renderHook(() =>
@@ -36,10 +36,11 @@ describe('useLocalStorage hydration', () => {
     );
 
     expect(result.current[0]).toEqual(defaultPackingForm);
+    expect(result.current[2]).toBe('recovered');
     await expectStoredDefault();
   });
 
-  it('falls back and self-heals when stored JSON is malformed', async () => {
+  it('falls back, self-heals and reports recovery when stored JSON is malformed', async () => {
     localStorage.setItem(packingFormKey, '{not-json');
 
     const { result } = renderHook(() =>
@@ -47,6 +48,19 @@ describe('useLocalStorage hydration', () => {
     );
 
     expect(result.current[0]).toEqual(defaultPackingForm);
+    expect(result.current[2]).toBe('recovered');
+    await expectStoredDefault();
+  });
+
+  it('treats an empty stored payload as corrupt and reports recovery', async () => {
+    localStorage.setItem(packingFormKey, '');
+
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
+    );
+
+    expect(result.current[0]).toEqual(defaultPackingForm);
+    expect(result.current[2]).toBe('recovered');
     await expectStoredDefault();
   });
 
@@ -67,6 +81,7 @@ describe('useLocalStorage hydration', () => {
       unitsPerCarton: '128',
       cartonsPerPalette: '40',
     });
+    expect(result.current[2]).toBe('persisted');
     await waitFor(() => {
       expect(JSON.parse(localStorage.getItem(packingFormKey) ?? 'null')).toEqual({
         quantity: '30880',
@@ -87,5 +102,26 @@ describe('useLocalStorage hydration', () => {
 
     await waitFor(() => expect(result.current[2]).toBe('degraded'));
     expect(result.current[0]).toEqual(defaultPackingForm);
+  });
+
+  it('returns the real write outcome to callers', () => {
+    const { result } = renderHook(() =>
+      useLocalStorage('lineops.packing.form.inputs', defaultPackingForm, normalizePackingForm)
+    );
+
+    let status: string | undefined;
+    act(() => {
+      status = result.current[1]({ ...defaultPackingForm, quantity: '42' });
+    });
+    expect(status).toBe('persisted');
+
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Blocked', 'SecurityError');
+    });
+    act(() => {
+      status = result.current[1]({ ...defaultPackingForm, quantity: '43' });
+    });
+    expect(status).toBe('degraded');
+    expect(result.current[2]).toBe('degraded');
   });
 });

@@ -62,6 +62,16 @@ const policyCopy: Record<PackingPolicy, { title: string; description: string }> 
   'round-pallet': { title: 'Palette complète', description: 'Arrondi à la palette supérieure' },
 };
 
+function formatPartialLoadDetail(partialLoadCartons: number, partialCartonUnits: number): string {
+  const completeCartons = partialLoadCartons > 0
+    ? `${partialLoadCartons} carton${partialLoadCartons > 1 ? 's' : ''} complet${partialLoadCartons > 1 ? 's' : ''}`
+    : '';
+  const incompleteCarton = partialCartonUnits > 0
+    ? `1 carton incomplet de ${formatNumber(partialCartonUnits)} unité${partialCartonUnits > 1 ? 's' : ''}`
+    : '';
+  return [completeCartons, incompleteCarton].filter(Boolean).join(' + ');
+}
+
 function NumericField({
   field,
   icon,
@@ -194,7 +204,7 @@ function StrategyCard({
 function PlanSummary({ input, selected }: { input: PackingInput; selected: PackingOption }) {
   const plan = summarizePackingLoads(input, selected);
   const partialText = plan.partialLoadCount
-    ? `1 palette partielle (${plan.partialLoadCartons} carton${plan.partialLoadCartons > 1 ? 's' : ''}${plan.partialCartonUnits ? ` + ${formatNumber(plan.partialCartonUnits)} unités` : ''})`
+    ? `1 palette partielle (${formatPartialLoadDetail(plan.partialLoadCartons, plan.partialCartonUnits)})`
     : 'Aucune palette partielle';
   return (
     <section className="packing-v3-plan" aria-label="Plan de conditionnement">
@@ -324,17 +334,29 @@ export function PackingConductWaiting() {
   );
 }
 
-export function PackingFrozenPreparation({ run, onModify }: { run: PackingRun; onModify: () => void }) {
+export function PackingFrozenPreparation({
+  run,
+  onModify,
+  draftRecovered = false,
+}: {
+  run: PackingRun;
+  onModify: () => void;
+  draftRecovered?: boolean;
+}) {
   const option = calculatePackingOptions({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }).find((entry) => entry.policy === run.selectedPolicy);
   if (!option) return null;
   const plan = summarizePackingLoads({ quantity: run.requestedUnits, unitsPerCarton: run.unitsPerCarton, cartonsPerPalette: run.cartonsPerLoad }, option);
   const start = new Date(getPackingRunProductionStartedAt(run)).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const policy = policyCopy[run.selectedPolicy].title;
+  const partialPlan = plan.partialLoadCount
+    ? `1 partielle (${formatPartialLoadDetail(plan.partialLoadCartons, plan.partialCartonUnits)})`
+    : 'aucune partielle';
   return (
     <section aria-label="Préparation figée" className="packing-v3-frozen">
       <div className="packing-v3-frozen-title"><PackageCheck size={16} aria-hidden="true" /><div><strong>Préparation figée</strong><small>Référence du run actif</small></div></div>
       <div className="packing-v3-frozen-values"><span>{formatNumber(run.requestedUnits)} demandées</span><i>·</i><span>{formatNumber(run.unitsPerCarton)} u/carton</span><i>·</i><span>{formatNumber(run.cartonsPerLoad)} cartons/palette</span><i>·</i><span>{start}</span><i>·</i><span>{formatNumber(run.referenceCadenceUnitsPerMinute)} u/min</span><i>·</i><span>{policy}</span></div>
-      <div className="packing-v3-frozen-plan"><strong>Plan :</strong> {formatNumber(plan.fullLoadCount)} pal. compl. + {plan.partialLoadCount ? `1 partielle (${formatNumber(plan.partialLoadCartons)} cart.)` : 'aucune partielle'} · {formatNumber(plan.totalLoads)} palettes · {formatNumber(plan.totalCartons)} cartons · {formatNumber(run.plannedUnits)} unités · {run.varianceUnits === 0 ? 'écart 0' : `+${formatNumber(run.varianceUnits)} vs dem.`}</div>
+      <div className="packing-v3-frozen-plan"><strong>Plan :</strong> {formatNumber(plan.fullLoadCount)} pal. compl. + {partialPlan} · {formatNumber(plan.totalLoads)} palettes · {formatNumber(plan.totalCartons)} cartons · {formatNumber(run.plannedUnits)} unités · {run.varianceUnits === 0 ? 'écart 0' : `+${formatNumber(run.varianceUnits)} vs dem.`}</div>
+      {draftRecovered ? <p role="status" className="packing-v3-persistence-warning">Une préparation locale invalide a été ignorée et remplacée par un brouillon sûr. Vérifiez les paramètres avant de les réutiliser.</p> : null}
       <button type="button" onClick={onModify}>Modifier la préparation</button>
     </section>
   );
