@@ -54,7 +54,7 @@
 }
 
 .packing-v3-stage-header p,
-.packing-v3-waiting-head span,
+.packing-v3-waiting-head > div > span,
 .packing-v3-frozen small {
   margin: .35rem 0 0;
   color: #64748b;
@@ -247,9 +247,8 @@
   background: #f8fafb;
   box-shadow: none;
 }
-.packing-v3-waiting-head { align-items:center; }
 .packing-v3-waiting-head strong { display:block; color:#334155; font-size:.9rem; }
-.packing-v3-waiting-head span { display:block; }
+.packing-v3-waiting-head > div > span { display:block; }
 
 .packing-v3-production-grid { display:grid; grid-template-columns:minmax(0,1.85fr) minmax(20rem,.95fr); gap:1rem; margin-top:1rem; min-height:0; }
 .packing-v3-production-main { display:flex; min-width:0; min-height:0; flex-direction:column; gap:.75rem; }
