@@ -72,8 +72,8 @@ test('Packing preparation fields stay separated at the 1024px cockpit-fit bounda
   await page.getByLabel('Début OC').fill(productionStart);
   await page.getByLabel('Cadence réf.').fill('60');
 
-  const startField = page.getByLabel('Début OC').locator('xpath=ancestor::label[1]');
-  const cadenceField = page.getByLabel('Cadence réf.').locator('xpath=ancestor::label[1]');
+  const startField = page.getByLabel('Début OC').locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " packing-v3-field ")][1]');
+  const cadenceField = page.getByLabel('Cadence réf.').locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " packing-v3-field ")][1]');
   const startBox = await startField.boundingBox();
   const cadenceBox = await cadenceField.boundingBox();
 
