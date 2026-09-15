@@ -38,7 +38,7 @@ function loadInitialValue<T>(
 
   let value = initialValue;
   let recovered = false;
-  if (stored) {
+  if (stored !== null) {
     try {
       const parsed: unknown = JSON.parse(stored);
       if (isValidPublicStorageValue(key, parsed)) {
