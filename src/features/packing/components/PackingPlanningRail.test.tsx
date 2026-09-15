@@ -10,8 +10,32 @@ const form: PackingPlanningFormState = {
   referenceCadence: '',
 };
 
+function renderPlanningRail() {
+  render(
+    <PackingPlanningRail
+      form={form}
+      input={null}
+      calculation={null}
+      selectedPolicy={null}
+      quantityInvalid={false}
+      unitsPerCartonInvalid={false}
+      cartonsPerPaletteInvalid={false}
+      startTimeInvalid={false}
+      cadenceInvalid={false}
+      combinationInvalid={false}
+      canLaunch={false}
+      persistenceDegraded={false}
+      onFieldChange={vi.fn()}
+      onSelectPolicy={vi.fn()}
+      onLaunch={vi.fn()}
+      onReset={vi.fn()}
+    />,
+  );
+}
+
 afterEach(() => {
   Reflect.deleteProperty(HTMLInputElement.prototype, 'showPicker');
+  vi.restoreAllMocks();
 });
 
 describe('PackingPlanningRail OC start picker', () => {
@@ -22,26 +46,7 @@ describe('PackingPlanningRail OC start picker', () => {
       value: showPicker,
     });
 
-    render(
-      <PackingPlanningRail
-        form={form}
-        input={null}
-        calculation={null}
-        selectedPolicy={null}
-        quantityInvalid={false}
-        unitsPerCartonInvalid={false}
-        cartonsPerPaletteInvalid={false}
-        startTimeInvalid={false}
-        cadenceInvalid={false}
-        combinationInvalid={false}
-        canLaunch={false}
-        persistenceDegraded={false}
-        onFieldChange={vi.fn()}
-        onSelectPolicy={vi.fn()}
-        onLaunch={vi.fn()}
-        onReset={vi.fn()}
-      />,
-    );
+    renderPlanningRail();
 
     const input = screen.getByLabelText('Début OC') as HTMLInputElement;
     expect(input.type).toBe('datetime-local');
@@ -50,6 +55,19 @@ describe('PackingPlanningRail OC start picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
 
     expect(showPicker).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('falls back to clicking the datetime input when showPicker is unavailable', () => {
+    const click = vi.spyOn(HTMLInputElement.prototype, 'click');
+    renderPlanningRail();
+
+    const input = screen.getByLabelText('Début OC') as HTMLInputElement;
+    expect('showPicker' in input).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
+
+    expect(click).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(input);
   });
 });
