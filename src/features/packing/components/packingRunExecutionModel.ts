@@ -69,8 +69,9 @@ export function formatPackingClock(iso: string): string {
 }
 
 function formatPackingDurationMinutes(minutes: number): string {
-  const rounded = Math.round(Math.abs(minutes));
-  if (rounded < 60) return `${rounded} min`;
+  const absoluteMinutes = Math.abs(minutes);
+  const rounded = Math.round(absoluteMinutes);
+  if (absoluteMinutes < 60) return `${rounded} min`;
 
   const hours = Math.floor(rounded / 60);
   const remainingMinutes = rounded % 60;
