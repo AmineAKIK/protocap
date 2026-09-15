@@ -139,7 +139,7 @@ function StartTimeField({
   const messageId = 'packing-production-start-message';
   const hasMessage = Boolean(error || legacyTime);
 
-  function openPicker() {
+  function openPickerFromTrigger() {
     const input = inputRef.current;
     if (!input) return;
     input.focus();
@@ -147,17 +147,22 @@ function StartTimeField({
     else input.click();
   }
 
+  function openPickerFromInput() {
+    const input = inputRef.current;
+    if (input && typeof input.showPicker === 'function') input.showPicker();
+  }
+
   function handlePickerKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Tab') return;
     event.preventDefault();
-    if (event.key === 'Enter' || event.key === ' ') openPicker();
+    if (event.key === 'Enter' || event.key === ' ') openPickerFromTrigger();
   }
 
   return (
     <div className="packing-v3-field min-w-0">
       <label className="packing-v3-field-label" htmlFor="packing-production-start">Début OC<span className="packing-v3-required" aria-hidden="true"> *</span></label>
       <div className={`packing-v3-field-control packing-v3-datetime-control ${error ? 'packing-v3-field-invalid' : ''}`}>
-        <button type="button" className="packing-v3-datetime-trigger" aria-label="Choisir la date et l’heure de début OC" onClick={openPicker}>
+        <button type="button" className="packing-v3-datetime-trigger" aria-label="Choisir la date et l’heure de début OC" onClick={openPickerFromTrigger}>
           <CalendarDays size={16} aria-hidden="true" />
         </button>
         <input
@@ -172,7 +177,7 @@ function StartTimeField({
           aria-describedby={hasMessage ? messageId : undefined}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          onClick={openPicker}
+          onClick={openPickerFromInput}
           onKeyDown={handlePickerKeyDown}
           onBeforeInput={(event) => event.preventDefault()}
           onPaste={(event) => event.preventDefault()}
