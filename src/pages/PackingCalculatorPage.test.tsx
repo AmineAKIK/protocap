@@ -125,7 +125,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect((screen.getByLabelText('Quantité demandée') as HTMLInputElement).value).toBe('30880');
 
     await user.click(reset);
-    await user.click(screen.getByRole('button', { name: 'Réinitialiser', exact: true }));
+    await user.click(screen.getByRole('button', { name: /^Réinitialiser$/ }));
 
     expect((screen.getByLabelText(/Quantité demandée/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/Unités par carton/i) as HTMLInputElement).value).toBe('');
