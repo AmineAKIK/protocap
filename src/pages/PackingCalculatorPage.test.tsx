@@ -78,7 +78,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     expect(screen.getByText(/À compléter : Début OC · Cadence réf\./)).toBeTruthy();
     expect(getProductionStartInput().getAttribute('aria-invalid')).toBe('true');
-    expect(document.activeElement).toBe(getProductionStartInput());
+    await waitFor(() => expect(document.activeElement).toBe(getProductionStartInput()));
 
     await chooseStrategy(user);
     fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
@@ -104,7 +104,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(quantity.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Saisissez un entier supérieur à 0.')).toBeTruthy();
     expect(screen.getByText(/Corrigez : Quantité demandée/)).toBeTruthy();
-    expect(document.activeElement).toBe(quantity);
+    await waitFor(() => expect(document.activeElement).toBe(quantity));
   });
 
   it('does not show required feedback on focus and blur alone', async () => {
@@ -118,7 +118,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     await user.click(screen.getByRole('button', { name: /Lancer le suivi de production/i }));
     expect(screen.getAllByText('Valeur obligatoire.')).toHaveLength(5);
-    expect(document.activeElement).toBe(quantity);
+    await waitFor(() => expect(document.activeElement).toBe(quantity));
   });
 
   it('protects reset with an accessible confirmation and restores focus when cancelled', async () => {
@@ -203,7 +203,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await user.click(launch);
     expect(start.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Choisissez une date et une heure valides.')).toBeTruthy();
-    expect(document.activeElement).toBe(start);
+    await waitFor(() => expect(document.activeElement).toBe(start));
   });
 
   it('launches an immutable run snapshot and turns preparation into a frozen reference', async () => {
