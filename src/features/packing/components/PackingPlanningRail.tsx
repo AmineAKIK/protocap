@@ -113,10 +113,10 @@ function NumericField({
       </span>
       <small
         id={error ? errorId : undefined}
-        className={`packing-v3-field-message ${error ? 'packing-v3-field-error' : ''}`}
+        className="packing-v3-field-message"
         aria-hidden={error ? undefined : true}
       >
-        {error ?? '\u00a0'}
+        {error ? <span className="packing-v3-field-error">{error}</span> : '\u00a0'}
       </small>
     </div>
   );
@@ -136,9 +136,8 @@ function StartTimeField({
   onBlur: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const errorId = 'packing-production-start-error';
-  const legacyId = 'packing-production-start-legacy';
-  const messageId = error ? errorId : legacyTime ? legacyId : undefined;
+  const messageId = 'packing-production-start-message';
+  const hasMessage = Boolean(error || legacyTime);
 
   function openPicker() {
     const input = inputRef.current;
@@ -164,17 +163,20 @@ function StartTimeField({
           value={value}
           required
           aria-invalid={Boolean(error)}
-          aria-describedby={messageId}
+          aria-describedby={hasMessage ? messageId : undefined}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
         />
       </div>
       <small
-        id={messageId}
-        className={`packing-v3-field-message ${error ? 'packing-v3-field-error' : legacyTime ? 'packing-v3-legacy-time' : ''}`}
-        aria-hidden={messageId ? undefined : true}
+        id={hasMessage ? messageId : undefined}
+        className="packing-v3-field-message"
+        aria-hidden={hasMessage ? undefined : true}
       >
-        {error ?? (legacyTime ? `Heure enregistrée précédemment : ${legacyTime}. Choisissez la date correspondante.` : '\u00a0')}
+        {error ? <span className="packing-v3-field-error">{error}</span> : null}
+        {error && legacyTime ? <span aria-hidden="true"> · </span> : null}
+        {legacyTime ? <span className="packing-v3-legacy-time">Heure enregistrée : {legacyTime} · choisissez sa date.</span> : null}
+        {!hasMessage ? '\u00a0' : null}
       </small>
     </div>
   );
