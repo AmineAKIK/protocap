@@ -72,6 +72,13 @@ function formatPartialLoadDetail(partialLoadCartons: number, partialCartonUnits:
   return [completeCartons, incompleteCarton].filter(Boolean).join(' + ');
 }
 
+function formatPreparationDateTime(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  if (!match) return '';
+  const [, year, month, day, hour, minute] = match;
+  return `${day}/${month}/${year} · ${hour}:${minute}`;
+}
+
 function NumericField({
   field,
   icon,
@@ -138,47 +145,51 @@ function StartTimeField({
   const inputRef = useRef<HTMLInputElement>(null);
   const messageId = 'packing-production-start-message';
   const hasMessage = Boolean(error || legacyTime);
+  const displayValue = formatPreparationDateTime(value);
 
-  function openPickerFromTrigger() {
+  function openPicker() {
     const input = inputRef.current;
     if (!input) return;
-    input.focus();
+    input.focus({ preventScroll: true });
     if (typeof input.showPicker === 'function') input.showPicker();
     else input.click();
   }
 
-  function openPickerFromInput() {
-    const input = inputRef.current;
-    if (input && typeof input.showPicker === 'function') input.showPicker();
-  }
-
-  function handlePickerKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === 'Tab') return;
+  function handleDisplayKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    if (event.key === 'Enter' || event.key === ' ') openPickerFromTrigger();
+    openPicker();
   }
 
   return (
     <div className="packing-v3-field min-w-0">
-      <label className="packing-v3-field-label" htmlFor="packing-production-start">Début OC<span className="packing-v3-required" aria-hidden="true"> *</span></label>
+      <span className="packing-v3-field-label">Début OC<span className="packing-v3-required" aria-hidden="true"> *</span></span>
       <div className={`packing-v3-field-control packing-v3-datetime-control ${error ? 'packing-v3-field-invalid' : ''}`}>
-        <button type="button" className="packing-v3-datetime-trigger" aria-label="Choisir la date et l’heure de début OC" onClick={openPickerFromTrigger}>
-          <CalendarDays size={16} aria-hidden="true" />
+        <button
+          type="button"
+          className="packing-v3-datetime-display"
+          aria-label={displayValue ? `Début OC : ${displayValue}` : 'Choisir la date et l’heure de début OC'}
+          aria-invalid={Boolean(error)}
+          aria-describedby={hasMessage ? messageId : undefined}
+          onClick={openPicker}
+          onKeyDown={handleDisplayKeyDown}
+        >
+          <CalendarDays size={15} aria-hidden="true" />
+          <span className={displayValue ? '' : 'packing-v3-datetime-display-empty'}>{displayValue}</span>
         </button>
         <input
           ref={inputRef}
           id="packing-production-start"
-          className={`packing-v3-datetime-input ${value ? '' : 'packing-v3-datetime-input-empty'}`}
+          className="packing-v3-datetime-native"
           aria-label="Début OC"
           type="datetime-local"
           value={value}
           required
+          tabIndex={-1}
           aria-invalid={Boolean(error)}
           aria-describedby={hasMessage ? messageId : undefined}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          onClick={openPickerFromInput}
-          onKeyDown={handlePickerKeyDown}
           onBeforeInput={(event) => event.preventDefault()}
           onPaste={(event) => event.preventDefault()}
           onDrop={(event) => event.preventDefault()}
