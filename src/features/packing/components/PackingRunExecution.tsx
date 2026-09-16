@@ -57,6 +57,25 @@ function formatDraftComposition(completeLoads: number, completeCartons: number, 
   return parts.length > 0 ? parts.join(' + ') : 'Aucune quantité en cours';
 }
 
+function formatLiveDraftComposition(
+  normalization: { completeLoads: number; completeCartons: number; partialCartonUnits: number } | null,
+): string {
+  const completeLoads = normalization?.completeLoads ?? 0;
+  const completeCartons = normalization?.completeCartons ?? 0;
+  const partialCartonUnits = normalization?.partialCartonUnits ?? 0;
+  const parts: string[] = [];
+
+  if (completeLoads > 0) {
+    parts.push(`${formatPackingNumber(completeLoads)} palette${completeLoads > 1 ? 's' : ''} complète${completeLoads > 1 ? 's' : ''}`);
+  }
+  parts.push(`${formatPackingNumber(completeCartons)} carton${completeCartons > 1 ? 's' : ''}`);
+  if (partialCartonUnits > 0) {
+    parts.push(`${formatPackingNumber(partialCartonUnits)} unité${partialCartonUnits > 1 ? 's' : ''} dans le carton incomplet`);
+  }
+
+  return parts.join(' + ');
+}
+
 function formatDeclarationKind(completeCartons: number, partialCartonUnits: number, cartonsPerLoad: number): string {
   const completeLoads = Math.floor(completeCartons / cartonsPerLoad);
   const remainingCartons = completeCartons % cartonsPerLoad;
@@ -211,14 +230,14 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
           </button>
 
           <form className="packing-v3-partial" onSubmit={submitPartialDeclaration}>
-            <div className="packing-v3-partial-heading"><div><strong>{editingDeclarationId ? 'Corriger la déclaration' : 'Palette partielle'}</strong><span>Cartons + unités du carton incomplet</span></div><div><span>Aperçu temps réel</span><strong>{preview.units === null ? '—' : formatPackingNumber(preview.units)} unités</strong>{preview.normalization && preview.normalization.totalUnits > 0 ? <small>{formatDraftComposition(preview.normalization.completeLoads, preview.normalization.completeCartons, preview.normalization.partialCartonUnits)}</small> : null}</div></div>
+            <div className="packing-v3-partial-heading"><div><strong>{editingDeclarationId ? 'Corriger la déclaration' : 'Palette partielle'}</strong><span>Cartons + unités du carton incomplet</span></div><div><span>Aperçu temps réel</span><strong>{preview.units === null ? '—' : formatPackingNumber(preview.units)} unités</strong><small className="packing-v3-live-composition">{formatLiveDraftComposition(preview.normalization)}</small></div></div>
             <div className="packing-v3-partial-controls">
               <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => setDraft((current) => ({ ...current, completeCartons: value }))} />
               <Stepper label="Unités dans le carton incomplet" value={draft.partialCartonUnits} onChange={(value) => setDraft((current) => ({ ...current, partialCartonUnits: value }))} />
               <button type="submit" disabled={isComplete && !editingDeclarationId}>{editingDeclarationId ? 'Enregistrer la correction' : 'Enregistrer la palette partielle'} <span aria-hidden="true">→</span></button>
             </div>
             {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); setDraft(emptyDeclarationDraft); }}>Annuler la correction</button> : null}
-            {hasLiveDraft ? <p role="status" className="packing-v3-feedback">Saisie en cours incluse dans la progression et les estimations. Validez pour l’ajouter à l’historique.</p> : null}
+            <p role={hasLiveDraft ? 'status' : undefined} aria-hidden={!hasLiveDraft} className={`packing-v3-feedback packing-v3-live-feedback ${hasLiveDraft ? '' : 'packing-v3-live-feedback-empty'}`}>{hasLiveDraft ? 'Saisie en cours incluse dans la progression et les estimations. Validez pour l’ajouter à l’historique.' : '\u00a0'}</p>
             {preview.error ? <p className="packing-v3-inline-error">{preview.error}</p> : null}
           </form>
 
