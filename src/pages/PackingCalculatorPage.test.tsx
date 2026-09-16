@@ -38,6 +38,10 @@ function getProductionStartInput(): HTMLInputElement {
   return screen.getByLabelText('Début OC', { selector: 'input' }) as HTMLInputElement;
 }
 
+function getProductionStartControl(): HTMLButtonElement {
+  return document.querySelector<HTMLButtonElement>('#packing-production-start')!;
+}
+
 async function chooseStrategy(user: ReturnType<typeof userEvent.setup>, name: RegExp = /Carton complet/i) {
   const group = screen.getByRole('radiogroup', { name: 'Stratégie de conditionnement' });
   await user.click(within(group).getByRole('radio', { name }));
@@ -78,7 +82,8 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     expect(screen.getByText(/À compléter : Début OC · Cadence réf\./)).toBeTruthy();
     expect(getProductionStartInput().getAttribute('aria-invalid')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(getProductionStartInput()));
+    expect(getProductionStartControl().getAttribute('aria-invalid')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(getProductionStartControl()));
 
     await chooseStrategy(user);
     fireEvent.change(getProductionStartInput(), { target: { value: productionStart } });
@@ -207,8 +212,9 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
 
     await user.click(launch);
     expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(getProductionStartControl().getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText('Choisissez une date et une heure valides.')).toBeTruthy();
-    await waitFor(() => expect(document.activeElement).toBe(start));
+    await waitFor(() => expect(document.activeElement).toBe(getProductionStartControl()));
   });
 
   it('launches an immutable run snapshot and turns preparation into a frozen reference', async () => {

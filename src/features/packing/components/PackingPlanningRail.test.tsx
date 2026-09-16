@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PackingRun } from '../domain/packingRun';
 import { PackingFrozenPreparation, PackingPlanningRail, type PackingPlanningFormState } from './PackingPlanningRail';
 
-const form: PackingPlanningFormState = {
+const emptyForm: PackingPlanningFormState = {
   quantity: '',
   unitsPerCarton: '',
   cartonsPerPalette: '',
@@ -11,7 +11,7 @@ const form: PackingPlanningFormState = {
   referenceCadence: '',
 };
 
-function renderPlanningRail() {
+function renderPlanningRail(form: PackingPlanningFormState = emptyForm) {
   render(
     <PackingPlanningRail
       form={form}
@@ -75,7 +75,7 @@ describe('PackingPlanningRail preparation semantics', () => {
 });
 
 describe('PackingPlanningRail OC start picker', () => {
-  it('uses the styled left trigger to open the native datetime picker', () => {
+  it('keeps the native datetime input out of the visual layer and opens it from the custom shell', () => {
     const showPicker = vi.fn();
     Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
       configurable: true,
@@ -86,28 +86,36 @@ describe('PackingPlanningRail OC start picker', () => {
 
     const input = screen.getByLabelText('Début OC') as HTMLInputElement;
     expect(input.type).toBe('datetime-local');
-    expect(input.classList.contains('packing-v3-datetime-input')).toBe(true);
-    expect(input.classList.contains('packing-v3-datetime-input-empty')).toBe(true);
+    expect(input.classList.contains('packing-v3-datetime-native')).toBe(true);
+    expect(input.tabIndex).toBe(-1);
+    expect(input.id).toBe('packing-production-start-native');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
+    const trigger = screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' });
+    expect(trigger.id).toBe('packing-production-start');
+    expect(trigger.textContent).toBe('');
+    fireEvent.click(trigger);
 
     expect(showPicker).toHaveBeenCalledOnce();
-    expect(document.activeElement).toBe(input);
   });
 
-  it('blocks direct keyboard, paste and drop entry while keeping Tab navigation', () => {
-    renderPlanningRail();
+  it('shows only the formatted selected value in the visual shell', () => {
+    renderPlanningRail({ ...emptyForm, productionStartTime: '2026-09-16T05:42' });
 
+    expect(screen.getByRole('button', { name: 'Début OC : 16/09/2026 · 05:42' }).textContent)
+      .toContain('16/09/2026 · 05:42');
+  });
+
+  it('blocks direct keyboard, paste and drop edits on the technical native input', () => {
+    renderPlanningRail();
     const input = screen.getByLabelText('Début OC') as HTMLInputElement;
 
     expect(fireEvent.keyDown(input, { key: '4' })).toBe(false);
-    expect(fireEvent.keyDown(input, { key: 'Backspace' })).toBe(false);
-    expect(fireEvent.keyDown(input, { key: 'Tab' })).toBe(true);
+    expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(false);
     expect(fireEvent.paste(input)).toBe(false);
     expect(fireEvent.drop(input)).toBe(false);
   });
 
-  it('opens the picker from Enter instead of accepting manual entry', () => {
+  it('opens the picker from the visible control with Enter', () => {
     const showPicker = vi.fn();
     Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
       configurable: true,
@@ -115,12 +123,12 @@ describe('PackingPlanningRail OC start picker', () => {
     });
     renderPlanningRail();
 
-    const input = screen.getByLabelText('Début OC') as HTMLInputElement;
-    expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
+    const trigger = screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' });
+    expect(fireEvent.keyDown(trigger, { key: 'Enter' })).toBe(false);
     expect(showPicker).toHaveBeenCalledOnce();
   });
 
-  it('falls back to clicking the datetime input when showPicker is unavailable', () => {
+  it('falls back to clicking the native datetime input when showPicker is unavailable', () => {
     const click = vi.spyOn(HTMLInputElement.prototype, 'click');
     renderPlanningRail();
 
@@ -130,6 +138,5 @@ describe('PackingPlanningRail OC start picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
 
     expect(click).toHaveBeenCalledOnce();
-    expect(document.activeElement).toBe(input);
   });
 });
