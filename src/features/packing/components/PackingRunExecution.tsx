@@ -60,9 +60,11 @@ function formatDraftComposition(completeLoads: number, completeCartons: number, 
 function formatLiveDraftComposition(
   normalization: { completeLoads: number; completeCartons: number; partialCartonUnits: number } | null,
 ): string {
-  const completeLoads = normalization?.completeLoads ?? 0;
-  const completeCartons = normalization?.completeCartons ?? 0;
-  const partialCartonUnits = normalization?.partialCartonUnits ?? 0;
+  if (!normalization) return '— carton';
+
+  const completeLoads = normalization.completeLoads;
+  const completeCartons = normalization.completeCartons;
+  const partialCartonUnits = normalization.partialCartonUnits;
   const parts: string[] = [];
 
   if (completeLoads > 0) {
