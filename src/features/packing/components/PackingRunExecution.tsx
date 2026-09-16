@@ -60,6 +60,7 @@ function formatDraftComposition(completeLoads: number, completeCartons: number, 
 function formatDeclarationKind(completeCartons: number, partialCartonUnits: number, cartonsPerLoad: number): string {
   const completeLoads = Math.floor(completeCartons / cartonsPerLoad);
   const remainingCartons = completeCartons % cartonsPerLoad;
+  if (completeLoads === 1 && remainingCartons === 0 && partialCartonUnits === 0) return 'Palette complète';
   return formatDraftComposition(completeLoads, remainingCartons, partialCartonUnits);
 }
 
@@ -248,7 +249,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
               );
             })}
           </div>
-          <div className="packing-v3-history-total"><span>{hasLiveDraft ? 'Total avec saisie en cours' : 'Total déclaré'}</span><strong>{formatPackingNumber(progress.declaredUnits)} unités</strong></div>
+          <div className="packing-v3-history-total"><span>Total enregistré</span><strong>{formatPackingNumber(committedProgress.declaredUnits)} unités</strong></div>
         </aside>
       </div>
     </section>
