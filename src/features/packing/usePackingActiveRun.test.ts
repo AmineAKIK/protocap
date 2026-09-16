@@ -63,7 +63,7 @@ describe('usePackingActiveRun storage acquisition', () => {
         result.current.clearRun();
       });
     }).not.toThrow();
-    expect(result.current.activeRun).toBeNull();
+    expect(result.current.activeRun).toBe(startedRun);
     expect(result.current.persistenceStatus).toBe('degraded');
   });
 
@@ -102,7 +102,7 @@ describe('usePackingActiveRun storage acquisition', () => {
     });
     expect(result.current.activeRun).not.toBeNull();
 
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Blocked', 'SecurityError');
     });
 

@@ -7,7 +7,15 @@ import {
 import type { PackingPolicy } from '../../../utils/packing';
 
 export const PACKING_ACTIVE_RUN_STORAGE_KEY = 'lineops.packing.active-run.v1';
-export const PACKING_RUN_STORAGE_SCHEMA_VERSION = 2 as const;
+export const PACKING_RUN_STORAGE_SCHEMA_VERSION = 3 as const;
+
+export interface PersistedPackingDraft {
+  runId: string;
+  completeCartons: string;
+  partialCartonUnits: string;
+  editingDeclarationId: string | null;
+  updatedAt: string;
+}
 
 export interface PackingStorageLike {
   getItem(key: string): string | null;
@@ -35,9 +43,11 @@ interface PersistedPackingRunV2 {
   declarations: PersistedPackingDeclarationV2[];
 }
 
-interface PersistedPackingStateV2 {
+interface PersistedPackingStateV3 {
   schemaVersion: typeof PACKING_RUN_STORAGE_SCHEMA_VERSION;
+  revision: number;
   activeRun: PersistedPackingRunV2 | null;
+  draft: PersistedPackingDraft | null;
 }
 
 export type PackingRunLoadResult =
@@ -47,8 +57,14 @@ export type PackingRunLoadResult =
   | { status: 'unavailable'; activeRun: null };
 
 export type PackingRunWriteResult =
-  | { status: 'persisted' }
-  | { status: 'degraded' };
+  | { status: 'persisted'; revision?: number }
+  | { status: 'degraded' }
+  | { status: 'conflict'; revision: number };
+
+export type PackingWorkspaceLoadResult =
+  | { status: 'empty'; activeRun: null; draft: null; revision: number }
+  | { status: 'loaded'; activeRun: PackingRun; draft: PersistedPackingDraft | null; revision: number }
+  | { status: 'corrupt' | 'unavailable'; activeRun: null; draft: null; revision: number };
 
 export interface NewPackingRunInput {
   requestedUnits: number;
@@ -130,6 +146,26 @@ function sanitizeRun(value: unknown, schemaVersion: number): PackingRun {
   return run;
 }
 
+function sanitizeDraft(value: unknown, run: PackingRun): PersistedPackingDraft | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) throw new Error('Invalid packing draft record.');
+  const draft: PersistedPackingDraft = {
+    runId: value.runId as string,
+    completeCartons: value.completeCartons as string,
+    partialCartonUnits: value.partialCartonUnits as string,
+    editingDeclarationId: value.editingDeclarationId === null ? null : value.editingDeclarationId as string,
+    updatedAt: value.updatedAt as string,
+  };
+  if (
+    draft.runId !== run.id ||
+    !/^\d*$/.test(draft.completeCartons) ||
+    !/^\d*$/.test(draft.partialCartonUnits) ||
+    !Number.isFinite(Date.parse(draft.updatedAt)) ||
+    (draft.editingDeclarationId !== null && !run.declarations.some((entry) => entry.id === draft.editingDeclarationId))
+  ) throw new Error('Invalid packing draft record.');
+  return draft;
+}
+
 function serializeRun(run: PackingRun): PersistedPackingRunV2 {
   validatePackingRun(run);
   return {
@@ -151,41 +187,75 @@ function serializeRun(run: PackingRun): PersistedPackingRunV2 {
   };
 }
 
-export function loadActivePackingRun(storage: PackingStorageLike): PackingRunLoadResult {
+export function loadPackingWorkspace(storage: PackingStorageLike): PackingWorkspaceLoadResult {
   let stored: string | null;
   try {
     stored = storage.getItem(PACKING_ACTIVE_RUN_STORAGE_KEY);
   } catch {
-    return { status: 'unavailable', activeRun: null };
+    return { status: 'unavailable', activeRun: null, draft: null, revision: 0 };
   }
-  if (stored === null) return { status: 'empty', activeRun: null };
+  if (stored === null) return { status: 'empty', activeRun: null, draft: null, revision: 0 };
 
   try {
     const parsed: unknown = JSON.parse(stored);
-    if (!isRecord(parsed)) return { status: 'corrupt', activeRun: null };
-    if (parsed.activeRun === null && (parsed.schemaVersion === 1 || parsed.schemaVersion === 2)) {
-      return { status: 'empty', activeRun: null };
+    if (!isRecord(parsed)) return { status: 'corrupt', activeRun: null, draft: null, revision: 0 };
+    if (parsed.activeRun === null && (parsed.schemaVersion === 1 || parsed.schemaVersion === 2 || parsed.schemaVersion === 3)) {
+      if (parsed.schemaVersion === 3 && (!Number.isSafeInteger(parsed.revision) || (parsed.revision as number) < 0 || parsed.draft !== null)) {
+        return { status: 'corrupt', activeRun: null, draft: null, revision: 0 };
+      }
+      return { status: 'empty', activeRun: null, draft: null, revision: parsed.schemaVersion === 3 ? parsed.revision as number : 0 };
     }
-    if (parsed.schemaVersion !== 1 && parsed.schemaVersion !== PACKING_RUN_STORAGE_SCHEMA_VERSION) {
-      return { status: 'corrupt', activeRun: null };
+    if (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2 && parsed.schemaVersion !== PACKING_RUN_STORAGE_SCHEMA_VERSION) {
+      return { status: 'corrupt', activeRun: null, draft: null, revision: 0 };
     }
-    return { status: 'loaded', activeRun: sanitizeRun(parsed.activeRun, parsed.schemaVersion as number) };
+    const activeRun = sanitizeRun(parsed.activeRun, parsed.schemaVersion as number);
+    const revision = parsed.schemaVersion === 3 && Number.isSafeInteger(parsed.revision) && (parsed.revision as number) >= 0
+      ? parsed.revision as number
+      : 0;
+    const draft = parsed.schemaVersion === 3 ? sanitizeDraft(parsed.draft, activeRun) : null;
+    return { status: 'loaded', activeRun, draft, revision };
   } catch {
-    return { status: 'corrupt', activeRun: null };
+    return { status: 'corrupt', activeRun: null, draft: null, revision: 0 };
+  }
+}
+
+export function loadActivePackingRun(storage: PackingStorageLike): PackingRunLoadResult {
+  const result = loadPackingWorkspace(storage);
+  if (result.status === 'loaded') return { status: 'loaded', activeRun: result.activeRun };
+  return { status: result.status, activeRun: null };
+}
+
+export function persistPackingWorkspace(
+  storage: PackingStorageLike,
+  activeRun: PackingRun | null,
+  draft: PersistedPackingDraft | null,
+  expectedRevision?: number,
+): PackingRunWriteResult {
+  const current = loadPackingWorkspace(storage);
+  if (current.status === 'unavailable') return { status: 'degraded' };
+  if (current.status === 'corrupt') return { status: 'degraded' };
+  if (expectedRevision !== undefined && current.revision !== expectedRevision) {
+    return { status: 'conflict', revision: current.revision };
+  }
+  if (draft && (!activeRun || draft.runId !== activeRun.id)) return { status: 'degraded' };
+  const revision = current.revision + 1;
+  const state: PersistedPackingStateV3 = {
+    schemaVersion: PACKING_RUN_STORAGE_SCHEMA_VERSION,
+    revision,
+    activeRun: activeRun === null ? null : serializeRun(activeRun),
+    draft,
+  };
+  try {
+    storage.setItem(PACKING_ACTIVE_RUN_STORAGE_KEY, JSON.stringify(state));
+    return { status: 'persisted', revision };
+  } catch {
+    return { status: 'degraded' };
   }
 }
 
 export function persistActivePackingRun(storage: PackingStorageLike, run: PackingRun | null): PackingRunWriteResult {
-  const state: PersistedPackingStateV2 = {
-    schemaVersion: PACKING_RUN_STORAGE_SCHEMA_VERSION,
-    activeRun: run === null ? null : serializeRun(run),
-  };
-  try {
-    storage.setItem(PACKING_ACTIVE_RUN_STORAGE_KEY, JSON.stringify(state));
-    return { status: 'persisted' };
-  } catch {
-    return { status: 'degraded' };
-  }
+  const result = persistPackingWorkspace(storage, run, null);
+  return result.status === 'persisted' ? { status: 'persisted' } : result;
 }
 
 export function clearActivePackingRun(storage: PackingStorageLike): PackingRunWriteResult {

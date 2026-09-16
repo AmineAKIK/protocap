@@ -5,7 +5,9 @@ import {
   clearActivePackingRun,
   createNewPackingRun,
   loadActivePackingRun,
+  loadPackingWorkspace,
   persistActivePackingRun,
+  persistPackingWorkspace,
   type PackingRunIdentityFactory,
   type PackingStorageLike,
 } from './packingRunStorage';
@@ -73,7 +75,7 @@ describe('packing active-run persistence', () => {
     persistActivePackingRun(storage, run);
     const serialized = JSON.parse(storage.getItem(PACKING_ACTIVE_RUN_STORAGE_KEY) ?? '{}');
 
-    expect(serialized.schemaVersion).toBe(2);
+    expect(serialized.schemaVersion).toBe(3);
     expect(serialized.activeRun.productionStartedAt).toBe('2026-09-14T20:00:00.000Z');
     expect(serialized.activeRun.varianceUnits).toBeUndefined();
     expect(serialized.activeRun.declarations[0].totalUnits).toBeUndefined();
@@ -269,5 +271,36 @@ describe('packing active-run persistence', () => {
 
     expect(clearActivePackingRun(storage)).toEqual({ status: 'persisted' });
     expect(loadActivePackingRun(storage)).toEqual({ status: 'empty', activeRun: null });
+  });
+
+  it('persists and restores the live operator draft with the run', () => {
+    const storage = new MemoryStorage();
+    const run = createRun();
+    const draft = {
+      runId: run.id,
+      completeCartons: '12',
+      partialCartonUnits: '30',
+      editingDeclarationId: null,
+      updatedAt: '2026-09-14T20:05:00.000Z',
+    };
+
+    expect(persistPackingWorkspace(storage, run, draft)).toMatchObject({ status: 'persisted', revision: 1 });
+    expect(loadPackingWorkspace(storage)).toEqual({ status: 'loaded', activeRun: run, draft, revision: 1 });
+  });
+
+  it('rejects a stale write instead of overwriting a newer tab revision', () => {
+    const storage = new MemoryStorage();
+    const run = createRun();
+    expect(persistPackingWorkspace(storage, run, null)).toMatchObject({ status: 'persisted', revision: 1 });
+    expect(persistPackingWorkspace(storage, run, null, 0)).toEqual({ status: 'conflict', revision: 1 });
+    expect(loadPackingWorkspace(storage)).toMatchObject({ status: 'loaded', revision: 1 });
+  });
+
+  it('keeps a revisioned tombstone so a cleared run cannot silently reappear', () => {
+    const storage = new MemoryStorage();
+    const run = createRun();
+    persistPackingWorkspace(storage, run, null);
+    expect(persistPackingWorkspace(storage, null, null, 1)).toMatchObject({ status: 'persisted', revision: 2 });
+    expect(loadPackingWorkspace(storage)).toEqual({ status: 'empty', activeRun: null, draft: null, revision: 2 });
   });
 });

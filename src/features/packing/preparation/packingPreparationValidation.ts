@@ -1,4 +1,4 @@
-import { isValidPackingInput, parsePositiveIntegerInput, type PackingInput, type PackingPolicy } from '../../../utils/packing';
+import { isValidPackingInput, MAX_PACKING_CADENCE_UNITS_PER_MINUTE, MAX_PACKING_UNITS, parsePositiveIntegerInput, type PackingInput, type PackingPolicy } from '../../../utils/packing';
 
 export type PackingPreparationField =
   | 'quantity'
@@ -48,10 +48,14 @@ const fieldLabels: Record<PackingPreparationField, string> = {
   referenceCadence: 'Cadence réf.',
 };
 
-function validatePositiveInteger(value: string): PackingPreparationFieldValidation {
+function validatePositiveInteger(value: string, maximum?: number): PackingPreparationFieldValidation {
   if (value.trim() === '') return { state: 'empty', message: 'Valeur obligatoire.' };
-  if (parsePositiveIntegerInput(value) === null) {
+  const parsed = parsePositiveIntegerInput(value);
+  if (parsed === null) {
     return { state: 'invalid', message: 'Saisissez un entier supérieur à 0.' };
+  }
+  if (maximum !== undefined && parsed > maximum) {
+    return { state: 'invalid', message: `La valeur maximale autorisée est ${new Intl.NumberFormat('fr-FR').format(maximum)}.` };
   }
   return { state: 'valid', message: null };
 }
@@ -138,11 +142,11 @@ export function validatePackingPreparation(
   now: Date = new Date(),
 ): PackingPreparationValidation {
   const fields = {
-    quantity: validatePositiveInteger(values.quantity),
+    quantity: validatePositiveInteger(values.quantity, MAX_PACKING_UNITS),
     unitsPerCarton: validatePositiveInteger(values.unitsPerCarton),
     cartonsPerPalette: validatePositiveInteger(values.cartonsPerPalette),
     productionStartTime: validateStart(values.productionStartTime, now),
-    referenceCadence: validatePositiveInteger(values.referenceCadence),
+    referenceCadence: validatePositiveInteger(values.referenceCadence, MAX_PACKING_CADENCE_UNITS_PER_MINUTE),
   } satisfies Record<PackingPreparationField, PackingPreparationFieldValidation>;
 
   let input: PackingInput | null = null;

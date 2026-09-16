@@ -98,6 +98,21 @@ describe('packing declaration normalization', () => {
 });
 
 describe('packing run validation and progress', () => {
+  it('rejects declarations before production start, out of order, or in the future', () => {
+    expectDomainError(() => validatePackingRun(createRun({ declarations: [
+      { id: 'early', createdAt: '2026-09-14T17:59:00.000Z', completeCartons: 1, partialCartonUnits: 0 },
+    ] })), 'INVALID_DECLARATION');
+
+    expectDomainError(() => validatePackingRun(createRun({ declarations: [
+      { id: 'later', createdAt: '2026-09-14T18:20:00.000Z', completeCartons: 1, partialCartonUnits: 0 },
+      { id: 'earlier', createdAt: '2026-09-14T18:10:00.000Z', completeCartons: 1, partialCartonUnits: 0 },
+    ] })), 'INVALID_DECLARATION');
+
+    expectDomainError(() => validatePackingRun(createRun({ declarations: [
+      { id: 'future', createdAt: '2099-09-14T18:10:00.000Z', completeCartons: 1, partialCartonUnits: 0 },
+    ] })), 'INVALID_DECLARATION');
+  });
+
   it('derives total and remaining time from planned units and reference cadence', () => {
     const run = createRun();
     const progress = getPackingRunProgress(run);

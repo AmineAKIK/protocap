@@ -115,7 +115,11 @@ describe('Packing preparation persistence hardening', () => {
     await user.click(screen.getByRole('button', { name: 'Modifier la préparation' }));
     await user.click(screen.getByRole('button', { name: 'Continuer sans sauvegarde' }));
     expect(await screen.findByRole('heading', { name: 'Préparer l’ordre de conditionnement' })).toBeTruthy();
-    expect(localStorage.getItem(activeRunStorageKey)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(activeRunStorageKey) ?? '{}')).toMatchObject({
+      schemaVersion: 3,
+      activeRun: null,
+      draft: null,
+    });
   });
 
   it('signals when a corrupt local preparation was discarded and repaired', () => {

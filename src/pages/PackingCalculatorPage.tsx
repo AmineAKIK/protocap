@@ -144,11 +144,15 @@ export function PackingCalculatorPage() {
   const [validationNow, setValidationNow] = useState(() => new Date());
   const {
     activeRun,
+    draft: activeRunDraft,
+    conflictDetected,
+    externalSyncVersion,
     persistenceStatus,
     probePersistence,
     tryStartRun,
     startRun,
     updateRun,
+    updateDraft,
     tryClearRun,
     clearRun,
   } = usePackingActiveRun();
@@ -336,7 +340,11 @@ export function PackingCalculatorPage() {
     transitionState(() => {
       if (allowDegraded) {
         setForm(restored);
-        clearRun();
+        const clearResult = clearRun();
+        if (clearResult.status !== 'persisted') {
+          setShowDegradedModifyConfirm(true);
+          return;
+        }
         finishModifyPreparation(policy);
         return;
       }
@@ -408,7 +416,15 @@ export function PackingCalculatorPage() {
       <div className="packing-v3-frame">
         {activeRun ? (
           <>
-            <PackingRunExecution run={activeRun} persistenceStatus={persistenceStatus} onRunChange={updateRun} />
+            <PackingRunExecution
+              key={`${activeRun.id}:${externalSyncVersion}`}
+              run={activeRun}
+              persistedDraft={activeRunDraft}
+              persistenceStatus={persistenceStatus}
+              conflictDetected={conflictDetected}
+              onRunChange={updateRun}
+              onDraftChange={updateDraft}
+            />
             <PackingFrozenPreparation run={activeRun} onModify={requestModifyPreparation} draftRecovered={draftRecovered} />
           </>
         ) : (
