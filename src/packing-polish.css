@@ -342,8 +342,8 @@
   }
 
   .packing-v3-next-work {
+    grid-template-columns:1fr;
     align-items: flex-start;
-    flex-direction: column;
     gap: .75rem;
   }
 
