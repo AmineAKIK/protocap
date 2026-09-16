@@ -64,9 +64,21 @@ export function HomePage() {
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-500 sm:text-lg sm:leading-8">
                 Démonstrateur interactif d’ingénierie des opérations industrielles, conçu pour rendre visibles des flux, décisions et contraintes terrain.
               </p>
+
               <div className="mt-6 rounded-r-xl border-l-4 border-teal-600 bg-teal-50 px-4 py-4 sm:px-5">
-                <p className="text-sm leading-6 text-slate-700">
-                  Trois jours en tant que conducteur de ligne de conditionnement dans une usine de produits de soins ont orienté les prototypes présentés ici et le rapport qui les accompagne. Les frictions observées en production sont réelles — les données affichées, elles, sont entièrement fictives. Aucun élément confidentiel propre à l’entreprise n’y figure.
+                <p className="text-xs font-bold uppercase tracking-widest text-teal-800">Pourquoi ProtoCap existe</p>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Quels efforts un outil peut-il prendre en charge pour rendre davantage d’attention à l’observation, au jugement et à la maîtrise du travail ? <span className="font-semibold text-slate-900">Rendre l’attention au réel</span> développe la réflexion personnelle à l’origine de ProtoCap.
+                </p>
+                <ButtonLink to="/essai" variant="ghost" className="mt-4" icon={<ArrowRight size={16} />}>
+                  Découvrir l’essai
+                </ButtonLink>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:px-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-600">Statut du démonstrateur</p>
+                <p className="mt-1.5 text-xs leading-5 text-slate-600">
+                  Les données affichées sont fictives et aucune donnée confidentielle d’entreprise n’est publiée. Les prototypes matérialisent des hypothèses de conception ; ils ne revendiquent pas de résultats industriels mesurés.
                 </p>
               </div>
             </div>
