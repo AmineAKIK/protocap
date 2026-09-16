@@ -150,7 +150,6 @@ function StartTimeField({
   function openPicker() {
     const input = inputRef.current;
     if (!input) return;
-    input.focus({ preventScroll: true });
     if (typeof input.showPicker === 'function') input.showPicker();
     else input.click();
   }
@@ -166,6 +165,7 @@ function StartTimeField({
       <span className="packing-v3-field-label">Début OC<span className="packing-v3-required" aria-hidden="true"> *</span></span>
       <div className={`packing-v3-field-control packing-v3-datetime-control ${error ? 'packing-v3-field-invalid' : ''}`}>
         <button
+          id="packing-production-start"
           type="button"
           className="packing-v3-datetime-display"
           aria-label={displayValue ? `Début OC : ${displayValue}` : 'Choisir la date et l’heure de début OC'}
@@ -179,7 +179,7 @@ function StartTimeField({
         </button>
         <input
           ref={inputRef}
-          id="packing-production-start"
+          id="packing-production-start-native"
           className="packing-v3-datetime-native"
           aria-label="Début OC"
           type="datetime-local"
@@ -190,6 +190,7 @@ function StartTimeField({
           aria-describedby={hasMessage ? messageId : undefined}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
+          onKeyDown={(event) => event.preventDefault()}
           onBeforeInput={(event) => event.preventDefault()}
           onPaste={(event) => event.preventDefault()}
           onDrop={(event) => event.preventDefault()}
