@@ -129,6 +129,16 @@ export function formatPackingFinish(iso: string, now: Date): string {
   });
 }
 
+export function getLiveDraftCreatedAt(
+  now: Date,
+  declarations: readonly { createdAt: string }[],
+): string {
+  const latestDeclarationAtMs = declarations.length > 0
+    ? Date.parse(declarations[declarations.length - 1].createdAt)
+    : 0;
+  return new Date(Math.max(now.getTime(), latestDeclarationAtMs)).toISOString();
+}
+
 function formatPackingDurationMinutes(minutes: number): string {
   const absoluteMinutes = Math.abs(minutes);
   const rounded = Math.round(absoluteMinutes);

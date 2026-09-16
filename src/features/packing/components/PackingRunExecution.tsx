@@ -24,6 +24,7 @@ import {
   formatPackingPercent,
   formatPackingReferenceVariance,
   getDeclarationDraftInput,
+  getLiveDraftCreatedAt,
   getPackingDeclarationErrorMessage,
   getPackingRemainingWork,
   normalizePackingDraft,
@@ -119,11 +120,12 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
     }
     try {
       const normalized = normalizePackingDeclaration(input, run.unitsPerCarton);
+      const liveDraftCreatedAt = getLiveDraftCreatedAt(now, run.declarations);
       const liveRun = editingDeclarationId
         ? replacePackingDeclaration(run, editingDeclarationId, input)
         : addPackingDeclaration(run, {
             id: '__packing-live-draft__',
-            createdAt: now.toISOString(),
+            createdAt: liveDraftCreatedAt,
             ...normalized,
           });
       return {

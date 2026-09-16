@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatPackingReferenceVariance,
+  getLiveDraftCreatedAt,
   getPackingRemainingWork,
   normalizePackingDraft,
 } from './packingRunExecutionModel';
+
+describe('getLiveDraftCreatedAt', () => {
+  it('never places a live preview before the latest committed declaration', () => {
+    expect(getLiveDraftCreatedAt(
+      new Date('2026-09-14T20:00:00.000Z'),
+      [{ createdAt: '2026-09-14T20:00:00.125Z' }],
+    )).toBe('2026-09-14T20:00:00.125Z');
+  });
+});
 
 describe('formatPackingReferenceVariance', () => {
   it('keeps sub-hour gaps in minutes', () => {
