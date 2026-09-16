@@ -227,21 +227,23 @@
 }
 
 .packing-v3-next-work {
-  display: flex;
+  display: grid;
   min-height: 6.75rem;
   flex: 1 1 7rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(15rem, .65fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
   padding: 1rem 1.15rem;
   border: 1px solid #cbdedb;
   border-radius: .75rem;
-  background: linear-gradient(135deg, #f8fbfb 0%, #edf8f6 100%);
+  background:
+    radial-gradient(circle at 8% 50%, rgb(15 159 149 / .08), transparent 28%),
+    linear-gradient(135deg, #f8fbfb 0%, #edf8f6 100%);
 }
 
 .packing-v3-next-work-heading {
   display: grid;
-  gap: .35rem;
+  gap: .4rem;
   min-width: 0;
 }
 
@@ -252,26 +254,40 @@
   color: #475569;
   font-size: .65rem;
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
 
 .packing-v3-next-work-heading > strong {
   color: #0b625c;
-  font-size: clamp(1rem, 1.5vw, 1.35rem);
-  line-height: 1.15;
+  font-size: clamp(1.15rem, 1.8vw, 1.6rem);
+  line-height: 1.12;
 }
 
-.packing-v3-next-work > p {
-  max-width: 23rem;
-  margin: 0;
-  padding-left: 1.1rem;
-  border-left: 1px solid #b8d6d2;
-  color: #334155;
-  font-size: .76rem;
-  font-weight: 700;
-  line-height: 1.45;
+.packing-v3-next-work-after {
+  display: grid;
+  gap: .3rem;
+  min-width: 0;
+  padding: .8rem .9rem;
+  border: 1px solid #b8d6d2;
+  border-radius: .65rem;
+  background: rgb(255 255 255 / .72);
 }
+
+.packing-v3-next-work-after > span {
+  color: #64748b;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.packing-v3-next-work-after > strong {
+  color: #1e3a3a;
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
 
 .packing-v3-launch:hover:not(:disabled),
 .packing-v3-full-load-action:hover:not(:disabled) {
@@ -331,12 +347,8 @@
     gap: .75rem;
   }
 
-  .packing-v3-next-work > p {
-    max-width: none;
-    padding-top: .65rem;
-    padding-left: 0;
-    border-top: 1px solid #b8d6d2;
-    border-left: 0;
+  .packing-v3-next-work-after {
+    width:100%;
   }
 }
 
