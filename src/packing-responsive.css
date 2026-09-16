@@ -326,8 +326,8 @@
 .packing-v3-frozen button { border:0; background:transparent; color:#475569; font-size:.68rem; font-weight:700; text-decoration:underline; white-space:nowrap; }
 
 @media (min-width: 1024px) and (min-height: 700px) {
-  html:has(.packing-calculator-page.packing-v3-is-running),
-  body:has(.packing-calculator-page.packing-v3-is-running) {
+  html.packing-active-run-scroll-lock,
+  body.packing-active-run-scroll-lock {
     height:100%;
     overflow-y:hidden;
   }
