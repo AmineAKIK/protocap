@@ -46,6 +46,48 @@ export function getDeclarationDraftInput(draft: DeclarationDraft): PackingDeclar
   return { completeCartons, partialCartonUnits };
 }
 
+export interface PackingDraftNormalization {
+  completeLoads: number;
+  completeCartons: number;
+  partialCartonUnits: number;
+  totalUnits: number;
+}
+
+export function normalizePackingDraft(
+  draft: DeclarationDraft,
+  unitsPerCarton: number,
+  cartonsPerLoad: number,
+): PackingDraftNormalization | null {
+  const input = getDeclarationDraftInput(draft);
+  if (
+    !input ||
+    !Number.isSafeInteger(unitsPerCarton) ||
+    unitsPerCarton <= 0 ||
+    !Number.isSafeInteger(cartonsPerLoad) ||
+    cartonsPerLoad <= 0
+  ) {
+    return null;
+  }
+
+  const unitsFromCartons = input.completeCartons * unitsPerCarton;
+  const totalUnits = unitsFromCartons + input.partialCartonUnits;
+  const unitsPerLoad = unitsPerCarton * cartonsPerLoad;
+  if (
+    !Number.isSafeInteger(unitsFromCartons) ||
+    !Number.isSafeInteger(totalUnits) ||
+    !Number.isSafeInteger(unitsPerLoad)
+  ) {
+    return null;
+  }
+
+  const completeLoads = Math.floor(totalUnits / unitsPerLoad);
+  const unitsAfterLoads = totalUnits % unitsPerLoad;
+  const completeCartons = Math.floor(unitsAfterLoads / unitsPerCarton);
+  const partialCartonUnits = unitsAfterLoads % unitsPerCarton;
+
+  return { completeLoads, completeCartons, partialCartonUnits, totalUnits };
+}
+
 export function getPackingDeclarationErrorMessage(error: unknown): string {
   if (error instanceof PackingRunDomainError) {
     if (error.code === 'OVER_DECLARATION') {
