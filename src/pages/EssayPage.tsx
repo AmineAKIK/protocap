@@ -1,7 +1,10 @@
 import { BookOpen, Download, FileText } from 'lucide-react';
 import { PageFrame } from '../components/PageFrame';
 
-const PDF_PATH = '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf';
+const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
+const PDF_FILENAME = 'rendre-l-attention-au-reel-akik-mohamed-amine.pdf';
+const PDF_PATH = `${PUBLIC_ASSET_BASE}${PDF_FILENAME}`;
+const COVER_PATH = `${PUBLIC_ASSET_BASE}rendre-l-attention-au-reel-cover.png`;
 
 const actionClassName =
   'inline-flex min-h-11 max-w-full min-w-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-center text-sm font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-4';
@@ -12,7 +15,7 @@ export function EssayPage() {
       <section className="border-b border-slate-200 bg-white">
         <PageFrame className="py-10 sm:py-14 lg:py-16">
           <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26rem)] lg:items-start lg:gap-12">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-100 bg-teal-50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-teal-800">
                 <FileText size={14} aria-hidden="true" />
                 Pensée systémique · Essai
@@ -47,7 +50,7 @@ export function EssayPage() {
                 </a>
                 <a
                   href={PDF_PATH}
-                  download="rendre-l-attention-au-reel-akik-mohamed-amine.pdf"
+                  download={PDF_FILENAME}
                   className={`${actionClassName} border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-900/10`}
                 >
                   <Download size={17} className="shrink-0" aria-hidden="true" />
@@ -63,7 +66,7 @@ export function EssayPage() {
             <figure className="mx-auto w-full max-w-sm lg:mx-0 lg:justify-self-end">
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#f7f5ee] shadow-xl shadow-slate-200/60">
                 <img
-                  src="/rendre-l-attention-au-reel-cover.png"
+                  src={COVER_PATH}
                   alt="Couverture de l’essai Rendre l’attention au réel"
                   className="block h-auto w-full"
                   loading="eager"
