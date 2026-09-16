@@ -8,6 +8,7 @@ import type { PackingPolicy } from '../../../utils/packing';
 
 export const PACKING_ACTIVE_RUN_STORAGE_KEY = 'lineops.packing.active-run.v1';
 export const PACKING_RUN_STORAGE_SCHEMA_VERSION = 3 as const;
+const PACKING_WORKSPACE_LOCK_NAME = 'lineops.packing.workspace.v1';
 
 export interface PersistedPackingDraft {
   runId: string;
@@ -158,12 +159,18 @@ function sanitizeDraft(value: unknown, run: PackingRun): PersistedPackingDraft |
   };
   if (
     draft.runId !== run.id ||
-    !/^\d*$/.test(draft.completeCartons) ||
-    !/^\d*$/.test(draft.partialCartonUnits) ||
+    typeof draft.completeCartons !== 'string' || draft.completeCartons.length > 64 ||
+    typeof draft.partialCartonUnits !== 'string' || draft.partialCartonUnits.length > 64 ||
     !Number.isFinite(Date.parse(draft.updatedAt)) ||
     (draft.editingDeclarationId !== null && !run.declarations.some((entry) => entry.id === draft.editingDeclarationId))
   ) throw new Error('Invalid packing draft record.');
   return draft;
+}
+
+export async function withPackingWorkspaceLock<T>(operation: () => T | Promise<T>): Promise<T> {
+  const lockManager = typeof navigator === 'undefined' ? undefined : navigator.locks;
+  if (!lockManager) return operation();
+  return lockManager.request(PACKING_WORKSPACE_LOCK_NAME, operation);
 }
 
 function serializeRun(run: PackingRun): PersistedPackingRunV2 {

@@ -248,7 +248,7 @@ export function PackingCalculatorPage() {
     };
   }
 
-  function performLaunch(allowDegraded: boolean) {
+  async function performLaunch(allowDegraded: boolean) {
     const freshValidation = validatePackingPreparation(form, selectedPolicy, new Date());
     if (isLaunching || !freshValidation.canLaunch) {
       setValidationNow(new Date());
@@ -259,12 +259,11 @@ export function PackingCalculatorPage() {
 
     setIsLaunching(true);
     setLaunchError(null);
-    transitionState(() => {
-      try {
+    try {
         if (allowDegraded) {
-          startRun(launchInput);
+          await startRun(launchInput);
         } else {
-          const attempt = tryStartRun(launchInput);
+          const attempt = await tryStartRun(launchInput);
           if (attempt.status === 'degraded') {
             setIsLaunching(false);
             setShowDegradedLaunchConfirm(true);
@@ -277,7 +276,6 @@ export function PackingCalculatorPage() {
         setIsLaunching(false);
         setLaunchError('Le suivi n’a pas pu démarrer. Réessayez ou vérifiez la disponibilité du navigateur.');
       }
-    });
   }
 
   function requestLaunch() {
@@ -302,12 +300,12 @@ export function PackingCalculatorPage() {
       setShowDegradedLaunchConfirm(true);
       return;
     }
-    performLaunch(false);
+    void performLaunch(false);
   }
 
   function continueWithoutPersistence() {
     setShowDegradedLaunchConfirm(false);
-    performLaunch(true);
+    void performLaunch(true);
   }
 
   function getRestoredPreparation(): PackingPlanningFormState | null {
@@ -329,7 +327,7 @@ export function PackingCalculatorPage() {
     focusAfterRender('#packing-quantity');
   }
 
-  function performModifyPreparation(allowDegraded: boolean) {
+  async function performModifyPreparation(allowDegraded: boolean) {
     if (!activeRun) return;
     const restored = getRestoredPreparation();
     if (!restored) return;
@@ -337,10 +335,9 @@ export function PackingCalculatorPage() {
     setShowModifyConfirm(false);
     setShowDegradedModifyConfirm(false);
 
-    transitionState(() => {
       if (allowDegraded) {
         setForm(restored);
-        const clearResult = clearRun();
+        const clearResult = await clearRun();
         if (clearResult.status !== 'persisted') {
           setShowDegradedModifyConfirm(true);
           return;
@@ -354,13 +351,12 @@ export function PackingCalculatorPage() {
         setShowDegradedModifyConfirm(true);
         return;
       }
-      const clearResult = tryClearRun();
+      const clearResult = await tryClearRun();
       if (clearResult.status === 'degraded') {
         setShowDegradedModifyConfirm(true);
         return;
       }
       finishModifyPreparation(policy);
-    });
   }
 
   function requestModifyPreparation() {
@@ -369,7 +365,7 @@ export function PackingCalculatorPage() {
       setShowModifyConfirm(true);
       return;
     }
-    performModifyPreparation(false);
+    void performModifyPreparation(false);
   }
 
   return (
@@ -399,7 +395,7 @@ export function PackingCalculatorPage() {
           description="Les déclarations déjà enregistrées pour ce run seront supprimées."
           confirmLabel="Modifier et supprimer"
           onCancel={() => setShowModifyConfirm(false)}
-          onConfirm={() => performModifyPreparation(false)}
+          onConfirm={() => void performModifyPreparation(false)}
         />
       ) : null}
       {showDegradedModifyConfirm ? (
@@ -409,7 +405,7 @@ export function PackingCalculatorPage() {
           confirmLabel="Continuer sans sauvegarde"
           tone="warning"
           onCancel={() => setShowDegradedModifyConfirm(false)}
-          onConfirm={() => performModifyPreparation(true)}
+          onConfirm={() => void performModifyPreparation(true)}
         />
       ) : null}
 

@@ -5,6 +5,7 @@ import {
   loadPackingWorkspace,
   PACKING_ACTIVE_RUN_STORAGE_KEY,
   persistPackingWorkspace,
+  withPackingWorkspaceLock,
   type PersistedPackingDraft,
   type NewPackingRunInput,
   type PackingRunWriteResult,
@@ -127,34 +128,41 @@ export function usePackingActiveRun() {
     }
   }, []);
 
-  const tryStartRun = useCallback((input: NewPackingRunInput): PackingRunStartAttempt => {
+  const tryStartRun = useCallback(async (input: NewPackingRunInput): Promise<PackingRunStartAttempt> => withPackingWorkspaceLock(() => {
     const run = createNewPackingRun(input);
     const storage = getBrowserPackingStorage();
-    const result = storage ? persistPackingWorkspace(storage, run, null) : degradedWriteResult;
+    const current = stateRef.current;
+    const result = storage ? persistPackingWorkspace(storage, run, null, current.revision) : degradedWriteResult;
     const status = toPersistenceStatus(result);
     if (status === 'persisted') commitState({ activeRun: run, draft: null, revision: result.status === 'persisted' ? result.revision ?? 0 : 0, persistenceStatus: status, conflictDetected: false, externalSyncVersion: 0 });
+    else if (result.status === 'conflict' && storage) reconcileConflict(storage, current);
     else setState((current) => ({ ...current, persistenceStatus: status }));
     return { run, status };
-  }, [commitState]);
+  }), [commitState, reconcileConflict]);
 
-  const startRun = useCallback((input: NewPackingRunInput): PackingRun => {
+  const startRun = useCallback(async (input: NewPackingRunInput): Promise<PackingRun> => withPackingWorkspaceLock(() => {
     const run = createNewPackingRun(input);
     const storage = getBrowserPackingStorage();
-    const result = storage ? persistPackingWorkspace(storage, run, null) : degradedWriteResult;
+    const current = stateRef.current;
+    const result = storage ? persistPackingWorkspace(storage, run, null, current.revision) : degradedWriteResult;
+    if (result.status === 'conflict' && storage) {
+      reconcileConflict(storage, current);
+      throw new Error('Packing workspace changed in another tab.');
+    }
     commitState({ activeRun: run, draft: null, revision: result.status === 'persisted' ? result.revision ?? 0 : 0, persistenceStatus: toPersistenceStatus(result), conflictDetected: false, externalSyncVersion: 0 });
     return run;
-  }, [commitState]);
+  }), [commitState, reconcileConflict]);
 
-  const updateRun = useCallback((run: PackingRun): PackingRunWriteResult => {
+  const updateRun = useCallback(async (run: PackingRun): Promise<PackingRunWriteResult> => withPackingWorkspaceLock(() => {
     const storage = getBrowserPackingStorage();
     const current = stateRef.current;
     const result = storage ? persistPackingWorkspace(storage, run, null, current.revision) : degradedWriteResult;
     if (result.status === 'conflict' && storage) reconcileConflict(storage, current);
     else commitState({ activeRun: run, draft: null, revision: result.status === 'persisted' ? result.revision ?? current.revision : current.revision, persistenceStatus: toPersistenceStatus(result), conflictDetected: false, externalSyncVersion: current.externalSyncVersion });
     return result;
-  }, [commitState, reconcileConflict]);
+  }), [commitState, reconcileConflict]);
 
-  const updateDraft = useCallback((draft: PersistedPackingDraft | null): PackingRunWriteResult => {
+  const updateDraft = useCallback(async (draft: PersistedPackingDraft | null): Promise<PackingRunWriteResult> => withPackingWorkspaceLock(() => {
     const storage = getBrowserPackingStorage();
     const current = stateRef.current;
     if (!current.activeRun) return degradedWriteResult;
@@ -162,9 +170,9 @@ export function usePackingActiveRun() {
     if (result.status === 'conflict' && storage) reconcileConflict(storage, current);
     else commitState({ ...current, draft, revision: result.status === 'persisted' ? result.revision ?? current.revision : current.revision, persistenceStatus: toPersistenceStatus(result), conflictDetected: false });
     return result;
-  }, [commitState, reconcileConflict]);
+  }), [commitState, reconcileConflict]);
 
-  const tryClearRun = useCallback((): PackingRunWriteResult => {
+  const tryClearRun = useCallback(async (): Promise<PackingRunWriteResult> => withPackingWorkspaceLock(() => {
     const storage = getBrowserPackingStorage();
     const current = stateRef.current;
     const result = storage ? persistPackingWorkspace(storage, null, null, current.revision) : degradedWriteResult;
@@ -172,9 +180,9 @@ export function usePackingActiveRun() {
     else if (result.status === 'conflict' && storage) reconcileConflict(storage, current);
     else commitState({ ...current, persistenceStatus: 'degraded', conflictDetected: result.status === 'conflict' || current.conflictDetected });
     return result;
-  }, [commitState, reconcileConflict]);
+  }), [commitState, reconcileConflict]);
 
-  const clearRun = useCallback((): PackingRunWriteResult => {
+  const clearRun = useCallback(async (): Promise<PackingRunWriteResult> => {
     return tryClearRun();
   }, [tryClearRun]);
 

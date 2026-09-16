@@ -1,4 +1,4 @@
-import { isValidPackingInput, MAX_PACKING_CADENCE_UNITS_PER_MINUTE, MAX_PACKING_UNITS, parsePositiveIntegerInput, type PackingInput, type PackingPolicy } from '../../../utils/packing';
+import { calculatePackingOptions, isValidPackingInput, MAX_PACKING_CADENCE_UNITS_PER_MINUTE, MAX_PACKING_DURATION_MINUTES, MAX_PACKING_UNITS, parsePositiveIntegerInput, type PackingInput, type PackingPolicy } from '../../../utils/packing';
 
 export type PackingPreparationField =
   | 'quantity'
@@ -168,6 +168,17 @@ export function validatePackingPreparation(
     fields.unitsPerCarton.state === 'valid' &&
     fields.cartonsPerPalette.state === 'valid' &&
     input === null;
+
+  if (input && selectedPolicy && fields.referenceCadence.state === 'valid') {
+    const cadence = parsePositiveIntegerInput(values.referenceCadence)!;
+    const selectedPlan = calculatePackingOptions(input).find((option) => option.policy === selectedPolicy);
+    if (selectedPlan && selectedPlan.totalPrepared / cadence > MAX_PACKING_DURATION_MINUTES) {
+      fields.referenceCadence = {
+        state: 'invalid',
+        message: 'La cadence est trop faible pour garantir une projection calendaire fiable.',
+      };
+    }
+  }
 
   const invalidFields = (Object.keys(fields) as PackingPreparationField[])
     .filter((field) => fields[field].state === 'invalid')

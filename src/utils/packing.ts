@@ -2,6 +2,7 @@ export type PackingPolicy = 'no-overrun' | 'round-carton' | 'round-pallet';
 
 export const MAX_PACKING_UNITS = 1_000_000_000_000;
 export const MAX_PACKING_CADENCE_UNITS_PER_MINUTE = 1_000_000_000;
+export const MAX_PACKING_DURATION_MINUTES = 10 * 365 * 24 * 60;
 
 export interface PackingInput {
   quantity: number;

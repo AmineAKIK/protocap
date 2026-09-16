@@ -288,6 +288,21 @@ describe('packing active-run persistence', () => {
     expect(loadPackingWorkspace(storage)).toEqual({ status: 'loaded', activeRun: run, draft, revision: 1 });
   });
 
+  it('restores raw invalid operator text without corrupting the active run', () => {
+    const storage = new MemoryStorage();
+    const run = createRun();
+    const draft = {
+      runId: run.id,
+      completeCartons: '1.5',
+      partialCartonUnits: '1e3',
+      editingDeclarationId: null,
+      updatedAt: '2026-09-14T20:05:00.000Z',
+    };
+
+    persistPackingWorkspace(storage, run, draft);
+    expect(loadPackingWorkspace(storage)).toEqual({ status: 'loaded', activeRun: run, draft, revision: 1 });
+  });
+
   it('rejects a stale write instead of overwriting a newer tab revision', () => {
     const storage = new MemoryStorage();
     const run = createRun();

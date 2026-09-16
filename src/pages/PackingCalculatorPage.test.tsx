@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
@@ -298,6 +298,11 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     await user.type(cartons, '1.5');
     expect((cartons as HTMLInputElement).value).toBe('1.5');
     expect(screen.getByText('Saisissez uniquement des nombres entiers positifs ou zéro.')).toBeTruthy();
+
+    cleanup();
+    render(<PackingCalculatorPage />);
+    expect(screen.getByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
+    expect((screen.getByLabelText('Cartons complets') as HTMLInputElement).value).toBe('1.5');
   });
 
   it('rejects over-declaration and supports correction then removal by identity', async () => {

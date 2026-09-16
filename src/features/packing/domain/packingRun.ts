@@ -1,6 +1,7 @@
 import {
   calculatePackingOptions,
   MAX_PACKING_CADENCE_UNITS_PER_MINUTE,
+  MAX_PACKING_DURATION_MINUTES,
   MAX_PACKING_UNITS,
   type PackingPolicy,
 } from '../../../utils/packing';
@@ -209,6 +210,9 @@ export function validatePackingRun(run: PackingRun): void {
   }
   if (run.referenceCadenceUnitsPerMinute > MAX_PACKING_CADENCE_UNITS_PER_MINUTE) {
     throw new PackingRunDomainError('INVALID_RUN', `Reference cadence cannot exceed ${MAX_PACKING_CADENCE_UNITS_PER_MINUTE} units per minute.`);
+  }
+  if (run.plannedUnits / run.referenceCadenceUnitsPerMinute > MAX_PACKING_DURATION_MINUTES) {
+    throw new PackingRunDomainError('INVALID_RUN', 'The planned duration exceeds the supported 10-year horizon.');
   }
 
   if (!isNonNegativeSafeInteger(run.varianceUnits)) {

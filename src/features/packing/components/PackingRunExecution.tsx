@@ -38,7 +38,7 @@ interface PackingRunExecutionProps {
   persistenceStatus: PackingPersistenceStatus;
   persistedDraft: PersistedPackingDraft | null;
   conflictDetected: boolean;
-  onRunChange: (run: PackingRun) => PackingRunWriteResult;
+  onRunChange: (run: PackingRun) => Promise<PackingRunWriteResult>;
   onDraftChange: (draft: PersistedPackingDraft | null) => void;
 }
 
@@ -164,8 +164,8 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
     });
   }
 
-  function commitRun(nextRun: PackingRun, message: string): boolean {
-    const result = onRunChange(nextRun);
+  async function commitRun(nextRun: PackingRun, message: string): Promise<boolean> {
+    const result = await onRunChange(nextRun);
     if (result.status === 'conflict') {
       setFeedback('');
       setErrorMessage('La déclaration n’a pas été enregistrée car un autre onglet a modifié ce suivi. Les données récentes ont été rechargées.');
@@ -176,21 +176,21 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
     return true;
   }
 
-  function declareFullLoad() {
+  async function declareFullLoad() {
     try {
       const nextRun = addPackingDeclaration(run, {
         ...createPackingDeclarationIdentity(),
         completeCartons: run.cartonsPerLoad,
         partialCartonUnits: 0,
       });
-      commitRun(nextRun, `${formatPackingNumber(fullLoadUnits)} unités déclarées.`);
+      await commitRun(nextRun, `${formatPackingNumber(fullLoadUnits)} unités déclarées.`);
     } catch (error) {
       setFeedback('');
       setErrorMessage(getPackingDeclarationErrorMessage(error));
     }
   }
 
-  function submitPartialDeclaration(event: FormEvent<HTMLFormElement>) {
+  async function submitPartialDeclaration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = getDeclarationDraftInput(draft);
     if (!input) {
@@ -201,7 +201,7 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
       const nextRun = editingDeclarationId
         ? replacePackingDeclaration(run, editingDeclarationId, input)
         : addPackingDeclaration(run, { ...createPackingDeclarationIdentity(), ...input });
-      if (!commitRun(nextRun, editingDeclarationId ? 'Déclaration corrigée.' : `${formatPackingNumber(preview.units ?? 0)} unités déclarées.`)) return;
+      if (!await commitRun(nextRun, editingDeclarationId ? 'Déclaration corrigée.' : `${formatPackingNumber(preview.units ?? 0)} unités déclarées.`)) return;
       setEditingDeclarationId(null);
       setDraft(emptyDeclarationDraft);
     } catch (error) {
@@ -219,9 +219,9 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
     setErrorMessage('');
   }
 
-  function deleteDeclaration(declarationId: string) {
+  async function deleteDeclaration(declarationId: string) {
     try {
-      if (!commitRun(removePackingDeclaration(run, declarationId), 'Déclaration supprimée et progression recalculée.')) return;
+      if (!await commitRun(removePackingDeclaration(run, declarationId), 'Déclaration supprimée et progression recalculée.')) return;
       setPendingDeleteId(null);
       if (editingDeclarationId === declarationId) {
         setEditingDeclarationId(null);
@@ -238,7 +238,7 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
         <AccessibleDialog title="Supprimer cette déclaration ?" description="La progression et toutes les estimations seront recalculées immédiatement." contentClassName="p-5" onClose={() => setPendingDeleteId(null)}>
           <div className="flex gap-3">
             <button type="button" className="flex-1 rounded-xl border border-slate-300 py-3 text-sm font-bold" onClick={() => setPendingDeleteId(null)}>Annuler</button>
-            <button type="button" className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white" onClick={() => deleteDeclaration(pendingDeleteId)}>Supprimer</button>
+            <button type="button" className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white" onClick={() => void deleteDeclaration(pendingDeleteId)}>Supprimer</button>
           </div>
         </AccessibleDialog>
       ) : null}
@@ -267,12 +267,12 @@ export function PackingRunExecution({ run, persistenceStatus, persistedDraft, co
             <div className={`packing-v3-reference-gap packing-v3-reference-gap-${variance.tone}`}><span>Écart vs référence</span><strong>{variance.label}</strong><small>{timing.varianceUnitsVsReference >= 0 ? '+' : '−'}{formatPackingNumber(Math.round(Math.abs(timing.varianceUnitsVsReference)))} unités</small></div>
           </div>
 
-          <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={declareFullLoad}>
+          <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={() => void declareFullLoad()}>
             <small>{formatPackingNumber(run.cartonsPerLoad)} cartons · {formatPackingNumber(fullLoadUnits)} unités</small>
             <span><Layers3 size={20} aria-hidden="true" /><strong>{isComplete ? 'Production terminée' : 'Déclarer une palette complète'}</strong></span>
           </button>
 
-          <form className="packing-v3-partial" onSubmit={submitPartialDeclaration}>
+          <form className="packing-v3-partial" onSubmit={(event) => void submitPartialDeclaration(event)}>
             <div className="packing-v3-partial-heading"><div><strong>{editingDeclarationId ? 'Corriger la déclaration' : 'Palette partielle'}</strong><span>Cartons + unités du carton incomplet</span></div><div><span>Aperçu temps réel</span><strong>{preview.units === null ? '—' : formatPackingNumber(preview.units)} unités</strong><small className="packing-v3-live-composition">{formatLiveDraftComposition(preview.normalization)}</small></div></div>
             <div className="packing-v3-partial-controls">
               <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => updateWorkingDraft({ ...draft, completeCartons: value })} />
