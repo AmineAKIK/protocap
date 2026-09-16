@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe('usePackingActiveRun storage acquisition', () => {
-  it('stays usable in degraded mode when reading window.localStorage itself throws', () => {
+  it('stays usable in degraded mode when reading window.localStorage itself throws', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
@@ -41,29 +41,23 @@ describe('usePackingActiveRun storage acquisition', () => {
     expect(result.current.probePersistence()).toBe('degraded');
 
     let startedRun: PackingRun | null = null;
-    expect(() => {
-      act(() => {
-        startedRun = result.current.startRun(runInput());
-      });
-    }).not.toThrow();
+    await act(async () => {
+      startedRun = await result.current.startRun(runInput());
+    });
 
     expect(startedRun).not.toBeNull();
     expect(result.current.activeRun?.id).toBe('00000000-0000-4000-8000-000000000001');
     expect(result.current.persistenceStatus).toBe('degraded');
 
-    expect(() => {
-      act(() => {
-        result.current.updateRun(startedRun!);
-      });
-    }).not.toThrow();
+    await act(async () => {
+      await result.current.updateRun(startedRun!);
+    });
     expect(result.current.persistenceStatus).toBe('degraded');
 
-    expect(() => {
-      act(() => {
-        result.current.clearRun();
-      });
-    }).not.toThrow();
-    expect(result.current.activeRun).toBeNull();
+    await act(async () => {
+      await result.current.clearRun();
+    });
+    expect(result.current.activeRun).toBe(startedRun);
     expect(result.current.persistenceStatus).toBe('degraded');
   });
 
@@ -77,7 +71,7 @@ describe('usePackingActiveRun storage acquisition', () => {
     expect(removeItem).toHaveBeenCalledWith('lineops.packing.persistence-probe.v1');
   });
 
-  it('does not activate a run when the real persistence write fails', () => {
+  it('does not activate a run when the real persistence write fails', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000002');
     const { result } = renderHook(() => usePackingActiveRun());
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -85,8 +79,8 @@ describe('usePackingActiveRun storage acquisition', () => {
     });
 
     let status: string | undefined;
-    act(() => {
-      status = result.current.tryStartRun(runInput()).status;
+    await act(async () => {
+      status = (await result.current.tryStartRun(runInput())).status;
     });
 
     expect(status).toBe('degraded');
@@ -94,21 +88,21 @@ describe('usePackingActiveRun storage acquisition', () => {
     expect(result.current.persistenceStatus).toBe('degraded');
   });
 
-  it('keeps the active run when durable removal fails', () => {
+  it('keeps the active run when durable removal fails', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000003');
     const { result } = renderHook(() => usePackingActiveRun());
-    act(() => {
-      result.current.startRun(runInput());
+    await act(async () => {
+      await result.current.startRun(runInput());
     });
     expect(result.current.activeRun).not.toBeNull();
 
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('Blocked', 'SecurityError');
     });
 
     let status: string | undefined;
-    act(() => {
-      status = result.current.tryClearRun().status;
+    await act(async () => {
+      status = (await result.current.tryClearRun()).status;
     });
 
     expect(status).toBe('degraded');

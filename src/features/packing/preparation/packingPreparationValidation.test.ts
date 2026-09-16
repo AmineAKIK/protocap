@@ -52,6 +52,19 @@ describe('validatePackingPreparation', () => {
     expect(result.launchGuidance).toBeNull();
   });
 
+  it('rejects a volume and cadence combination beyond the supported calendar horizon', () => {
+    const result = validatePackingPreparation({
+      ...validValues,
+      quantity: '1000000000000',
+      unitsPerCarton: '1',
+      cartonsPerPalette: '1',
+      referenceCadence: '1',
+    }, 'no-overrun', afterProductionStart);
+
+    expect(result.fields.referenceCadence.state).toBe('invalid');
+    expect(result.canLaunch).toBe(false);
+  });
+
   it('rejects a production start in the future', () => {
     const result = validatePackingPreparation(
       { ...validValues, productionStartTime: '2026-09-15T12:01' },

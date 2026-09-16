@@ -1,5 +1,11 @@
 export type PackingPolicy = 'no-overrun' | 'round-carton' | 'round-pallet';
 
+export const MAX_PACKING_UNITS = 1_000_000_000_000;
+export const MAX_PACKING_CADENCE_UNITS_PER_MINUTE = 1_000_000_000;
+// Keeps projected timestamps below the ECMAScript Date ceiling, including
+// contemporary production-start timestamps.
+export const MAX_PACKING_DURATION_MINUTES = 100_000_000_000;
+
 export interface PackingInput {
   quantity: number;
   unitsPerCarton: number;
@@ -55,7 +61,7 @@ function calculateExactPackingUnchecked(input: PackingInput): PackingExactResult
 }
 
 export function isValidPackingInput(input: PackingInput): boolean {
-  if (!isPositiveInteger(input.quantity) || !isPositiveInteger(input.unitsPerCarton) || !isPositiveInteger(input.cartonsPerPalette)) {
+  if (!isPositiveInteger(input.quantity) || !isPositiveInteger(input.unitsPerCarton) || !isPositiveInteger(input.cartonsPerPalette) || input.quantity > MAX_PACKING_UNITS) {
     return false;
   }
   const unitsPerPalette = input.unitsPerCarton * input.cartonsPerPalette;
@@ -72,7 +78,7 @@ export function isValidPackingInput(input: PackingInput): boolean {
     Number.isSafeInteger(roundedCartonUnits) &&
     Number.isSafeInteger(roundCartonTotal) &&
     Number.isSafeInteger(roundCartonTotal - input.quantity) &&
-    Number.isSafeInteger(roundPaletteTotal) &&
+    Number.isSafeInteger(roundPaletteTotal) && roundPaletteTotal <= MAX_PACKING_UNITS &&
     Number.isSafeInteger(roundPaletteTotal - input.quantity)
   );
 }

@@ -1,5 +1,6 @@
 import { Clock3, Gauge, Layers3, Pencil, Trash2, TriangleAlert } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
+import { AccessibleDialog } from '../../../components/AccessibleDialog';
 import {
   addPackingDeclaration,
   formatPackingDuration,
@@ -13,14 +14,17 @@ import {
   type PackingRun,
 } from '../domain/packingRun';
 import type { PackingPersistenceStatus } from '../usePackingActiveRun';
+import type { PackingRunWriteResult, PersistedPackingDraft } from '../persistence/packingRunStorage';
 import {
   createPackingDeclarationIdentity,
   emptyDeclarationDraft,
   formatPackingClock,
+  formatPackingFinish,
   formatPackingNumber,
   formatPackingPercent,
   formatPackingReferenceVariance,
   getDeclarationDraftInput,
+  getLiveDraftCreatedAt,
   getPackingDeclarationErrorMessage,
   getPackingRemainingWork,
   normalizePackingDraft,
@@ -32,7 +36,10 @@ import { usePackingNow } from './usePackingNow';
 interface PackingRunExecutionProps {
   run: PackingRun;
   persistenceStatus: PackingPersistenceStatus;
-  onRunChange: (run: PackingRun) => void;
+  persistedDraft: PersistedPackingDraft | null;
+  conflictDetected: boolean;
+  onRunChange: (run: PackingRun) => Promise<PackingRunWriteResult>;
+  onDraftChange: (draft: PersistedPackingDraft | null) => void;
 }
 
 function Stepper({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
@@ -42,7 +49,7 @@ function Stepper({ label, value, onChange }: { label: string; value: string; onC
       <span>{label}</span>
       <div>
         <button type="button" aria-label={`Diminuer ${label}`} onClick={() => onChange(String(Math.max(0, parsed - 1)))}>−</button>
-        <input aria-label={label} inputMode="numeric" pattern="[0-9]*" value={value} onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))} />
+        <input aria-label={label} inputMode="numeric" pattern="[0-9]*" value={value} onChange={(event) => onChange(event.target.value)} />
         <button type="button" aria-label={`Augmenter ${label}`} onClick={() => onChange(String(parsed + 1))}>+</button>
       </div>
     </div>
@@ -85,11 +92,16 @@ function formatDeclarationKind(completeCartons: number, partialCartonUnits: numb
   return formatDraftComposition(completeLoads, remainingCartons, partialCartonUnits);
 }
 
-export function PackingRunExecution({ run, persistenceStatus, onRunChange }: PackingRunExecutionProps) {
+export function PackingRunExecution({ run, persistenceStatus, persistedDraft, conflictDetected, onRunChange, onDraftChange }: PackingRunExecutionProps) {
   const now = usePackingNow();
   const productionStartedAt = getPackingRunProductionStartedAt(run);
-  const [draft, setDraft] = useState<DeclarationDraft>(emptyDeclarationDraft);
-  const [editingDeclarationId, setEditingDeclarationId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DeclarationDraft>(() => persistedDraft?.runId === run.id ? {
+    completeCartons: persistedDraft.completeCartons,
+    partialCartonUnits: persistedDraft.partialCartonUnits,
+  } : emptyDeclarationDraft);
+  const [editingDeclarationId, setEditingDeclarationId] = useState<string | null>(() => persistedDraft?.runId === run.id ? persistedDraft.editingDeclarationId : null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(100);
   const [feedback, setFeedback] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const committedProgress = getPackingRunProgress(run);
@@ -108,11 +120,12 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
     }
     try {
       const normalized = normalizePackingDeclaration(input, run.unitsPerCarton);
+      const liveDraftCreatedAt = getLiveDraftCreatedAt(now, run.declarations);
       const liveRun = editingDeclarationId
         ? replacePackingDeclaration(run, editingDeclarationId, input)
         : addPackingDeclaration(run, {
             id: '__packing-live-draft__',
-            createdAt: now.toISOString(),
+            createdAt: liveDraftCreatedAt,
             ...normalized,
           });
       return {
@@ -136,28 +149,48 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
   const progressPercent = progress.progressRatio * 100;
   const variance = formatPackingReferenceVariance(timing.varianceMinutesVsReference);
   const remainingWork = getPackingRemainingWork(progress.remainingUnits, run.unitsPerCarton, run.cartonsPerLoad);
+  const visibleDeclarations = useMemo(
+    () => [...run.declarations].reverse().slice(0, visibleHistoryCount),
+    [run.declarations, visibleHistoryCount],
+  );
 
-  function commitRun(nextRun: PackingRun, message: string) {
-    onRunChange(nextRun);
-    setErrorMessage('');
-    setFeedback(message);
+  function updateWorkingDraft(nextDraft: DeclarationDraft, nextEditingId = editingDeclarationId) {
+    setDraft(nextDraft);
+    onDraftChange(nextDraft.completeCartons === '' && nextDraft.partialCartonUnits === '' && !nextEditingId ? null : {
+      runId: run.id,
+      ...nextDraft,
+      editingDeclarationId: nextEditingId,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
-  function declareFullLoad() {
+  async function commitRun(nextRun: PackingRun, message: string): Promise<boolean> {
+    const result = await onRunChange(nextRun);
+    if (result.status === 'conflict') {
+      setFeedback('');
+      setErrorMessage('La déclaration n’a pas été enregistrée car un autre onglet a modifié ce suivi. Les données récentes ont été rechargées.');
+      return false;
+    }
+    setErrorMessage('');
+    setFeedback(message);
+    return true;
+  }
+
+  async function declareFullLoad() {
     try {
       const nextRun = addPackingDeclaration(run, {
         ...createPackingDeclarationIdentity(),
         completeCartons: run.cartonsPerLoad,
         partialCartonUnits: 0,
       });
-      commitRun(nextRun, `${formatPackingNumber(fullLoadUnits)} unités déclarées.`);
+      await commitRun(nextRun, `${formatPackingNumber(fullLoadUnits)} unités déclarées.`);
     } catch (error) {
       setFeedback('');
       setErrorMessage(getPackingDeclarationErrorMessage(error));
     }
   }
 
-  function submitPartialDeclaration(event: FormEvent<HTMLFormElement>) {
+  async function submitPartialDeclaration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = getDeclarationDraftInput(draft);
     if (!input) {
@@ -168,7 +201,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
       const nextRun = editingDeclarationId
         ? replacePackingDeclaration(run, editingDeclarationId, input)
         : addPackingDeclaration(run, { ...createPackingDeclarationIdentity(), ...input });
-      commitRun(nextRun, editingDeclarationId ? 'Déclaration corrigée.' : `${formatPackingNumber(preview.units ?? 0)} unités déclarées.`);
+      if (!await commitRun(nextRun, editingDeclarationId ? 'Déclaration corrigée.' : `${formatPackingNumber(preview.units ?? 0)} unités déclarées.`)) return;
       setEditingDeclarationId(null);
       setDraft(emptyDeclarationDraft);
     } catch (error) {
@@ -181,14 +214,15 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
     const declaration = run.declarations.find((entry) => entry.id === declarationId);
     if (!declaration) return;
     setEditingDeclarationId(declarationId);
-    setDraft({ completeCartons: String(declaration.completeCartons), partialCartonUnits: String(declaration.partialCartonUnits) });
+    updateWorkingDraft({ completeCartons: String(declaration.completeCartons), partialCartonUnits: String(declaration.partialCartonUnits) }, declarationId);
     setFeedback('');
     setErrorMessage('');
   }
 
-  function deleteDeclaration(declarationId: string) {
+  async function deleteDeclaration(declarationId: string) {
     try {
-      commitRun(removePackingDeclaration(run, declarationId), 'Déclaration supprimée et progression recalculée.');
+      if (!await commitRun(removePackingDeclaration(run, declarationId), 'Déclaration supprimée et progression recalculée.')) return;
+      setPendingDeleteId(null);
       if (editingDeclarationId === declarationId) {
         setEditingDeclarationId(null);
         setDraft(emptyDeclarationDraft);
@@ -200,6 +234,14 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
 
   return (
     <section aria-labelledby="packing-production-title" className="packing-v3-production packing-v3-stage">
+      {pendingDeleteId ? (
+        <AccessibleDialog title="Supprimer cette déclaration ?" description="La progression et toutes les estimations seront recalculées immédiatement." contentClassName="p-5" onClose={() => setPendingDeleteId(null)}>
+          <div className="flex gap-3">
+            <button type="button" className="flex-1 rounded-xl border border-slate-300 py-3 text-sm font-bold" onClick={() => setPendingDeleteId(null)}>Annuler</button>
+            <button type="button" className="flex-1 rounded-xl bg-red-700 py-3 text-sm font-bold text-white" onClick={() => void deleteDeclaration(pendingDeleteId)}>Supprimer</button>
+          </div>
+        </AccessibleDialog>
+      ) : null}
       <header className="packing-v3-stage-header">
         <div><h1 id="packing-production-title" tabIndex={-1}>Conduite de production</h1><p>Suivez l’avancement et déclarez ce qui est réellement conditionné.</p></div>
         <span className="packing-v3-status packing-v3-status-running"><span /> Production en cours</span>
@@ -209,7 +251,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
         <div className="packing-v3-production-main">
           <div className="packing-v3-primary-kpis">
             <div><span>Quantité planifiée</span><strong>{formatPackingNumber(run.plannedUnits)}</strong><small>{formatPackingNumber(Math.ceil(run.plannedUnits / run.unitsPerCarton))} cartons</small></div>
-            <div><span>Quantité déclarée</span><strong>{formatPackingNumber(progress.declaredUnits)}</strong><small>{committedProgress.declarationCount} déclaration{committedProgress.declarationCount > 1 ? 's' : ''} enregistrée{committedProgress.declarationCount > 1 ? 's' : ''}{hasLiveDraft ? ' + saisie en cours' : ''}</small></div>
+            <div><span>Quantité enregistrée</span><strong>{formatPackingNumber(committedProgress.declaredUnits)}</strong><small>{committedProgress.declarationCount} déclaration{committedProgress.declarationCount > 1 ? 's' : ''} enregistrée{committedProgress.declarationCount > 1 ? 's' : ''}{hasLiveDraft ? ' · saisie en cours incluse ci-dessous' : ''}</small></div>
             <div className="packing-v3-remaining"><span>Quantité restante</span><strong>{formatPackingNumber(progress.remainingUnits)} unités</strong><small>{formatPackingPercent(Math.max(0, 100 - progressPercent))} % du plan restant</small></div>
           </div>
 
@@ -221,23 +263,23 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
           <div className="packing-v3-time-kpis">
             <div><span><Clock3 size={16} /> Temps écoulé</span><strong>{formatPackingDuration(timing.elapsedMinutes)}</strong><small>Depuis {formatPackingClock(productionStartedAt)}</small></div>
             <div><span><Gauge size={16} /> Temps estimé total</span><strong>{formatPackingDuration(progress.estimatedTotalMinutes)}</strong><small>À {formatPackingNumber(run.referenceCadenceUnitsPerMinute)} u/min</small></div>
-            <div><span><Clock3 size={16} /> Temps estimé restant</span><strong>{formatPackingDuration(progress.estimatedRemainingMinutes)}</strong><small>Fin estimée {formatPackingClock(timing.projectedFinishAt)}</small></div>
+            <div><span><Clock3 size={16} /> Temps estimé restant</span><strong>{formatPackingDuration(progress.estimatedRemainingMinutes)}</strong><small>Fin estimée {formatPackingFinish(timing.projectedFinishAt, now)}</small></div>
             <div className={`packing-v3-reference-gap packing-v3-reference-gap-${variance.tone}`}><span>Écart vs référence</span><strong>{variance.label}</strong><small>{timing.varianceUnitsVsReference >= 0 ? '+' : '−'}{formatPackingNumber(Math.round(Math.abs(timing.varianceUnitsVsReference)))} unités</small></div>
           </div>
 
-          <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={declareFullLoad}>
+          <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={() => void declareFullLoad()}>
             <small>{formatPackingNumber(run.cartonsPerLoad)} cartons · {formatPackingNumber(fullLoadUnits)} unités</small>
             <span><Layers3 size={20} aria-hidden="true" /><strong>{isComplete ? 'Production terminée' : 'Déclarer une palette complète'}</strong></span>
           </button>
 
-          <form className="packing-v3-partial" onSubmit={submitPartialDeclaration}>
+          <form className="packing-v3-partial" onSubmit={(event) => void submitPartialDeclaration(event)}>
             <div className="packing-v3-partial-heading"><div><strong>{editingDeclarationId ? 'Corriger la déclaration' : 'Palette partielle'}</strong><span>Cartons + unités du carton incomplet</span></div><div><span>Aperçu temps réel</span><strong>{preview.units === null ? '—' : formatPackingNumber(preview.units)} unités</strong><small className="packing-v3-live-composition">{formatLiveDraftComposition(preview.normalization)}</small></div></div>
             <div className="packing-v3-partial-controls">
-              <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => setDraft((current) => ({ ...current, completeCartons: value }))} />
-              <Stepper label="Unités dans le carton incomplet" value={draft.partialCartonUnits} onChange={(value) => setDraft((current) => ({ ...current, partialCartonUnits: value }))} />
+              <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => updateWorkingDraft({ ...draft, completeCartons: value })} />
+              <Stepper label="Unités dans le carton incomplet" value={draft.partialCartonUnits} onChange={(value) => updateWorkingDraft({ ...draft, partialCartonUnits: value })} />
               <button type="submit" disabled={isComplete && !editingDeclarationId}>{editingDeclarationId ? 'Enregistrer la correction' : 'Enregistrer la palette partielle'}</button>
             </div>
-            {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); setDraft(emptyDeclarationDraft); }}>Annuler la correction</button> : null}
+            {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); updateWorkingDraft(emptyDeclarationDraft, null); }}>Annuler la correction</button> : null}
             <p role={hasLiveDraft ? 'status' : undefined} aria-hidden={!hasLiveDraft} className={`packing-v3-feedback packing-v3-live-feedback ${hasLiveDraft ? '' : 'packing-v3-live-feedback-empty'}`}>{hasLiveDraft ? 'Saisie en cours incluse dans la progression et les estimations. Validez pour l’ajouter à l’historique.' : '\u00a0'}</p>
             {preview.error ? <p className="packing-v3-inline-error">{preview.error}</p> : null}
           </form>
@@ -256,6 +298,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
           </section>
 
           {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">La sauvegarde locale n’est pas garantie : les dernières déclarations pourront être perdues au rechargement.</p> : null}
+          {conflictDetected ? <p role="alert" className="packing-v3-persistence-warning">Ce suivi a été modifié dans un autre onglet. Les données les plus récentes ont été rechargées ; vérifiez-les avant de continuer.</p> : null}
           {errorMessage ? <div role="alert" className="packing-v3-error"><TriangleAlert size={16} />{errorMessage}</div> : null}
           {feedback ? <p role="status" aria-live="polite" className="packing-v3-feedback">{feedback}</p> : null}
         </div>
@@ -263,7 +306,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
         <aside className="packing-v3-history" aria-label="Historique des déclarations">
           <div className="packing-v3-history-head"><div><strong>Historique des déclarations</strong><span>{run.declarations.length} déclaration{run.declarations.length > 1 ? 's' : ''} enregistrée{run.declarations.length > 1 ? 's' : ''}</span></div></div>
           <div className="packing-v3-history-scroll">
-            {run.declarations.length === 0 ? <p className="packing-v3-history-empty">Aucune production déclarée pour le moment.</p> : [...run.declarations].reverse().map((declaration) => {
+            {run.declarations.length === 0 ? <p className="packing-v3-history-empty">Aucune production déclarée pour le moment.</p> : visibleDeclarations.map((declaration) => {
               const units = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
               const declarationKind = formatDeclarationKind(declaration.completeCartons, declaration.partialCartonUnits, run.cartonsPerLoad);
               const isCompleteLoadDeclaration =
@@ -273,13 +316,18 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
               return (
                 <div className="packing-v3-history-row" key={declaration.id}>
                   <time dateTime={declaration.createdAt}>{formatPackingClock(declaration.createdAt)}</time>
-                  <span><Layers3 size={14} aria-hidden="true" />{isCompleteLoadDeclaration ? 'Palette complète' : 'Palette partielle'}{declarationKind !== 'Palette complète' ? <small> · {declarationKind}</small> : null}</span>
+                  <span><Layers3 size={14} aria-hidden="true" />{isCompleteLoadDeclaration ? declarationKind : 'Palette partielle'}{!isCompleteLoadDeclaration ? <small> · {declarationKind}</small> : null}</span>
                   <strong>{formatPackingNumber(units)} unités</strong>
                   <button type="button" onClick={() => beginCorrection(declaration.id)} aria-label={`Corriger la déclaration de ${formatPackingNumber(units)} unités`}><Pencil size={14} />Corriger</button>
-                  <button type="button" className="packing-v3-history-delete" onClick={() => deleteDeclaration(declaration.id)} aria-label={`Supprimer la déclaration de ${formatPackingNumber(units)} unités`}><Trash2 size={14} /></button>
+                  <button type="button" className="packing-v3-history-delete" onClick={() => setPendingDeleteId(declaration.id)} aria-label={`Supprimer la déclaration de ${formatPackingNumber(units)} unités`}><Trash2 size={14} /></button>
                 </div>
               );
             })}
+            {visibleHistoryCount < run.declarations.length ? (
+              <button type="button" className="packing-v3-history-more" onClick={() => setVisibleHistoryCount((count) => count + 100)}>
+                Afficher 100 déclarations supplémentaires
+              </button>
+            ) : null}
           </div>
           <div className="packing-v3-history-total"><span>Total enregistré</span><strong>{formatPackingNumber(committedProgress.declaredUnits)} unités</strong></div>
         </aside>

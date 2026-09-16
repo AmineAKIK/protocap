@@ -1,5 +1,8 @@
 import {
   calculatePackingOptions,
+  MAX_PACKING_CADENCE_UNITS_PER_MINUTE,
+  MAX_PACKING_DURATION_MINUTES,
+  MAX_PACKING_UNITS,
   type PackingPolicy,
 } from '../../../utils/packing';
 
@@ -10,6 +13,8 @@ export type PackingRunDomainErrorCode =
   | 'UNSAFE_ARITHMETIC'
   | 'OVER_DECLARATION'
   | 'DECLARATION_NOT_FOUND';
+
+const MAX_CLOCK_SKEW_MS = 5 * 60_000;
 
 export class PackingRunDomainError extends RangeError {
   readonly code: PackingRunDomainErrorCode;
@@ -196,6 +201,20 @@ export function validatePackingRun(run: PackingRun): void {
   assertPositiveSafeInteger(run.referenceCadenceUnitsPerMinute, 'referenceCadenceUnitsPerMinute');
   assertPackingPolicy(run.selectedPolicy);
 
+  if (Date.parse(getPackingRunProductionStartedAt(run)) > Date.now() + MAX_CLOCK_SKEW_MS) {
+    throw new PackingRunDomainError('INVALID_RUN', 'Production start cannot be dated in the future.');
+  }
+
+  if (run.plannedUnits > MAX_PACKING_UNITS || run.requestedUnits > MAX_PACKING_UNITS) {
+    throw new PackingRunDomainError('INVALID_RUN', `Packing volumes cannot exceed ${MAX_PACKING_UNITS} units.`);
+  }
+  if (run.referenceCadenceUnitsPerMinute > MAX_PACKING_CADENCE_UNITS_PER_MINUTE) {
+    throw new PackingRunDomainError('INVALID_RUN', `Reference cadence cannot exceed ${MAX_PACKING_CADENCE_UNITS_PER_MINUTE} units per minute.`);
+  }
+  if (run.plannedUnits / run.referenceCadenceUnitsPerMinute > MAX_PACKING_DURATION_MINUTES) {
+    throw new PackingRunDomainError('INVALID_RUN', 'The planned duration exceeds the supported calendar horizon.');
+  }
+
   if (!isNonNegativeSafeInteger(run.varianceUnits)) {
     throw new PackingRunDomainError('INVALID_RUN', 'varianceUnits must be a non-negative safe integer.');
   }
@@ -209,6 +228,9 @@ export function validatePackingRun(run: PackingRun): void {
 
   const seenIds = new Set<string>();
   let declaredUnits = 0;
+  const productionStartedAtMs = Date.parse(getPackingRunProductionStartedAt(run));
+  let previousDeclarationAtMs = productionStartedAtMs;
+  const latestAcceptedTimestampMs = Date.now() + MAX_CLOCK_SKEW_MS;
   for (const declaration of run.declarations) {
     assertIdentity(declaration.id, 'declaration.id');
     assertTimestamp(declaration.createdAt, 'declaration.createdAt');
@@ -216,6 +238,18 @@ export function validatePackingRun(run: PackingRun): void {
       throw new PackingRunDomainError('INVALID_DECLARATION', `Duplicate declaration id: ${declaration.id}`);
     }
     seenIds.add(declaration.id);
+
+    const declarationAtMs = Date.parse(declaration.createdAt);
+    if (declarationAtMs < productionStartedAtMs) {
+      throw new PackingRunDomainError('INVALID_DECLARATION', 'A declaration cannot predate the production start.');
+    }
+    if (declarationAtMs < previousDeclarationAtMs) {
+      throw new PackingRunDomainError('INVALID_DECLARATION', 'Declarations must be stored in chronological order.');
+    }
+    if (declarationAtMs > latestAcceptedTimestampMs) {
+      throw new PackingRunDomainError('INVALID_DECLARATION', 'A declaration cannot be dated in the future.');
+    }
+    previousDeclarationAtMs = declarationAtMs;
 
     const declarationUnits = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
     const remainingCapacity = run.plannedUnits - declaredUnits;
@@ -246,7 +280,9 @@ export function getPackingRunProgress(run: PackingRun): PackingRunProgress {
 export function getPackingRunTiming(run: PackingRun, now: Date = new Date()): PackingRunTiming {
   const progress = getPackingRunProgress(run);
   const startMs = Date.parse(getPackingRunProductionStartedAt(run));
-  const lastDeclaration = run.declarations[run.declarations.length - 1];
+  const lastDeclaration = run.declarations.reduce<PackingDeclaration | undefined>((latest, declaration) => (
+    !latest || Date.parse(declaration.createdAt) > Date.parse(latest.createdAt) ? declaration : latest
+  ), undefined);
   const effectiveNowMs = progress.remainingUnits === 0 && lastDeclaration
     ? Date.parse(lastDeclaration.createdAt)
     : now.getTime();
@@ -258,7 +294,11 @@ export function getPackingRunTiming(run: PackingRun, now: Date = new Date()): Pa
   const referenceExpectedUnits = Math.min(run.plannedUnits, elapsedMinutes * run.referenceCadenceUnitsPerMinute);
   const varianceUnitsVsReference = progress.declaredUnits - referenceExpectedUnits;
   const varianceMinutesVsReference = (progress.declaredUnits / run.referenceCadenceUnitsPerMinute) - elapsedMinutes;
-  const projectedFinishAt = new Date(effectiveNowMs + progress.estimatedRemainingMinutes * 60_000).toISOString();
+  const projectedFinishAtMs = effectiveNowMs + progress.estimatedRemainingMinutes * 60_000;
+  if (!Number.isFinite(projectedFinishAtMs) || projectedFinishAtMs > 8_640_000_000_000_000) {
+    throw new PackingRunDomainError('INVALID_RUN', 'Projected finish date is outside the supported calendar range.');
+  }
+  const projectedFinishAt = new Date(projectedFinishAtMs).toISOString();
 
   return {
     elapsedMinutes,
@@ -286,7 +326,9 @@ export function addPackingDeclaration(
   if (declarationUnits > progress.remainingUnits) {
     throw new PackingRunDomainError('OVER_DECLARATION', `Declaration of ${declarationUnits} units exceeds the ${progress.remainingUnits} units remaining in the run.`);
   }
-  return { ...run, declarations: [...run.declarations, { id: declaration.id, createdAt: declaration.createdAt, ...normalized }] };
+  const nextRun = { ...run, declarations: [...run.declarations, { id: declaration.id, createdAt: declaration.createdAt, ...normalized }] };
+  validatePackingRun(nextRun);
+  return nextRun;
 }
 
 export function replacePackingDeclaration(run: PackingRun, declarationId: string, replacement: PackingDeclarationInput): PackingRun {

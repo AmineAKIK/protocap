@@ -131,6 +131,7 @@ test.describe('Packing Calculator operator declaration flow', () => {
     await execution.getByRole('button', { name: /Enregistrer la correction/i }).click();
     await expect(history).toContainText(/1\s?280 unités/);
     await history.getByRole('button', { name: /Supprimer la déclaration/i }).click();
+    await page.getByRole('dialog', { name: 'Supprimer cette déclaration ?' }).getByRole('button', { name: 'Supprimer' }).click();
     await expect(history).toContainText('Aucune production déclarée pour le moment.');
   });
 

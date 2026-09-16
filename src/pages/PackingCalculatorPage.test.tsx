@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
@@ -233,7 +233,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
         schemaVersion?: number;
         activeRun?: { productionStartedAt?: string; selectedPolicy?: string };
       };
-      expect(stored.schemaVersion).toBe(2);
+      expect(stored.schemaVersion).toBe(3);
       expect(stored.activeRun?.productionStartedAt).toBe(new Date(productionStart).toISOString());
       expect(stored.activeRun?.selectedPolicy).toBe('round-carton');
     });
@@ -279,6 +279,32 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(within(screen.getByLabelText('Historique des déclarations')).getByText('Palette partielle')).toBeTruthy();
   });
 
+  it('preserves the live draft after reload and rejects malformed numeric input without rewriting it', async () => {
+    const user = userEvent.setup();
+    storePackingForm({ quantity: '400000', unitsPerCarton: '480', cartonsPerPalette: '50' });
+    const view = render(<PackingCalculatorPage />);
+    await launchRun(user);
+
+    await user.type(screen.getByLabelText('Cartons complets'), '12');
+    await user.type(screen.getByLabelText('Unités dans le carton incomplet'), '30');
+    view.unmount();
+    render(<PackingCalculatorPage />);
+
+    expect((screen.getByLabelText('Cartons complets') as HTMLInputElement).value).toBe('12');
+    expect((screen.getByLabelText('Unités dans le carton incomplet') as HTMLInputElement).value).toBe('30');
+
+    const cartons = screen.getByLabelText('Cartons complets');
+    await user.clear(cartons);
+    await user.type(cartons, '1.5');
+    expect((cartons as HTMLInputElement).value).toBe('1.5');
+    expect(screen.getByText('Saisissez uniquement des nombres entiers positifs ou zéro.')).toBeTruthy();
+
+    cleanup();
+    render(<PackingCalculatorPage />);
+    expect(screen.getByRole('heading', { name: 'Conduite de production' })).toBeTruthy();
+    expect((screen.getByLabelText('Cartons complets') as HTMLInputElement).value).toBe('1.5');
+  });
+
   it('rejects over-declaration and supports correction then removal by identity', async () => {
     const user = userEvent.setup();
     storePackingForm({ quantity: '100', unitsPerCarton: '10', cartonsPerPalette: '10' });
@@ -301,6 +327,7 @@ describe('PackingCalculatorPage V3 operator workflow', () => {
     expect(screen.getByRole('status').textContent).toBe('Déclaration corrigée.');
 
     await user.click(screen.getByRole('button', { name: /Supprimer la déclaration/i }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer' }));
     expect(screen.getByRole('status').textContent).toBe('Déclaration supprimée et progression recalculée.');
     expect(screen.getByText('Aucune production déclarée pour le moment.')).toBeTruthy();
   });

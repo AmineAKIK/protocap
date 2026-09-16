@@ -115,6 +115,30 @@ export function formatPackingClock(iso: string): string {
   });
 }
 
+export function formatPackingFinish(iso: string, now: Date): string {
+  const finish = new Date(iso);
+  const sameLocalDay = finish.getFullYear() === now.getFullYear()
+    && finish.getMonth() === now.getMonth()
+    && finish.getDate() === now.getDate();
+  if (sameLocalDay) return formatPackingClock(iso);
+  return finish.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function getLiveDraftCreatedAt(
+  now: Date,
+  declarations: readonly { createdAt: string }[],
+): string {
+  const latestDeclarationAtMs = declarations.length > 0
+    ? Date.parse(declarations[declarations.length - 1].createdAt)
+    : 0;
+  return new Date(Math.max(now.getTime(), latestDeclarationAtMs)).toISOString();
+}
+
 function formatPackingDurationMinutes(minutes: number): string {
   const absoluteMinutes = Math.abs(minutes);
   const rounded = Math.round(absoluteMinutes);
