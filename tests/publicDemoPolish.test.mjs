@@ -57,9 +57,10 @@ test('essay is separated from demo-status disclosure and points to the original 
 
   assert.match(essayPage, /Rendre l’attention au réel/);
   assert.match(essayPage, /Technologie, travail et maîtrise des systèmes/);
-  assert.match(essayPage, /rendre-l-attention-au-reel-akik-mohamed-amine\.pdf/);
-  assert.match(essayPage, /download="rendre-l-attention-au-reel-akik-mohamed-amine\.pdf"/);
+  assert.match(essayPage, /const PDF_FILENAME = 'rendre-l-attention-au-reel-akik-mohamed-amine\.pdf'/);
+  assert.match(essayPage, /download=\{PDF_FILENAME\}/);
   assert.match(essayPage, /rendre-l-attention-au-reel-cover\.png/);
+  assert.match(essayPage, /import\.meta\.env\.BASE_URL/);
 
   assert.doesNotMatch(appShell, /to: '\/essai'/);
 });
