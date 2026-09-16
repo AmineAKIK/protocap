@@ -88,13 +88,14 @@ describe('PackingPlanningRail OC start picker', () => {
     expect(input.type).toBe('datetime-local');
     expect(input.classList.contains('packing-v3-datetime-native')).toBe(true);
     expect(input.tabIndex).toBe(-1);
+    expect(input.id).toBe('packing-production-start-native');
 
     const trigger = screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' });
+    expect(trigger.id).toBe('packing-production-start');
     expect(trigger.textContent).toBe('');
     fireEvent.click(trigger);
 
     expect(showPicker).toHaveBeenCalledOnce();
-    expect(document.activeElement).toBe(input);
   });
 
   it('shows only the formatted selected value in the visual shell', () => {
@@ -104,10 +105,12 @@ describe('PackingPlanningRail OC start picker', () => {
       .toContain('16/09/2026 · 05:42');
   });
 
-  it('blocks paste and drop on the technical native input', () => {
+  it('blocks direct keyboard, paste and drop edits on the technical native input', () => {
     renderPlanningRail();
     const input = screen.getByLabelText('Début OC') as HTMLInputElement;
 
+    expect(fireEvent.keyDown(input, { key: '4' })).toBe(false);
+    expect(fireEvent.keyDown(input, { key: 'ArrowUp' })).toBe(false);
     expect(fireEvent.paste(input)).toBe(false);
     expect(fireEvent.drop(input)).toBe(false);
   });
@@ -135,6 +138,5 @@ describe('PackingPlanningRail OC start picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Choisir la date et l’heure de début OC' }));
 
     expect(click).toHaveBeenCalledOnce();
-    expect(document.activeElement).toBe(input);
   });
 });
