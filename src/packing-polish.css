@@ -18,7 +18,7 @@
 .packing-v3-partial-controls > button,
 .packing-v3-history-row button,
 .packing-v3-preparation-reset,
-.packing-v3-datetime-trigger {
+.packing-v3-datetime-display {
   transition:
     border-color 150ms ease,
     background-color 150ms ease,
@@ -81,54 +81,66 @@
   color: #64748b;
 }
 
-.packing-v3-datetime-control {
-  gap: .3rem;
+.packing-v3-preparation .packing-v3-field-control {
+  min-height: 2.25rem;
 }
 
-.packing-v3-datetime-trigger {
-  display: inline-grid;
-  width: 1.7rem;
-  height: 1.7rem;
-  flex: 0 0 auto;
-  place-items: center;
+.packing-v3-datetime-control {
+  position: relative;
   padding: 0;
-  border: 1px solid #cbd5df;
-  border-radius: .45rem;
-  background: #f8fafb;
-  color: #475569;
+}
+
+.packing-v3-datetime-display {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: .45rem;
+  padding: 0 .25rem;
+  border: 0;
+  background: transparent;
+  color: #1e293b;
+  font: inherit;
+  font-size: .96rem;
+  font-weight: 800;
+  text-align: left;
   cursor: pointer;
 }
 
-.packing-v3-datetime-trigger:hover {
-  border-color: #8fbdb8;
-  background: #edf8f6;
+.packing-v3-datetime-display:hover {
   color: #0b625c;
 }
 
-.packing-v3-datetime-trigger:focus-visible {
+.packing-v3-datetime-display:focus-visible {
   outline: 3px solid rgb(15 159 149 / .2);
-  outline-offset: 2px;
+  outline-offset: 1px;
+  border-radius: .35rem;
 }
 
-.packing-v3-field-control input.packing-v3-datetime-input {
-  color-scheme: light;
-  font-size: 1rem;
-  cursor: pointer;
+.packing-v3-datetime-display > svg {
+  flex: 0 0 auto;
+  color: #64748b;
 }
 
-.packing-v3-field-control input.packing-v3-datetime-input-empty {
-  color: transparent;
-  caret-color: transparent;
+.packing-v3-datetime-display > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.packing-v3-field-control input.packing-v3-datetime-input-empty::-webkit-datetime-edit {
-  color: transparent;
+.packing-v3-datetime-display-empty {
+  min-height: 1em;
 }
 
-.packing-v3-field-control input.packing-v3-datetime-input::-webkit-calendar-picker-indicator {
-  width: 0;
-  margin: 0;
-  padding: 0;
+.packing-v3-field-control input.packing-v3-datetime-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
   opacity: 0;
   pointer-events: none;
 }
@@ -139,10 +151,10 @@
 
 .packing-v3-field-message {
   display: block;
-  min-height: 2.2rem;
-  margin-top: .03rem;
+  min-height: 1.25rem;
+  margin-top: .02rem;
   color: #64748b;
-  font-size: .64rem;
+  font-size: .62rem;
   line-height: 1.15;
 }
 
@@ -157,11 +169,11 @@
 }
 
 .packing-v3-launch-guidance {
-  margin: .45rem 0 0;
+  margin: .35rem 0 0;
   color: #475569;
-  font-size: .72rem;
+  font-size: .7rem;
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.3;
   text-align: center;
 }
 
@@ -179,7 +191,7 @@
 .packing-v3-preparation-reset-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: .45rem;
+  margin-top: .35rem;
 }
 
 .packing-v3-preparation-reset {
@@ -291,6 +303,11 @@
 }
 
 @media (max-width: 1023px), (max-height: 699px) {
+  .packing-v3-field-message {
+    min-height: 2.2rem;
+    font-size: .64rem;
+  }
+
   .packing-v3-next-work {
     min-height: auto;
     flex: 0 0 auto;
