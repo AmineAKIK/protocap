@@ -28,6 +28,7 @@ test('public demo metadata is canonical and shareable', async () => {
   assert.match(robots, new RegExp(`Sitemap: ${PUBLIC_ORIGIN}/sitemap\\.xml`));
   for (const path of [
     '/',
+    '/essai',
     '/rapport',
     '/proposition-pilote',
     '/shiftguide',
@@ -39,6 +40,29 @@ test('public demo metadata is canonical and shareable', async () => {
     assert.match(sitemap, new RegExp(`<loc>${PUBLIC_ORIGIN}${path === '/' ? '/' : path}</loc>`));
   }
   assert.match(socialCard, /ProtoCap/);
+});
+
+test('essay is separated from demo-status disclosure and points to the original PDF asset', async () => {
+  const [homePage, essayPage, appShell] = await Promise.all([
+    read('src/pages/HomePage.tsx'),
+    read('src/pages/EssayPage.tsx'),
+    read('src/components/AppShell.tsx'),
+  ]);
+
+  assert.match(homePage, /Pourquoi ProtoCap existe/);
+  assert.match(homePage, /Découvrir l’essai/);
+  assert.match(homePage, /to="\/essai"/);
+  assert.match(homePage, /Statut du démonstrateur/);
+  assert.doesNotMatch(homePage, /Trois jours en tant que conducteur de ligne/);
+
+  assert.match(essayPage, /Rendre l’attention au réel/);
+  assert.match(essayPage, /Technologie, travail et maîtrise des systèmes/);
+  assert.match(essayPage, /const PDF_FILENAME = 'rendre-l-attention-au-reel-akik-mohamed-amine\.pdf'/);
+  assert.match(essayPage, /download=\{PDF_FILENAME\}/);
+  assert.match(essayPage, /rendre-l-attention-au-reel-cover\.png/);
+  assert.match(essayPage, /import\.meta\.env\.BASE_URL/);
+
+  assert.doesNotMatch(appShell, /to: '\/essai'/);
 });
 
 test('Céline disclosure states the browser, server and remote-provider data boundaries', async () => {

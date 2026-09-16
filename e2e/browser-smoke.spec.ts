@@ -36,6 +36,21 @@ test.describe('browser and responsive smoke', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('essay page exposes readable and downloadable PDF actions without overflow', async ({ page }) => {
+    await page.goto('/essai');
+    await expect(page.getByRole('heading', { name: 'Rendre l’attention au réel' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Couverture de l’essai Rendre l’attention au réel' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Lire le PDF' })).toHaveAttribute(
+      'href',
+      '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf',
+    );
+    await expect(page.getByRole('link', { name: 'Télécharger le PDF' })).toHaveAttribute(
+      'download',
+      'rendre-l-attention-au-reel-akik-mohamed-amine.pdf',
+    );
+    await expectNoHorizontalOverflow(page);
+  });
+
   test('Pilot proposal is stable on mobile, tablet, small laptop and desktop widths', async ({ page }) => {
     const viewports = [
       { width: 390, height: 844 },

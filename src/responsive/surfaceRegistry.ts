@@ -17,6 +17,7 @@ export interface ResponsiveSurface {
  */
 export const RESPONSIVE_SURFACES: readonly ResponsiveSurface[] = [
   { id: 'home', route: '/', coverage: 'browser-contract', contractRef: 'home' },
+  { id: 'essay', route: '/essai', coverage: 'browser-contract', contractRef: 'essay' },
   { id: 'report', route: '/rapport', coverage: 'browser-contract', contractRef: 'report' },
   { id: 'pilot', route: '/proposition-pilote', coverage: 'browser-contract', contractRef: 'pilot' },
   { id: 'expiry', route: '/expiry-check', coverage: 'browser-contract', contractRef: 'expiry' },

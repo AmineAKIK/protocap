@@ -51,6 +51,14 @@ test.describe('critical accessibility smoke', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('essay page has no serious automated WCAG violations', async ({ page }) => {
+    await page.goto('/essai');
+    await expect(page.getByRole('heading', { name: 'Rendre l’attention au réel' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Lire le PDF' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Télécharger le PDF' })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
   test('Packing preparation errors and reset confirmation have no serious automated WCAG violations', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/packing-calculator');
