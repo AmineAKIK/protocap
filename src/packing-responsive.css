@@ -408,6 +408,7 @@
 }
 
 @media (max-width: 639px) {
+  .packing-v3-partial-heading .packing-v3-live-composition { min-height:3em; line-height:1.15; }
   .packing-v3-stage { padding:1rem; }
   .packing-v3-stage-header { align-items:flex-start; }
   .packing-v3-stage-header h1 { font-size:1.25rem; }
