@@ -75,9 +75,12 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
 
   const preview = useMemo(() => {
     const input = getDeclarationDraftInput(draft);
-    const normalization = normalizePackingDraft(draft, run.unitsPerCarton, run.cartonsPerLoad);
-    if (!input || !normalization) {
+    if (!input) {
       return { units: null, error: 'Saisissez uniquement des nombres entiers positifs ou zéro.', normalization: null, liveRun: null };
+    }
+    const normalization = normalizePackingDraft(draft, run.unitsPerCarton, run.cartonsPerLoad);
+    if (!normalization) {
+      return { units: null, error: 'Cette saisie est trop élevée pour être calculée de manière fiable.', normalization: null, liveRun: null };
     }
     if (normalization.totalUnits === 0) {
       return { units: 0, error: '', normalization, liveRun: run };
@@ -88,7 +91,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
         ? replacePackingDeclaration(run, editingDeclarationId, input)
         : addPackingDeclaration(run, {
             id: '__packing-live-draft__',
-            createdAt: run.createdAt,
+            createdAt: now.toISOString(),
             ...normalized,
           });
       return {
@@ -100,15 +103,15 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
     } catch (error) {
       return { units: null, error: getPackingDeclarationErrorMessage(error), normalization, liveRun: null };
     }
-  }, [draft, editingDeclarationId, run]);
+  }, [draft, editingDeclarationId, now, run]);
 
   const liveRun = preview.liveRun ?? run;
   const progress = getPackingRunProgress(liveRun);
   const timing = getPackingRunTiming(liveRun, now);
   const fullLoadUnits = run.unitsPerCarton * run.cartonsPerLoad;
-  const canDeclareFullLoad = committedProgress.remainingUnits >= fullLoadUnits;
   const isComplete = committedProgress.remainingUnits === 0;
   const hasLiveDraft = Boolean(preview.units && preview.liveRun);
+  const canDeclareFullLoad = !hasLiveDraft && committedProgress.remainingUnits >= fullLoadUnits;
   const progressPercent = progress.progressRatio * 100;
   const variance = formatPackingReferenceVariance(timing.varianceMinutesVsReference);
   const remainingWork = getPackingRemainingWork(progress.remainingUnits, run.unitsPerCarton, run.cartonsPerLoad);
