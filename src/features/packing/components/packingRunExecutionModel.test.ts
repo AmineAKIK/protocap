@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPackingReferenceVariance,
   getPackingRemainingWork,
+  normalizePackingDraft,
 } from './packingRunExecutionModel';
 
 describe('formatPackingReferenceVariance', () => {
@@ -49,5 +50,55 @@ describe('getPackingRemainingWork', () => {
       summary: '2 cartons',
       afterNextFullLoad: null,
     });
+  });
+});
+
+
+describe('normalizePackingDraft', () => {
+  it('promotes loose units into cartons and cartons into complete palettes', () => {
+    expect(normalizePackingDraft(
+      { completeCartons: '0', partialCartonUnits: '2000' },
+      50,
+      40,
+    )).toEqual({
+      completeLoads: 1,
+      completeCartons: 0,
+      partialCartonUnits: 0,
+      totalUnits: 2000,
+    });
+  });
+
+  it('normalizes a mixed working declaration through both thresholds', () => {
+    expect(normalizePackingDraft(
+      { completeCartons: '45', partialCartonUnits: '300' },
+      50,
+      40,
+    )).toEqual({
+      completeLoads: 1,
+      completeCartons: 11,
+      partialCartonUnits: 0,
+      totalUnits: 2550,
+    });
+  });
+
+  it('preserves the final incomplete carton after cascading conversion', () => {
+    expect(normalizePackingDraft(
+      { completeCartons: '39', partialCartonUnits: '75' },
+      50,
+      40,
+    )).toEqual({
+      completeLoads: 1,
+      completeCartons: 0,
+      partialCartonUnits: 25,
+      totalUnits: 2025,
+    });
+  });
+
+  it('rejects unsafe draft arithmetic', () => {
+    expect(normalizePackingDraft(
+      { completeCartons: String(Number.MAX_SAFE_INTEGER), partialCartonUnits: '0' },
+      50,
+      40,
+    )).toBeNull();
   });
 });
