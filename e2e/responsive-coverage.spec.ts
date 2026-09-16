@@ -56,8 +56,28 @@ test.describe('responsive principal surface coverage', () => {
         await useViewport(page, viewport);
         await page.goto('/');
         await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Découvrir l’essai' })).toBeVisible();
         await expectPrimaryActionUsable(page, page.getByRole('button', { name: 'Lancer la présentation' }));
         await expect(page.getByRole('link', { name: /Ouvrir le module/ }).first()).toBeVisible();
+        await expectNoDocumentHorizontalOverflow(page);
+      });
+    }
+  });
+
+  // responsive-contract:essay
+  test('Essay keeps its cover and PDF actions usable without root overflow', async ({ page }) => {
+    for (const viewport of COVERAGE_VIEWPORTS) {
+      await test.step(viewport.name, async () => {
+        await useViewport(page, viewport);
+        await page.goto('/essai');
+
+        await expect(page.getByRole('heading', { name: 'Rendre l’attention au réel' })).toBeVisible();
+        const readPdf = page.getByRole('link', { name: 'Lire le PDF' });
+        const downloadPdf = page.getByRole('link', { name: 'Télécharger le PDF' });
+        await expect(readPdf).toHaveAttribute('href', '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf');
+        await expect(downloadPdf).toHaveAttribute('download', 'rendre-l-attention-au-reel-akik-mohamed-amine.pdf');
+        await expectLocatorInsideViewport(page, readPdf);
+        await expectLocatorInsideViewport(page, downloadPdf);
         await expectNoDocumentHorizontalOverflow(page);
       });
     }
