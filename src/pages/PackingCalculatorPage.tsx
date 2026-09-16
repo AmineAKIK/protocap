@@ -159,6 +159,16 @@ export function PackingCalculatorPage() {
     return () => window.clearInterval(timer);
   }, [activeRun]);
 
+  useEffect(() => {
+    const scrollLockClass = 'packing-active-run-scroll-lock';
+    document.documentElement.classList.toggle(scrollLockClass, Boolean(activeRun));
+    document.body.classList.toggle(scrollLockClass, Boolean(activeRun));
+    return () => {
+      document.documentElement.classList.remove(scrollLockClass);
+      document.body.classList.remove(scrollLockClass);
+    };
+  }, [activeRun]);
+
   const validation = useMemo(
     () => validatePackingPreparation(form, selectedPolicy, validationNow),
     [form, selectedPolicy, validationNow],

@@ -226,9 +226,8 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
           </div>
 
           <button type="button" className="packing-v3-full-load-action" disabled={!canDeclareFullLoad || isComplete} onClick={declareFullLoad}>
-            <span><Layers3 size={20} aria-hidden="true" /><strong>{isComplete ? 'Production terminée' : 'Déclarer une palette complète'}</strong></span>
             <small>{formatPackingNumber(run.cartonsPerLoad)} cartons · {formatPackingNumber(fullLoadUnits)} unités</small>
-            <b aria-hidden="true">→</b>
+            <span><Layers3 size={20} aria-hidden="true" /><strong>{isComplete ? 'Production terminée' : 'Déclarer une palette complète'}</strong></span>
           </button>
 
           <form className="packing-v3-partial" onSubmit={submitPartialDeclaration}>
@@ -236,7 +235,7 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
             <div className="packing-v3-partial-controls">
               <Stepper label="Cartons complets" value={draft.completeCartons} onChange={(value) => setDraft((current) => ({ ...current, completeCartons: value }))} />
               <Stepper label="Unités dans le carton incomplet" value={draft.partialCartonUnits} onChange={(value) => setDraft((current) => ({ ...current, partialCartonUnits: value }))} />
-              <button type="submit" disabled={isComplete && !editingDeclarationId}>{editingDeclarationId ? 'Enregistrer la correction' : 'Enregistrer la palette partielle'} <span aria-hidden="true">→</span></button>
+              <button type="submit" disabled={isComplete && !editingDeclarationId}>{editingDeclarationId ? 'Enregistrer la correction' : 'Enregistrer la palette partielle'}</button>
             </div>
             {editingDeclarationId ? <button type="button" className="packing-v3-cancel-edit" onClick={() => { setEditingDeclarationId(null); setDraft(emptyDeclarationDraft); }}>Annuler la correction</button> : null}
             <p role={hasLiveDraft ? 'status' : undefined} aria-hidden={!hasLiveDraft} className={`packing-v3-feedback packing-v3-live-feedback ${hasLiveDraft ? '' : 'packing-v3-live-feedback-empty'}`}>{hasLiveDraft ? 'Saisie en cours incluse dans la progression et les estimations. Validez pour l’ajouter à l’historique.' : '\u00a0'}</p>
@@ -248,7 +247,12 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
               <span><Layers3 size={16} aria-hidden="true" /> Suite du conditionnement</span>
               <strong>{remainingWork.summary}</strong>
             </div>
-            {remainingWork.afterNextFullLoad ? <p>{remainingWork.afterNextFullLoad}</p> : null}
+            {remainingWork.afterNextFullLoad ? (
+              <div className="packing-v3-next-work-after">
+                <span>Après la prochaine palette</span>
+                <strong>{remainingWork.afterNextFullLoad.replace(/^Après cette palette complète : /, '')}</strong>
+              </div>
+            ) : null}
           </section>
 
           {persistenceStatus === 'degraded' ? <p className="packing-v3-persistence-warning">La sauvegarde locale n’est pas garantie : les dernières déclarations pourront être perdues au rechargement.</p> : null}

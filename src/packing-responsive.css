@@ -274,11 +274,10 @@
 .packing-v3-reference-gap-late { border-color:#e9a23b !important; background:#fff7ea !important; }
 .packing-v3-reference-gap-late strong { color:#b45309; }
 
-.packing-v3-full-load-action { position:relative; display:grid; min-height:3.45rem; padding:.65rem 3.1rem .65rem .9rem; border:0; border-radius:.65rem; background:#109b92; color:#fff; text-align:left; cursor:pointer; box-shadow:0 8px 18px rgb(15 159 149 / .19); }
-.packing-v3-full-load-action > span { display:flex; align-items:center; justify-content:center; gap:.5rem; }
+.packing-v3-full-load-action { position:relative; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; min-height:3.45rem; padding:.65rem .9rem; border:0; border-radius:.65rem; background:#109b92; color:#fff; text-align:center; cursor:pointer; box-shadow:0 8px 18px rgb(15 159 149 / .19); }
+.packing-v3-full-load-action > span { grid-column:2; display:flex; align-items:center; justify-content:center; gap:.5rem; }
 .packing-v3-full-load-action strong { font-size:1rem; }
-.packing-v3-full-load-action small { font-size:.67rem; opacity:.85; }
-.packing-v3-full-load-action b { position:absolute; right:1rem; top:50%; translate:0 -50%; font-size:1.55rem; }
+.packing-v3-full-load-action small { grid-column:1; grid-row:1; justify-self:start; font-size:.67rem; opacity:.85; }
 .packing-v3-full-load-action:disabled { background:#9fb0b9; box-shadow:none; cursor:not-allowed; }
 
 .packing-v3-partial { padding:.8rem .9rem; border:1px solid #d8e1e8; border-radius:.75rem; background:#fff; }
@@ -298,7 +297,7 @@
 .packing-v3-stepper > div { display:grid; grid-template-columns:2.25rem 1fr 2.25rem; min-height:2.35rem; border:1px solid #d8e1e8; border-radius:.5rem; overflow:hidden; }
 .packing-v3-stepper button,.packing-v3-stepper input { border:0; background:#f8fafb; color:#334155; font-weight:800; text-align:center; outline:0; }
 .packing-v3-stepper input { min-width:0; background:#fff; }
-.packing-v3-partial-controls > button { align-self:end; min-height:2.35rem; border:1px solid #0f9f95; border-radius:.5rem; background:#fff; color:#07847a; font-size:.72rem; font-weight:800; }
+.packing-v3-partial-controls > button { display:flex; align-self:end; align-items:center; justify-content:center; min-height:2.35rem; border:1px solid #0f9f95; border-radius:.5rem; background:#fff; color:#07847a; font-size:.72rem; font-weight:800; text-align:center; }
 .packing-v3-cancel-edit { margin-top:.5rem; border:0; background:transparent; color:#64748b; font-size:.67rem; font-weight:700; text-decoration:underline; }
 
 .packing-v3-history { display:flex; min-width:0; min-height:0; flex-direction:column; overflow:hidden; border:1px solid #d8e1e8; border-radius:.75rem; background:#fff; }
@@ -327,6 +326,11 @@
 .packing-v3-frozen button { border:0; background:transparent; color:#475569; font-size:.68rem; font-weight:700; text-decoration:underline; white-space:nowrap; }
 
 @media (min-width: 1024px) and (min-height: 700px) {
+  html.packing-active-run-scroll-lock,
+  body.packing-active-run-scroll-lock {
+    height:100%;
+    overflow-y:hidden;
+  }
   .packing-calculator-page {
     --packing-shell-bottom-reserve: var(--app-mobile-nav-reserve);
   }
