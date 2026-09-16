@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const ACCESS_CODE = 'e2e-access-code';
 const productionStart = '2026-09-15T07:30';
+const ESSAY_PDF_PATH = '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf';
 
 async function expectNoHorizontalOverflow(page: Page) {
   const viewport = await page.evaluate(() => ({
@@ -40,15 +41,35 @@ test.describe('browser and responsive smoke', () => {
     await page.goto('/essai');
     await expect(page.getByRole('heading', { name: 'Rendre l’attention au réel' })).toBeVisible();
     await expect(page.getByRole('img', { name: 'Couverture de l’essai Rendre l’attention au réel' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Lire le PDF' })).toHaveAttribute(
-      'href',
-      '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf',
-    );
+    await expect(page.getByRole('link', { name: 'Lire le PDF' })).toHaveAttribute('href', ESSAY_PDF_PATH);
     await expect(page.getByRole('link', { name: 'Télécharger le PDF' })).toHaveAttribute(
       'download',
       'rendre-l-attention-au-reel-akik-mohamed-amine.pdf',
     );
     await expectNoHorizontalOverflow(page);
+  });
+
+  test('PWA navigation serves the essay PDF instead of the SPA fallback', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+    const pdfResponse = page.waitForResponse((response) =>
+      response.request().url().endsWith(ESSAY_PDF_PATH),
+    );
+    await page.evaluate((path) => {
+      const frame = document.createElement('iframe');
+      frame.src = path;
+      frame.hidden = true;
+      document.body.appendChild(frame);
+    }, ESSAY_PDF_PATH);
+
+    const response = await pdfResponse;
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toContain('application/pdf');
   });
 
   test('Pilot proposal is stable on mobile, tablet, small laptop and desktop widths', async ({ page }) => {
