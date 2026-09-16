@@ -238,10 +238,14 @@ export function PackingRunExecution({ run, persistenceStatus, onRunChange }: Pac
             {run.declarations.length === 0 ? <p className="packing-v3-history-empty">Aucune production déclarée pour le moment.</p> : [...run.declarations].reverse().map((declaration) => {
               const units = getPackingDeclarationUnits(declaration, run.unitsPerCarton);
               const declarationKind = formatDeclarationKind(declaration.completeCartons, declaration.partialCartonUnits, run.cartonsPerLoad);
+              const isCompleteLoadDeclaration =
+                declaration.partialCartonUnits === 0 &&
+                declaration.completeCartons >= run.cartonsPerLoad &&
+                declaration.completeCartons % run.cartonsPerLoad === 0;
               return (
                 <div className="packing-v3-history-row" key={declaration.id}>
                   <time dateTime={declaration.createdAt}>{formatPackingClock(declaration.createdAt)}</time>
-                  <span><Layers3 size={14} aria-hidden="true" />{declarationKind}</span>
+                  <span><Layers3 size={14} aria-hidden="true" />{isCompleteLoadDeclaration ? 'Palette complète' : 'Palette partielle'}{declarationKind !== 'Palette complète' ? <small> · {declarationKind}</small> : null}</span>
                   <strong>{formatPackingNumber(units)} unités</strong>
                   <button type="button" onClick={() => beginCorrection(declaration.id)} aria-label={`Corriger la déclaration de ${formatPackingNumber(units)} unités`}><Pencil size={14} />Corriger</button>
                   <button type="button" className="packing-v3-history-delete" onClick={() => deleteDeclaration(declaration.id)} aria-label={`Supprimer la déclaration de ${formatPackingNumber(units)} unités`}><Trash2 size={14} /></button>
