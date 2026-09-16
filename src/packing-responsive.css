@@ -289,7 +289,7 @@
 .packing-v3-partial-heading > div + div { text-align:right; }
 .packing-v3-partial-heading > div + div strong { color:#087f72; font-size:1.15rem; }
 .packing-v3-partial-heading small { color:#8ca0b8; font-size:.62rem; font-style:italic; }
-.packing-v3-live-composition { display:block; min-height:1em; color:#64748b; line-height:1; }
+.packing-v3-partial-heading .packing-v3-live-composition { display:block; min-height:1em; color:#475569; line-height:1; }
 .packing-v3-live-feedback { min-height:1em; line-height:1; }
 .packing-v3-live-feedback-empty { visibility:hidden; }
 .packing-v3-partial-controls { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem; margin-top:.65rem; }
