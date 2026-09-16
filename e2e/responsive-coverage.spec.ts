@@ -76,7 +76,11 @@ test.describe('responsive principal surface coverage', () => {
         const downloadPdf = page.getByRole('link', { name: 'Télécharger le PDF' });
         await expect(readPdf).toHaveAttribute('href', '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf');
         await expect(downloadPdf).toHaveAttribute('download', 'rendre-l-attention-au-reel-akik-mohamed-amine.pdf');
+        await expectNoDocumentHorizontalOverflow(page);
+
+        await readPdf.scrollIntoViewIfNeeded();
         await expectLocatorInsideViewport(page, readPdf);
+        await downloadPdf.scrollIntoViewIfNeeded();
         await expectLocatorInsideViewport(page, downloadPdf);
         await expectNoDocumentHorizontalOverflow(page);
       });
