@@ -3,6 +3,9 @@ import { Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
 
+const EssayPage = lazy(() =>
+  import('./pages/EssayPage').then((module) => ({ default: module.EssayPage }))
+);
 const ExpiryCheckPage = lazy(() =>
   import('./pages/ExpiryCheckPage').then((module) => ({ default: module.ExpiryCheckPage }))
 );
@@ -96,6 +99,7 @@ export function App() {
 
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/essai" element={<EssayPage />} />
         <Route
           path="/rapport"
           element={(
