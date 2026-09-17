@@ -157,7 +157,7 @@ test.describe('Unknown Expiry states stay readable and conservative', () => {
   }
 });
 
-test('T42: keyboard can reach and scroll the dialog body, then close without a mutation', async ({ page }) => {
+test('T42: keyboard reaches every declaration control and scrolls the dialog without a mutation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 400 });
   await openExpiry(page);
   const before = await snapshot(page);
@@ -166,12 +166,34 @@ test('T42: keyboard can reach and scroll the dialog body, then close without a m
   const dialog = page.getByRole('dialog', { name: 'Déclarer un remplacement', exact: true });
   const close = dialog.getByRole('button', { name: 'Fermer', exact: true });
   const region = dialog.getByRole('region', { name: 'Déclarer un remplacement', exact: true });
+  const cancel = dialog.getByRole('button', { name: 'Annuler', exact: true });
   await expect(close).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(region).toBeFocused();
+  await expect(region).toHaveAttribute('tabindex', '0');
   expect(await region.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
-  await region.press('PageDown');
+
+  // ACT 0ssw9k permits the scroller OR its descendant in sequential navigation.
+  // Native datetime controls have engine-specific internal tab stops, and some
+  // engines reach the fields before the container. Exercise actual keys only:
+  // no element.focus(), clicks, synthetic key events or programmatic scrolling.
+  const visited = new Set<string>();
+  for (let step = 0; step < 24; step += 1) {
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    const name = await page.evaluate(() => document.activeElement?.getAttribute('name'));
+    if (name) visited.add(name);
+    if (await cancel.evaluate((element) => element === document.activeElement)) break;
+  }
+  expect([...visited]).toEqual(expect.arrayContaining(['changedAt', 'operator', 'comment']));
+  await expect(cancel).toBeFocused();
   await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const beforePageUp = await region.evaluate((element) => element.scrollTop);
+  await page.keyboard.press('PageUp');
+  await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBeLessThan(beforePageUp);
+  const afterPageUp = await region.evaluate((element) => element.scrollTop);
+  await page.keyboard.press('PageDown');
+  await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBeGreaterThan(afterPageUp);
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Valider le remplacement', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
