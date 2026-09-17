@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "method": "Identical real-page behavior tests and identical jsdom dialog shim executed against two immutable checkouts; no parent application code changed.",
+  "parentSha": "e9784980433cc871e956f0cce647e8f835e860b5",
+  "candidateSha": "93a3002ed97b667934fbfc862eb3a1c40fd73d3e",
+  "testPath": "src/pages/ExpiryTemporalRegression.test.tsx",
+  "testSha256": "43745238da1d170a649ad77a8faebc90ec38fbe98fd92ec94007f57dac330b12",
+  "identicalSetupSha256": "53cd6215d2c859e33f3082308219d7f1ef6440628653aa49c89f2c39df3bd13a",
+  "timeZone": "Europe/Paris",
+  "node": "v24.20.0",
+  "npm": "11.19.0",
+  "operatingSystem": "Ubuntu 24.04.5",
+  "executedAt": "2026-09-17T22:16:51.394Z",
+  "runUrl": "https://github.com/AmineAKIK/protocap/actions/runs/35281160632",
+  "jobId": 105403166250,
+  "results": [
+    { "directory": "parent", "exitCode": 1, "total": 3, "passed": 0, "failed": 3 },
+    { "directory": "candidate", "exitCode": 0, "total": 3, "passed": 3, "failed": 0 }
+  ],
+  "observedFailuresOnParent": [
+    { "test": "T01: replacement prefill is the actual local minute", "observed": "2026-09-17T12:00", "expected": "2026-09-17T14:00" },
+    { "test": "T04: future replacement does not mutate either store", "observedStorageWrites": 2, "expectedStorageWrites": 0 },
+    { "test": "T04: future refill does not mutate either store", "observedStorageWrites": 2, "expectedStorageWrites": 0 }
+  ],
+  "failureTypeVerified": "All three parent failures were behavior assertions, not import failures or unsupported dialog methods.",
+  "installationIntegrity": "npm ci in both directories; package.json, package-lock.json and the actual application page remained unchanged in each checkout.",
+  "scope": "This report proves these three regressions only, on the candidate SHA stated above. Later lint/test refinements and final-SHA full CI are tracked separately on PR #176. It is not a claim that the entire earlier candidate passed all checks."
+}
