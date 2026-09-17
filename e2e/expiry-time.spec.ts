@@ -156,3 +156,24 @@ test.describe('Unknown Expiry states stay readable and conservative', () => {
     });
   }
 });
+
+test('T42: keyboard can reach and scroll the dialog body, then close without a mutation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 400 });
+  await openExpiry(page);
+  const before = await snapshot(page);
+  const trigger = page.getByRole('button', { name: 'Déclarer un remplacement', exact: true });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Déclarer un remplacement', exact: true });
+  const close = dialog.getByRole('button', { name: 'Fermer', exact: true });
+  const region = dialog.getByRole('region', { name: 'Déclarer un remplacement', exact: true });
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(region).toBeFocused();
+  expect(await region.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await region.press('PageDown');
+  await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(await snapshot(page)).toEqual(before);
+});

@@ -112,7 +112,12 @@ export function AccessibleDialog({
             </button>
           ) : null}
         </div>
-        <div className={`min-h-0 overflow-y-auto overscroll-contain ${contentClassName}`}>
+        <div
+          role="region"
+          aria-labelledby={titleId}
+          tabIndex={0}
+          className={`min-h-0 overflow-y-auto overscroll-contain focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal-700 ${contentClassName}`}
+        >
           {children}
         </div>
       </div>
