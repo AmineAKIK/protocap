@@ -421,13 +421,13 @@ export function ExpiryCheckPage() {
                   </div>
 
                   <dl className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-sm sm:gap-y-2">
-                    <dt className="min-w-0 break-normal text-slate-500">Temps restant</dt>
+                    <dt className="min-w-0 break-normal text-slate-600">Temps restant</dt>
                     <dd className={`text-right font-black ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                       {remainingLabel(selectedLine)}
                     </dd>
-                    <dt className="min-w-0 break-normal text-slate-500">Validité</dt>
+                    <dt className="min-w-0 break-normal text-slate-600">Validité</dt>
                     <dd className="text-right font-medium text-slate-800">{isUnknown ? 'À vérifier' : `${selectedLine.elements[0].validityDays} jours calendaires`}</dd>
-                    <dt className="min-w-0 break-normal text-slate-500">Déclaré par</dt>
+                    <dt className="min-w-0 break-normal text-slate-600">Déclaré par</dt>
                     <dd className="max-w-[12rem] break-normal text-right font-medium text-slate-800">{selectedLine.elements[0]?.operator}</dd>
                   </dl>
 
@@ -580,7 +580,7 @@ export function ExpiryCheckPage() {
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="break-normal text-sm font-bold text-slate-950">{line.name.replace('Ligne de conditionnement ', 'Ligne ')}</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-500">{line.vat} · {line.product}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-600">{line.vat} · {line.product}</p>
                     </div>
                     <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
                   </div>
