@@ -83,7 +83,9 @@ test.describe('Expiry temporal rejection and recovery boundary', () => {
     await expect(page.getByLabel('Commentaire', { exact: true })).toHaveValue('Brouillon conservé');
     expect(await snapshot(page)).toEqual(before);
     expect(await page.evaluate(() => (window as unknown as { expiryWrites: number }).expiryWrites)).toBe(0);
-    expect((await new AxeBuilder({ page }).include('[role="dialog"]').analyze()).violations).toEqual([]);
+    await expect(page.locator('dialog[open]')).toHaveCount(1);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('dialog[open]').analyze()).violations).toEqual([]);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     expect(overflow).toBe(false);
   });
