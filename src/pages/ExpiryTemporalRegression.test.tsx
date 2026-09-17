@@ -29,14 +29,14 @@ afterEach(() => { vi.useRealTimers(); });
 describe('portable parent-to-candidate temporal regressions', () => {
   it('T01: replacement prefill is the actual local minute', () => {
     render(<ExpiryCheckPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'Déclarer un remplacement', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Déclarer un remplacement' }));
     expect((screen.getByLabelText('Date / heure du remplacement') as HTMLInputElement).value).toBe(localMinute(now));
   });
   for (const kind of ['replacement', 'refill'] as const) {
     it(`T04: future ${kind} does not mutate either store`, () => {
       render(<ExpiryCheckPage />);
       fireEvent.click(screen.getByRole('button', {
-        name: kind === 'replacement' ? 'Déclarer un remplacement' : 'Ajouter une recharge de cuve', exact: true,
+        name: kind === 'replacement' ? 'Déclarer un remplacement' : 'Ajouter une recharge de cuve',
       }));
       const writes = vi.spyOn(Storage.prototype, 'setItem');
       const snapshot = () => [localStorage.getItem(linesKey), localStorage.getItem(historyKey)];
@@ -47,7 +47,7 @@ describe('portable parent-to-candidate temporal regressions', () => {
       fireEvent.change(screen.getByLabelText('Opérateur'), { target: { value: 'Fixture' } });
       fireEvent.change(screen.getByLabelText('Commentaire'), { target: { value: 'Brouillon conservé' } });
       fireEvent.click(screen.getByRole('button', {
-        name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge', exact: true,
+        name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge',
       }));
       expect(writes).not.toHaveBeenCalled();
       expect(snapshot()).toEqual(before);

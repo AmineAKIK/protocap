@@ -127,3 +127,32 @@ test.describe('Expiry temporal rejection and recovery boundary', () => {
     expect(lines[0].elements[0].lastChangedAt).toBe('2026-09-18T12:00:00.000Z');
   });
 });
+
+test.describe('Unknown Expiry states stay readable and conservative', () => {
+  test.use({ timezoneId: 'Europe/Paris' });
+  for (const state of ['future', 'invalid-calendar', 'missing-block'] as const) {
+    test(`T05/T42/T43: ${state} preserves data and accessible layout`, async ({ page }) => {
+      await page.addInitScript(({ state, now }) => {
+        const block = { type: 'fillingBlock', label: 'Bloc', validityDays: 5, operator: 'Fixture',
+          lastChangedAt: state === 'future' ? '2026-09-18T12:00:00.000Z' : '2026-09-15T12:00:00.000Z',
+          expiresAt: state === 'invalid-calendar' ? '2026-02-30T12:00:00.000Z' : '2026-09-23T12:00:00.000Z' };
+        localStorage.setItem('lineops.expiry.lines.v8', JSON.stringify([{ id: 'a', name: 'Ligne de conditionnement A',
+          vat: 'Cuve 1', product: 'Fixture', conditioningStartedAt: now, elements: state === 'missing-block' ? [] : [block] }]));
+        localStorage.setItem('lineops.expiry.history.v8', JSON.stringify([
+          { id: 'old-block', lineId: 'a', lineName: 'Ligne de conditionnement A', elementLabel: 'Bloc de remplissage',
+            changedAt: '2026-09-01T12:00:00.000Z', newExpiresAt: '2026-09-06T12:00:00.000Z', operator: 'Fixture' },
+          { id: 'old-refill', lineId: 'a', lineName: 'Ligne de conditionnement A', elementLabel: 'Recharge de cuve',
+            changedAt: '2026-09-02T12:00:00.000Z', newExpiresAt: '2026-09-06T12:00:00.000Z', operator: 'Fixture' },
+        ]));
+      }, { state, now: NOW });
+      await openExpiry(page);
+      const before = await snapshot(page);
+      await expect(page.getByText('Aucune recharge tracée sur ce bloc.')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
+      await expect(page.getByText(/Démarrage de la ligne autorisé/)).toHaveCount(0);
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+      expect(await snapshot(page)).toEqual(before);
+    });
+  }
+});

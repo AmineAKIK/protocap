@@ -248,7 +248,7 @@ export function ExpiryCheckPage() {
       })
     };
   });
-  const vatHistory = blockHistoryGroups[0]?.vatEntries ?? [];
+  const vatHistory = blockHistoryGroups.find((group) => group.isCurrent)?.vatEntries ?? [];
   const registerEntryCount = blockHistoryGroups.reduce((count, group) => count + 1 + group.vatEntries.length, 0);
   const washerBoard = lines;
   const groupedIds = new Set(blockHistoryGroups.flatMap((group) => [group.block.id, ...group.vatEntries.map((entry) => entry.id)]));
@@ -343,7 +343,7 @@ export function ExpiryCheckPage() {
                       className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                     >
                       {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
-                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
+                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected && status !== 'unknown' ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
                     </button>
                   );
                 })}
@@ -406,12 +406,12 @@ export function ExpiryCheckPage() {
                   <div className="grid min-w-0 grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:gap-3">
                     <div className="min-w-0 rounded-xl bg-white p-2.5 ring-1 ring-slate-200 sm:p-4">
                       <p className="label text-[10px] sm:text-xs">Bloc changé le</p>
-                      <p className="mt-1 whitespace-nowrap text-base font-black tabular-nums text-slate-950 sm:mt-2 sm:text-xl">{formatDateOnly(latestChange(selectedLine))}</p>
+                      <p className="mt-1 break-normal text-base font-black tabular-nums text-slate-950 sm:mt-2 sm:text-xl">{formatDateOnly(latestChange(selectedLine))}</p>
                       <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-lg">{formatTimeOnly(latestChange(selectedLine))}</p>
                     </div>
                     <div className={`min-w-0 rounded-xl p-2.5 ring-1 sm:p-4 ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
                       <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
-                      <p className={`mt-1 whitespace-nowrap text-base font-black tabular-nums sm:mt-2 sm:text-xl ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
+                      <p className={`mt-1 break-normal text-base font-black tabular-nums sm:mt-2 sm:text-xl ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
                       <p className={`text-sm font-bold tabular-nums sm:text-lg ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
                     </div>
                   </div>
@@ -589,7 +589,7 @@ export function ExpiryCheckPage() {
                   </p>
                   <div className="mt-2 min-w-0 rounded-xl bg-white/85 p-2 ring-1 ring-slate-200 sm:mt-3 sm:p-3">
                     <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
-                    <p className="mt-1 whitespace-nowrap text-base font-black tabular-nums text-slate-950 sm:text-lg">{formatDateOnly(expiry)}</p>
+                    <p className="mt-1 break-normal text-base font-black tabular-nums text-slate-950 sm:text-lg">{formatDateOnly(expiry)}</p>
                     <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-base">{formatTimeOnly(expiry)}</p>
                   </div>
                 </button>
