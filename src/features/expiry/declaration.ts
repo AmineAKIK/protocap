@@ -20,6 +20,16 @@ export type PreparedDeclaration =
   | { ok: false; error: DeclarationError }
   | { ok: true; lines: ConditioningLine[]; entry: ChangeHistoryEntry };
 
+function hasForbiddenControlCharacter(value: string): boolean {
+  // Preserve tab, LF and CR; reject the other C0 controls and DEL.
+  // Numeric checks keep this policy explicit without an opaque control-character regex.
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    if (code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127) return true;
+  }
+  return false;
+}
+
 /** No writes, clock reads or hidden fallback: prepare and validate everything before the caller mutates. */
 export function prepareDeclaration(
   lines: readonly ConditioningLine[], lineId: string, kind: DeclarationKind,
@@ -42,7 +52,7 @@ export function prepareDeclaration(
   for (const field of ['operator', 'comment', ...(kind === 'refill' ? ['vat'] as const : [])] as const) {
     const value = draft[field];
     if (typeof value !== 'string' || value.length > DECLARATION_LIMITS[field]
-      || (field !== 'comment' && !value.trim()) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) {
+      || (field !== 'comment' && !value.trim()) || hasForbiddenControlCharacter(value)) {
       return fail(field, field === 'comment' ? 'Commentaire invalide ou trop long (1 000 caractères maximum).'
         : field === 'operator' ? 'Renseignez un opérateur (120 caractères maximum, pas seulement des espaces).'
           : 'Renseignez la référence de cuve (120 caractères maximum, pas seulement des espaces).');
