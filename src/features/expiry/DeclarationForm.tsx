@@ -65,27 +65,25 @@ export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
       </label>}
       <label className="block min-w-0">
         <span className="label">{kind === 'replacement' ? 'Date / heure du remplacement' : 'Date / heure'}</span>
-        <input className="field mt-1" name="changedAt" type="datetime-local" step={60} value={draft.changedAt}
-          max={formatLocalMinute(new Date(), draft.timeZone)} required
-          onChange={(event) => update('changedAt', event.target.value)} aria-invalid={invalid('changedAt')} aria-describedby={describedBy('changedAt')} />
+        <input className="field mt-1" name="changedAt" type="datetime-local" step={60} value={draft.changedAt} onChange={(event) => update('changedAt', event.target.value)} required aria-invalid={invalid('changedAt')} aria-describedby={describedBy('changedAt')} />
       </label>
-      {candidates.length > 0 && <label className="block min-w-0">
+      {candidates.length > 1 && <label className="block min-w-0">
         <span className="label">Occurrence de l’heure répétée</span>
-        <select className="field mt-1" name="occurrence" value={draft.occurrence} required onChange={(event) => update('occurrence', event.target.value)} aria-invalid={invalid('occurrence')} aria-describedby={describedBy('occurrence')}>
-          <option value="">Choisir le décalage UTC</option>
+        <select className="field mt-1" name="occurrence" value={draft.occurrence} onChange={(event) => update('occurrence', event.target.value)} aria-invalid={invalid('occurrence')} aria-describedby={describedBy('occurrence')} required>
+          <option value="">Choisir explicitement</option>
           {candidates.map((candidate) => <option key={candidate.occurrence} value={candidate.occurrence}>
-            {candidate.occurrence === 'earlier' ? 'Première occurrence' : 'Seconde occurrence'} — UTC{candidate.offset}
+            {candidate.occurrence === 'earlier' ? 'Première occurrence' : 'Seconde occurrence'} (UTC{candidate.offset})
           </option>)}
         </select>
       </label>}
       <label className="block min-w-0">
         <span className="label">Opérateur</span>
-        <input className="field mt-1" name="operator" value={draft.operator} onChange={(event) => update('operator', event.target.value)} required maxLength={DECLARATION_LIMITS.operator} aria-invalid={invalid('operator')} aria-describedby={describedBy('operator')} autoComplete="off" />
+        <input className="field mt-1" name="operator" value={draft.operator} onChange={(event) => update('operator', event.target.value)} required maxLength={DECLARATION_LIMITS.operator} autoComplete="name" aria-invalid={invalid('operator')} aria-describedby={describedBy('operator')} />
       </label>
-      <label className="block min-w-0">
-        <span className="label">Commentaire</span>
-        <textarea className="field mt-1 min-h-20" name="comment" value={draft.comment} onChange={(event) => update('comment', event.target.value)} maxLength={DECLARATION_LIMITS.comment} aria-invalid={invalid('comment')} aria-describedby={describedBy('comment')} />
-      </label>
+      <div className="block min-w-0">
+        <label className="label" htmlFor={`${id}-comment`}>Commentaire</label>
+        <textarea id={`${id}-comment`} className="field mt-1 min-h-20" name="comment" value={draft.comment} onChange={(event) => update('comment', event.target.value)} maxLength={DECLARATION_LIMITS.comment} aria-invalid={invalid('comment')} aria-describedby={describedBy('comment')} />
+      </div>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
         <Button className="w-full sm:w-auto" type="submit">{kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge'}</Button>

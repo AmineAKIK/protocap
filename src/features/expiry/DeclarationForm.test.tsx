@@ -42,4 +42,23 @@ describe('T42: declaration errors preserve the draft and accessible context', ()
     fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
     expect(cancel).toHaveBeenCalledTimes(1);
   });
+  it.each(['replacement', 'refill'] as const)('keeps the %s comment label independent of the entered textarea content', async (kind) => {
+    render(<DeclarationForm kind={kind} line={line} onCancel={vi.fn()} onDeclare={() => ({ field: 'comment', message: 'Commentaire à vérifier' })} />);
+    const comment = screen.getByLabelText('Commentaire', { exact: true }) as HTMLTextAreaElement;
+    expect(comment.id).not.toBe('');
+    expect(comment.labels?.length).toBe(1);
+    const label = comment.labels![0];
+    expect(label.htmlFor).toBe(comment.id);
+    expect(label.contains(comment)).toBe(false);
+    fireEvent.change(comment, { target: { value: 'Brouillon conservé\nDeuxième ligne' } });
+    fireEvent.click(screen.getByRole('button', { name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge' }));
+    const alert = await screen.findByRole('alert');
+    expect(label.textContent).toBe('Commentaire');
+    expect(screen.getByLabelText('Commentaire', { exact: true })).toBe(comment);
+    expect(screen.getByRole('textbox', { name: 'Commentaire' })).toBe(comment);
+    expect(comment.value).toBe('Brouillon conservé\nDeuxième ligne');
+    expect(comment.getAttribute('aria-invalid')).toBe('true');
+    expect(comment.getAttribute('aria-describedby')).toBe(alert.id);
+    await waitFor(() => expect(document.activeElement).toBe(comment));
+  });
 });
