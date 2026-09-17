@@ -1,0 +1,149 @@
+name: PR-02 lockfile preparation
+
+on:
+  push:
+    branches: [work/pr02-lockfile-generation]
+    paths: [.github/workflows/pr02-lockfile-generation.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: github.repository == 'AmineAKIK/protocap' && github.ref == 'refs/heads/work/pr02-lockfile-generation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout audited parent without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ae6ff45ee46750b8026d2848e8d881e094157fa1
+          persist-credentials: false
+      - name: Setup repository Node version
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+      - name: Audit parent, regenerate only Vitest, and verify a fresh install
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          const parent = 'ae6ff45ee46750b8026d2848e8d881e094157fa1';
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), parent);
+          assert.equal(Number(process.versions.node.split('.')[0]), 24);
+          const initialPackage = JSON.parse(readFileSync('package.json', 'utf8'));
+          const initialLockText = readFileSync('package-lock.json', 'utf8');
+          const initialLock = JSON.parse(initialLockText);
+          const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
+          const run = (args) => execFileSync('npm', args, { stdio: 'inherit', timeout: 240000 });
+          function audit(extra) {
+            const result = spawnSync('npm', ['audit', '--json', '--audit-level=low', ...extra], {
+              encoding: 'utf8', timeout: 120000, maxBuffer: 8 * 1024 * 1024,
+            });
+            if (result.error) throw result.error;
+            assert.equal(result.signal, null);
+            assert.ok(result.status === 0 || result.status === 1, 'unexpected npm audit failure');
+            const report = JSON.parse(result.stdout);
+            assert.ok(!report.error && report.auditReportVersion === 2 && report.metadata?.vulnerabilities && report.vulnerabilities);
+            assert.equal(Number.isInteger(report.metadata.vulnerabilities.total), true);
+            return { exitCode: result.status, report };
+          }
+          run(['ci', '--ignore-scripts']);
+          const before = { full: audit(['--include=dev']), production: audit(['--omit=dev']) };
+          assert.equal(before.full.exitCode, 1, 'expected vulnerable parent');
+          assert.ok(JSON.stringify(before.full.report.vulnerabilities).includes('GHSA-82fw-gwwq-j7x9'));
+          assert.equal(before.production.exitCode, 0);
+          console.log('PR02_PARENT_AUDIT', JSON.stringify({ full: before.full.report.metadata.vulnerabilities, production: before.production.report.metadata.vulnerabilities }));
+          run(['install', '--package-lock-only', '--ignore-scripts', '--save-dev', '--save-exact', 'vitest@4.1.11', '@vitest/coverage-v8@4.1.11']);
+          const updatedPackage = JSON.parse(readFileSync('package.json', 'utf8'));
+          const updatedLockText = readFileSync('package-lock.json', 'utf8');
+          const updatedLock = JSON.parse(updatedLockText);
+          const expectedPackage = structuredClone(initialPackage);
+          expectedPackage.devDependencies.vitest = '4.1.11';
+          expectedPackage.devDependencies['@vitest/coverage-v8'] = '4.1.11';
+          assert.deepEqual(updatedPackage, expectedPackage, 'unexpected manifest change');
+          const changed = [];
+          for (const path of new Set([...Object.keys(initialLock.packages), ...Object.keys(updatedLock.packages)])) {
+            const previous = initialLock.packages[path];
+            const next = updatedLock.packages[path];
+            if (JSON.stringify(previous) === JSON.stringify(next)) continue;
+            changed.push({ path, before: previous?.version ?? null, after: next?.version ?? null });
+          }
+          console.log('PR02_CHANGED_PACKAGES', JSON.stringify(changed));
+          for (const { path } of changed) {
+            assert.ok(path === '' || path === 'node_modules/vitest' || path.startsWith('node_modules/@vitest/'), `out-of-scope lockfile change: ${path}`);
+            if (path) assert.equal(updatedLock.packages[path].version, '4.1.11');
+          }
+          const productionBefore = Object.entries(initialLock.packages).filter(([path, entry]) => path && !entry.dev);
+          for (const [path, entry] of productionBefore) assert.deepEqual(updatedLock.packages[path], entry, `production graph changed: ${path}`);
+          run(['ci']);
+          assert.equal(readFileSync('package-lock.json', 'utf8'), updatedLockText, 'npm ci must not rewrite the lockfile');
+          const after = { full: audit(['--include=dev']), production: audit(['--omit=dev']) };
+          assert.equal(after.full.exitCode, 0, 'remaining advisories require investigation');
+          assert.equal(after.full.report.metadata.vulnerabilities.total, 0);
+          assert.equal(after.production.exitCode, 0);
+          assert.equal(after.production.report.metadata.vulnerabilities.total, 0);
+          const installed = {};
+          for (const name of ['vitest', '@vitest/coverage-v8', '@vitest/mocker']) {
+            installed[name] = JSON.parse(readFileSync(`node_modules/${name}/package.json`, 'utf8')).version;
+            assert.equal(installed[name], '4.1.11');
+          }
+          const lockSha256 = createHash('sha256').update(updatedLockText).digest('hex');
+          const evidence = {
+            schemaVersion: 1, parent, executedAt: new Date().toISOString(),
+            nodeVersion: process.version, npmVersion,
+            runUrl: `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            generation: 'npm install --package-lock-only --ignore-scripts --save-dev --save-exact vitest@4.1.11 @vitest/coverage-v8@4.1.11',
+            cleanInstall: 'npm ci completed and left lockfile unchanged',
+            lockSha256, changedPackages: changed, productionGraphUnchanged: true,
+            installed, acceptedExceptions: [], before, after,
+            scope: 'Dependency generation and audits only; full candidate tests run on the final PR SHA.',
+          };
+          writeFileSync('/tmp/pr02-dependency-audit.json', JSON.stringify(evidence, null, 2) + '\n');
+          console.log('PR02_GENERATION_VERIFIED', JSON.stringify({ installed, lockSha256, full: after.full.report.metadata.vulnerabilities, production: after.production.report.metadata.vulnerabilities }));
+          NODE
+      - name: Publish generated Git objects only, without updating any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import assert from 'node:assert/strict';
+          const repository = 'AmineAKIK/protocap';
+          const parent = 'ae6ff45ee46750b8026d2848e8d881e094157fa1';
+          async function api(path, body) {
+            const response = await fetch(`https://api.github.com/repos/${repository}/${path}`, {
+              method: body ? 'POST' : 'GET',
+              headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+              ...(body ? { body: JSON.stringify(body) } : {}),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (!response.ok) throw new Error(`Git object publication failed: HTTP ${response.status}`);
+            return response.json();
+          }
+          const currentMain = await api('git/ref/heads/main');
+          assert.equal(currentMain.object.sha, parent, 'main changed during preparation');
+          const parentCommit = await api(`git/commits/${parent}`);
+          const tree = [];
+          for (const [path, localPath] of [
+            ['package.json', 'package.json'],
+            ['package-lock.json', 'package-lock.json'],
+            ['docs/release-evidence/pr-02-dependency-audit.json', '/tmp/pr02-dependency-audit.json'],
+          ]) {
+            const blob = await api('git/blobs', { content: readFileSync(localPath, 'utf8'), encoding: 'utf-8' });
+            tree.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+          }
+          const resultTree = await api('git/trees', { base_tree: parentCommit.tree.sha, tree });
+          const commit = await api('git/commits', {
+            message: 'fix(deps): regenerate Vitest 4.1.11 lockfile with npm and record audits',
+            tree: resultTree.sha, parents: [parent],
+          });
+          console.log('PR02_GENERATED_COMMIT', commit.sha);
+          console.log('PR02_GENERATED_TREE', resultTree.sha);
+          NODE
