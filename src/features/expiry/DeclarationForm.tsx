@@ -14,6 +14,7 @@ interface Props {
 export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const submittedRef = useRef(false);
   const summaryRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState<DeclarationDraft>(() => {
     const timeZone = browserTimeZone();
@@ -39,7 +40,10 @@ export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(onDeclare(draft));
+    if (submittedRef.current) return;
+    const result = onDeclare(draft);
+    if (result === null) submittedRef.current = true;
+    setError(result);
   }
   const invalid = (field: DeclarationError['field']) => error?.field === field ? true : undefined;
   const describedBy = (field: DeclarationError['field']) => [field === 'changedAt' ? helpId : '', error?.field === field ? errorId : ''].filter(Boolean).join(' ') || undefined;

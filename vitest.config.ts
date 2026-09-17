@@ -25,6 +25,10 @@ export default defineConfig({
         'src/hooks/useShiftGuideShell.ts',
         'src/pages/shiftguide/ShiftGuideLock.tsx',
         'src/utils/expiry.ts',
+        'src/features/expiry/time.ts',
+        'src/features/expiry/declaration.ts',
+        'src/features/expiry/DeclarationForm.tsx',
+        'src/pages/ExpiryCheckPage.tsx',
         'src/utils/packing.ts',
       ],
       thresholds: {

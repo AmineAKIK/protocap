@@ -24,12 +24,13 @@ describe('public storage schema registry', () => {
     })).toBe(true);
   });
 
-  it('rejects partial, structurally invalid, retired, or unsafe persisted values', () => {
-    expect(isValidPublicStorageValue('lineops.expiry.lines', [])).toBe(false);
+  it('keeps empty Expiry records readable without weakening other schemas', () => {
+    expect(isValidPublicStorageValue('lineops.expiry.lines', [])).toBe(true);
+    expect(isValidPublicStorageValue('lineops.expiry.lines', [{ id: 'partial' }])).toBe(false);
     expect(isValidPublicStorageValue('lineops.expiry.lines', [{
       ...initialConditioningLines[0],
       elements: [],
-    }])).toBe(false);
+    }])).toBe(true);
     expect(isValidPublicStorageValue('lineops.logistics.requests', { requests: initialLogisticsRequests })).toBe(false);
     expect(isValidPublicStorageValue('lineops.packing.form.inputs', { quantity: 30880 })).toBe(false);
     expect(isValidPublicStorageValue('lineops.packing.shipment.progress', {

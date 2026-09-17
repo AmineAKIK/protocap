@@ -51,7 +51,7 @@ export function remainingValidityPercent(line: ConditioningLine, now = new Date(
 export function statusLabel(status: ElementStatus | LineStatus): string {
   const labels: Record<ElementStatus | LineStatus, string> = {
     ok: 'OK', warning: 'Bientôt expiré', expired: 'Expiré',
-    conform: 'Conforme', watch: 'Vigilance', nonConform: 'Non conforme', unknown: 'À vérifier',
+    conform: 'Conforme', watch: 'Vigilance', nonConform: 'Non conforme', unknown: 'État à vérifier',
   };
   return labels[status];
 }

@@ -17,8 +17,11 @@ import { Modal } from '../components/Modal';
 import { initialChangeHistory, initialConditioningLines } from '../data/expiryData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { ChangeHistoryEntry, ConditioningLine } from '../types/expiry';
-import { addDays, formatDateTime, hoursUntil } from '../utils/date';
-import { getElementStatus, getLineStatus, statusLabel } from '../utils/expiry';
+import { hoursUntil } from '../utils/date';
+import { DeclarationForm } from '../features/expiry/DeclarationForm';
+import { prepareDeclaration, type DeclarationDraft, type DeclarationError, type DeclarationKind } from '../features/expiry/declaration';
+import { formatStoredTime as formatDateTime, instantMilliseconds } from '../features/expiry/time';
+import { getBlockStatus as getTemporalBlockStatus, getLineStatus, statusLabel, earliestExpiry, latestChange, remainingValidityPercent } from '../utils/expiry';
 
 const statusTone = {
   ok: 'green',
@@ -26,31 +29,22 @@ const statusTone = {
   expired: 'red',
   conform: 'green',
   watch: 'amber',
-  nonConform: 'red'
+  nonConform: 'red',
+  unknown: 'slate'
 } as const;
 
 function getBlockStatus(line: ConditioningLine) {
-  const statuses = line.elements.map((el) => getElementStatus(el));
-  if (statuses.includes('expired')) return 'expired';
-  if (statuses.includes('warning')) return 'warning';
-  return 'ok';
+  return getLineStatus(line) === 'unknown' ? 'unknown' : getTemporalBlockStatus(line);
 }
 
-function earliestExpiry(line: ConditioningLine) {
-  return line.elements.reduce((min, el) =>
-    new Date(el.expiresAt) < new Date(min) ? el.expiresAt : min,
-    line.elements[0].expiresAt
-  );
-}
-
-function latestChange(line: ConditioningLine) {
-  return line.elements.reduce((max, el) =>
-    new Date(el.lastChangedAt) > new Date(max) ? el.lastChangedAt : max,
-    line.elements[0].lastChangedAt
-  );
+function canGroupHistoryEntry(entry: ChangeHistoryEntry) {
+  const changedAt = instantMilliseconds(entry.changedAt);
+  const expiresAt = instantMilliseconds(entry.newExpiresAt);
+  return changedAt !== null && expiresAt !== null && changedAt <= Date.now() && expiresAt > changedAt;
 }
 
 function remainingLabel(line: ConditioningLine) {
+  if (getBlockStatus(line) === 'unknown') return 'État à vérifier';
   const remaining = hoursUntil(earliestExpiry(line));
   if (remaining <= 0) return 'À remplacer';
   const totalHours = Math.ceil(remaining);
@@ -62,6 +56,7 @@ function remainingLabel(line: ConditioningLine) {
 }
 
 function formatDateOnly(dateIso: string) {
+  if (instantMilliseconds(dateIso) === null) return 'Date à vérifier';
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: '2-digit',
@@ -70,6 +65,7 @@ function formatDateOnly(dateIso: string) {
 }
 
 function formatTimeOnly(dateIso: string) {
+  if (instantMilliseconds(dateIso) === null) return 'Date à vérifier';
   return new Intl.DateTimeFormat('fr-FR', {
     hour: '2-digit',
     minute: '2-digit'
@@ -88,19 +84,20 @@ function BlockValidityBar({ line }: { line: ConditioningLine }) {
   const validityDays = line.elements[0]?.validityDays ?? 5;
   const changedAt = latestChange(line);
   const expiresAt = earliestExpiry(line);
-  const remaining = hoursUntil(expiresAt);
-  const pct = Math.min(100, Math.max(0, (remaining / (validityDays * 24)) * 100));
+  const pct = remainingValidityPercent(line);
   const blockStatus = getBlockStatus(line);
 
-  const barColor = blockStatus === 'expired' ? 'bg-rose-500' : blockStatus === 'warning' ? 'bg-amber-400' : 'bg-emerald-500';
+  const barColor = (blockStatus === 'expired' || blockStatus === 'unknown') ? 'bg-rose-500' : blockStatus === 'warning' ? 'bg-amber-400' : 'bg-emerald-500';
   const label = remainingLabel(line);
+
+  if (pct === null) return <p className="break-normal text-sm font-semibold text-slate-700">Validité indéterminée — données à vérifier.</p>;
 
   return (
     <div className="min-w-0">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-1 text-xs text-slate-500">
-        <span className="break-normal">Validité restante ({validityDays} j max)</span>
+        <span className="break-normal">Validité restante ({validityDays} jours calendaires)</span>
         <span className={
-          blockStatus === 'expired' ? 'font-bold text-rose-600' :
+          (blockStatus === 'expired' || blockStatus === 'unknown') ? 'font-bold text-rose-600' :
           blockStatus === 'warning' ? 'font-bold text-amber-700' :
           'font-medium text-emerald-700'
         }>
@@ -171,6 +168,7 @@ export function ExpiryCheckPage() {
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? lines[0];
   const lineStatus = getLineStatus(selectedLine);
   const isBlocked = lineStatus === 'nonConform';
+  const isUnknown = lineStatus === 'unknown';
 
   function handleLineSelect(line: ConditioningLine) {
     setSelectedLineId(line.id);
@@ -182,71 +180,25 @@ export function ExpiryCheckPage() {
     return {
       conform: statuses.filter((s) => s === 'conform').length,
       watch: statuses.filter((s) => s === 'watch').length,
-      blocked: statuses.filter((s) => s === 'nonConform').length
+      blocked: statuses.filter((s) => s === 'nonConform').length,
+      unknown: statuses.filter((s) => s === 'unknown').length
     };
   }, [lines]);
 
-  function handleVatSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    const vat = String(data.get('vat') || selectedLine.vat);
-    const changedAt = String(data.get('changedAt'));
-    const operator = String(data.get('operator') || 'Opérateur démo');
-    const comment = String(data.get('comment') || '');
-
-    setLines((current) =>
-      current.map((l) => (l.id === selectedLine.id ? { ...l, vat } : l))
-    );
-
-    const newEntry: ChangeHistoryEntry = {
-      id: `hist-vat-${Date.now()}`,
-      lineId: selectedLine.id,
-      lineName: selectedLine.name,
-      elementLabel: 'Recharge de cuve - même matière',
-      changedAt: new Date(changedAt).toISOString(),
-      operator,
-      comment: comment || `${vat} ajoutée sur la ligne. Matière inchangée : ${selectedLine.product}.`,
-      newExpiresAt: earliestExpiry(selectedLine)
-    };
-    setHistory((current) => [newEntry, ...current]);
-    setVatModalOpen(false);
-  }
-
-  function handleDeclareSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    const changedAt = String(data.get('changedAt'));
-    const operator = String(data.get('operator') || 'Opérateur démo');
-    const comment = String(data.get('comment') || '');
-
-    setLines((current) =>
-      current.map((l) => {
-        if (l.id !== selectedLine.id) return l;
-        return {
-          ...l,
-          elements: l.elements.map((el) => ({
-            ...el,
-            lastChangedAt: new Date(changedAt).toISOString(),
-            expiresAt: addDays(new Date(changedAt).toISOString(), el.validityDays),
-            operator,
-            comment
-          }))
-        };
-      })
-    );
-
-    const newEntry: ChangeHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      lineId: selectedLine.id,
-      lineName: selectedLine.name,
-      elementLabel: 'Bloc de remplissage',
-      changedAt: new Date(changedAt).toISOString(),
-      operator,
-      comment,
-      newExpiresAt: addDays(new Date(changedAt).toISOString(), selectedLine.elements[0]?.validityDays ?? 5)
-    };
-    setHistory((current) => [newEntry, ...current]);
-    setDeclareModalOpen(false);
+  function handleDeclaration(kind: DeclarationKind, draft: DeclarationDraft): DeclarationError | null {
+    // All validation and date calculations finish before either legacy storage setter.
+    // Atomic persistence and failed-write recovery remain PR-05/06, not a claim of this preflight.
+    if (!selectedLine) return { field: 'form', message: 'La ligne sélectionnée n’existe plus.' };
+    let id: string;
+    try { id = crypto.randomUUID(); }
+    catch { return { field: 'form', message: 'Identifiant indisponible. Aucune donnée n’a été modifiée.' }; }
+    const result = prepareDeclaration(lines, selectedLine.id, kind, draft, new Date(), id);
+    if (!result.ok) return result.error;
+    setLines(result.lines);
+    setHistory((current) => [result.entry, ...current]);
+    if (kind === 'replacement') setDeclareModalOpen(false);
+    else setVatModalOpen(false);
+    return null;
   }
 
   function openDeclareFromBlockedModal() {
@@ -254,10 +206,17 @@ export function ExpiryCheckPage() {
     setDeclareModalOpen(true);
   }
 
+  if (!selectedLine) return (
+    <div className="mx-auto min-w-0 max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+      <h1 className="break-normal text-xl font-bold">Expiry Check</h1>
+      <p className="mt-4 break-normal">Aucune ligne exploitable. Les données existantes restent conservées ; aucune conformité ne peut être établie.</p>
+    </div>
+  );
+
   const blockStatus = getBlockStatus(selectedLine);
   const selectedLineHistory = history.filter((entry) => entry.lineId === selectedLine.id);
   const currentBlockChangedAt = new Date(latestChange(selectedLine)).getTime();
-  const blockHistory = selectedLineHistory.filter(isBlockHistoryEntry);
+  const blockHistory = selectedLineHistory.filter(isBlockHistoryEntry).filter(canGroupHistoryEntry);
   const hasCurrentBlockHistory = blockHistory.some(
     (entry) => Math.abs(new Date(entry.changedAt).getTime() - currentBlockChangedAt) < 1000
   );
@@ -265,23 +224,24 @@ export function ExpiryCheckPage() {
     id: `current-block-${selectedLine.id}-${latestChange(selectedLine)}`,
     lineId: selectedLine.id,
     lineName: selectedLine.name,
-    elementLabel: 'Bloc de remplissage',
+    elementLabel: 'État courant du bloc — sans déclaration enregistrée',
     changedAt: latestChange(selectedLine),
     operator: selectedLine.elements[0]?.operator ?? 'Opérateur non renseigné',
     comment: selectedLine.elements[0]?.comment,
     newExpiresAt: earliestExpiry(selectedLine)
   };
-  const blockInstances = (hasCurrentBlockHistory ? blockHistory : [currentBlockHistory, ...blockHistory])
+  const blockInstances = (hasCurrentBlockHistory || isUnknown ? blockHistory : [currentBlockHistory, ...blockHistory])
     .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   const vatEntries = selectedLineHistory
     .filter(isVatHistoryEntry)
+    .filter(canGroupHistoryEntry)
     .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   const blockHistoryGroups = blockInstances.map((block, index) => {
     const blockStartedAt = new Date(block.changedAt).getTime();
     const nextBlockStartedAt = index > 0 ? new Date(blockInstances[index - 1].changedAt).getTime() : Number.POSITIVE_INFINITY;
     return {
       block,
-      isCurrent: index === 0,
+      isCurrent: !isUnknown && blockStartedAt === currentBlockChangedAt,
       vatEntries: vatEntries.filter((entry) => {
         const changedAt = new Date(entry.changedAt).getTime();
         return changedAt >= blockStartedAt && changedAt < nextBlockStartedAt;
@@ -291,6 +251,8 @@ export function ExpiryCheckPage() {
   const vatHistory = blockHistoryGroups[0]?.vatEntries ?? [];
   const registerEntryCount = blockHistoryGroups.reduce((count, group) => count + 1 + group.vatEntries.length, 0);
   const washerBoard = lines;
+  const groupedIds = new Set(blockHistoryGroups.flatMap((group) => [group.block.id, ...group.vatEntries.map((entry) => entry.id)]));
+  const unclassifiedEntries = selectedLineHistory.filter((entry) => !groupedIds.has(entry.id));
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
@@ -304,6 +266,16 @@ export function ExpiryCheckPage() {
           Échéances visibles. Remplacements priorisés. Trace exploitable en cas d'investigation.
         </p>
       </div>
+
+      {unclassifiedEntries.length > 0 && <section className="mb-4 min-w-0 rounded-xl border border-amber-300 bg-amber-50 p-3">
+        <h2 className="break-normal font-bold">Traces non rattachables — à vérifier</h2>
+        <p className="break-normal text-sm">Ces traces sont conservées sans inventer de date ni les attribuer à un bloc.</p>
+        {unclassifiedEntries.map((entry, index) => <div key={index} className="mt-2 min-w-0 text-sm">
+          <p className="break-normal">{entry.elementLabel} · {entry.operator}</p>
+          <div className="max-w-full overflow-x-auto"><code>{entry.changedAt}</code></div>
+          {entry.comment && <p className="break-normal">{entry.comment}</p>}
+        </div>)}
+      </section>}
 
       <div
         className="sticky top-[var(--app-header-height)] z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 px-3 py-2 backdrop-blur lg:hidden"
@@ -351,6 +323,7 @@ export function ExpiryCheckPage() {
                   const status = getLineStatus(line);
                   const isSelected = line.id === selectedLine.id;
                   const selectorTone =
+                    status === 'unknown' ? 'border-slate-400 bg-slate-100 text-slate-900' :
                     status === 'nonConform'
                       ? isSelected
                         ? 'border-rose-600 bg-rose-600 text-white shadow-sm'
@@ -379,7 +352,12 @@ export function ExpiryCheckPage() {
           </section>
 
           <section className="min-w-0 space-y-4">
-            {isBlocked ? (
+            {isUnknown ? (
+              <div className="min-w-0 rounded-xl border-2 border-slate-400 bg-slate-50 p-3 sm:p-4">
+                <p className="break-normal font-bold">État à vérifier</p>
+                <p className="break-normal text-sm">Bloc : état temporel incohérent ou incomplet. Aucune autorisation de démarrage ne peut être établie. Les données restent conservées pour vérification.</p>
+              </div>
+            ) : isBlocked ? (
               <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border-2 border-rose-400 bg-rose-50 p-3 sm:p-4">
                 <Ban size={20} className="shrink-0 text-rose-600" />
                 <p className="min-w-0 flex-1 break-normal text-sm font-semibold text-rose-900">
@@ -416,7 +394,7 @@ export function ExpiryCheckPage() {
 
               <div className="mt-3 grid min-w-0 gap-3 sm:mt-5 sm:gap-4 xl:grid-cols-2">
                 <div className={`min-w-0 rounded-xl border-2 p-3 sm:p-5 ${
-                  blockStatus === 'expired' ? 'border-rose-300 bg-rose-50' :
+                  (blockStatus === 'expired' || blockStatus === 'unknown') ? 'border-rose-300 bg-rose-50' :
                   blockStatus === 'warning' ? 'border-amber-200 bg-amber-50/40' :
                   'border-slate-200 bg-white'
                 }`}>
@@ -431,10 +409,10 @@ export function ExpiryCheckPage() {
                       <p className="mt-1 whitespace-nowrap text-base font-black tabular-nums text-slate-950 sm:mt-2 sm:text-xl">{formatDateOnly(latestChange(selectedLine))}</p>
                       <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-lg">{formatTimeOnly(latestChange(selectedLine))}</p>
                     </div>
-                    <div className={`min-w-0 rounded-xl p-2.5 ring-1 sm:p-4 ${blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
+                    <div className={`min-w-0 rounded-xl p-2.5 ring-1 sm:p-4 ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
                       <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
-                      <p className={`mt-1 whitespace-nowrap text-base font-black tabular-nums sm:mt-2 sm:text-xl ${blockStatus === 'expired' ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
-                      <p className={`text-sm font-bold tabular-nums sm:text-lg ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
+                      <p className={`mt-1 whitespace-nowrap text-base font-black tabular-nums sm:mt-2 sm:text-xl ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
+                      <p className={`text-sm font-bold tabular-nums sm:text-lg ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
                     </div>
                   </div>
 
@@ -444,11 +422,11 @@ export function ExpiryCheckPage() {
 
                   <dl className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-sm sm:gap-y-2">
                     <dt className="min-w-0 break-normal text-slate-500">Temps restant</dt>
-                    <dd className={`text-right font-black ${blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                    <dd className={`text-right font-black ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                       {remainingLabel(selectedLine)}
                     </dd>
                     <dt className="min-w-0 break-normal text-slate-500">Validité</dt>
-                    <dd className="text-right font-medium text-slate-800">{selectedLine.elements[0]?.validityDays ?? 5} jours</dd>
+                    <dd className="text-right font-medium text-slate-800">{isUnknown ? 'À vérifier' : `${selectedLine.elements[0].validityDays} jours calendaires`}</dd>
                     <dt className="min-w-0 break-normal text-slate-500">Déclaré par</dt>
                     <dd className="max-w-[12rem] break-normal text-right font-medium text-slate-800">{selectedLine.elements[0]?.operator}</dd>
                   </dl>
@@ -456,6 +434,7 @@ export function ExpiryCheckPage() {
                   <Button
                     className="mt-3 w-full py-3 text-base shadow-sm sm:mt-5"
                     variant={isBlocked ? 'danger' : 'primary'}
+                    disabled={isUnknown}
                     onClick={() => setDeclareModalOpen(true)}
                   >
                     {isBlocked ? 'Remplacer le bloc de remplissage' : 'Déclarer un remplacement'}
@@ -486,7 +465,7 @@ export function ExpiryCheckPage() {
                       </div>
                     )}
                   </div>
-                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
+                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" disabled={isUnknown} icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
                     Ajouter une recharge de cuve
                   </Button>
                 </div>
@@ -567,7 +546,7 @@ export function ExpiryCheckPage() {
             </div>
             <Route className="shrink-0 text-teal-700" size={20} />
           </div>
-          <div className="mb-3 grid grid-cols-3 gap-2 sm:mb-4 sm:gap-3">
+          <div className="mb-3 grid grid-cols-2 gap-2 sm:mb-4 sm:grid-cols-4 sm:gap-3">
             <div className="min-w-0 rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-center sm:p-4">
               <p className="text-[10px] font-semibold text-emerald-700 sm:text-xs sm:uppercase sm:tracking-wide">OK</p>
               <p className="mt-1 text-2xl font-bold text-slate-950">{stats.conform}</p>
@@ -580,6 +559,10 @@ export function ExpiryCheckPage() {
               <p className="text-[10px] font-semibold text-rose-700 sm:text-xs sm:uppercase sm:tracking-wide">Bloqués</p>
               <p className="mt-1 text-2xl font-bold text-slate-950">{stats.blocked}</p>
             </div>
+            <div className="min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-2 text-center sm:p-4">
+              <p className="text-[10px] font-semibold text-slate-700 sm:text-xs">À vérifier</p>
+              <p className="mt-1 text-2xl font-bold text-slate-950">{stats.unknown}</p>
+            </div>
           </div>
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
             {washerBoard.map((line) => {
@@ -591,7 +574,7 @@ export function ExpiryCheckPage() {
                   type="button"
                   onClick={() => { handleLineSelect(line); setMobileView('line'); }}
                   className={`min-w-0 rounded-xl border p-3 text-left transition hover:border-teal-300 sm:p-4 ${
-                    status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
+                    (status === 'expired' || status === 'unknown') ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
@@ -601,7 +584,7 @@ export function ExpiryCheckPage() {
                     </div>
                     <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
                   </div>
-                  <p className={`mt-2 break-normal text-sm font-bold sm:mt-3 sm:text-base ${status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                  <p className={`mt-2 break-normal text-sm font-bold sm:mt-3 sm:text-base ${(status === 'expired' || status === 'unknown') ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
                     {remainingLabel(line)}
                   </p>
                   <div className="mt-2 min-w-0 rounded-xl bg-white/85 p-2 ring-1 ring-slate-200 sm:mt-3 sm:p-3">
@@ -626,57 +609,12 @@ export function ExpiryCheckPage() {
 
       {vatModalOpen && (
         <Modal title="Tracer une recharge de cuve" onClose={() => setVatModalOpen(false)}>
-          <form className="space-y-4" onSubmit={handleVatSubmit}>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              Matière inchangée : <strong>{selectedLine.product}</strong>. Cette trace n'impacte pas la date de péremption du bloc.
-            </div>
-            <label className="block min-w-0">
-              <span className="label">Cuve rechargée</span>
-              <input className="field mt-1" name="vat" defaultValue={selectedLine.vat} required />
-            </label>
-            <label className="block min-w-0">
-              <span className="label">Date / heure</span>
-              <input className="field mt-1" name="changedAt" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} required />
-            </label>
-            <label className="block min-w-0">
-              <span className="label">Opérateur</span>
-              <input className="field mt-1" name="operator" defaultValue="Opérateur démo" required />
-            </label>
-            <label className="block min-w-0">
-              <span className="label">Commentaire</span>
-              <textarea className="field mt-1 min-h-20" name="comment" placeholder="Ex : recharge de cuve, matière inchangée" />
-            </label>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={() => setVatModalOpen(false)}>Annuler</Button>
-              <Button className="w-full sm:w-auto" type="submit">Tracer la recharge</Button>
-            </div>
-          </form>
+          <DeclarationForm key={selectedLine.id} line={selectedLine} kind="refill" onCancel={() => setVatModalOpen(false)} onDeclare={(draft) => handleDeclaration('refill', draft)} />
         </Modal>
       )}
-
       {declareModalOpen && (
         <Modal title="Déclarer un remplacement" onClose={() => setDeclareModalOpen(false)}>
-          <form className="space-y-4" onSubmit={handleDeclareSubmit}>
-            <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-800">
-              Remplacement du bloc de remplissage — {selectedLine.name}
-            </div>
-            <label className="block min-w-0">
-              <span className="label">Date / heure du remplacement</span>
-              <input className="field mt-1" name="changedAt" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} required />
-            </label>
-            <label className="block min-w-0">
-              <span className="label">Opérateur</span>
-              <input className="field mt-1" name="operator" defaultValue="Opérateur démo" required />
-            </label>
-            <label className="block min-w-0">
-              <span className="label">Commentaire</span>
-              <textarea className="field mt-1 min-h-20" name="comment" placeholder="Ex : remplacement avant redémarrage" />
-            </label>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={() => setDeclareModalOpen(false)}>Annuler</Button>
-              <Button className="w-full sm:w-auto" type="submit">Valider le remplacement</Button>
-            </div>
-          </form>
+          <DeclarationForm key={selectedLine.id} line={selectedLine} kind="replacement" onCancel={() => setDeclareModalOpen(false)} onDeclare={(draft) => handleDeclaration('replacement', draft)} />
         </Modal>
       )}
     </div>

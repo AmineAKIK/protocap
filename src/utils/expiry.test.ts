@@ -28,9 +28,9 @@ function line(expiresAt: string): ConditioningLine {
 }
 
 describe('expiry fail-safe semantics', () => {
-  it('classifies an invalid expiry as expired instead of OK', () => {
-    expect(getElementStatus(element('not-a-date'), now)).toBe('expired');
-    expect(getLineStatus(line('not-a-date'), now)).toBe('nonConform');
+  it('classifies an invalid expiry as unknown, never OK or a falsely known expiration', () => {
+    expect(getElementStatus(element('not-a-date'), now)).toBe('unknown');
+    expect(getLineStatus(line('not-a-date'), now)).toBe('unknown');
   });
 
   it('preserves expiration and 48-hour warning boundaries', () => {

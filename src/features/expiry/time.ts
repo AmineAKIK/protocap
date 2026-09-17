@@ -44,7 +44,7 @@ export function formatLocalMinute(date: Date, timeZone: string): string {
 export function parseLocalMinute(value: unknown, timeZone: unknown, occurrence: unknown = ''): LocalTimeResult {
   const fail = (code: 'invalid' | 'zone' | 'gap' | 'overlap', message: string, candidates: LocalCandidate[] = []): LocalTimeResult => ({ ok: false, code, message, candidates });
   if (!isNamedTimeZone(timeZone)) return fail('zone', 'Fuseau indisponible ou non reconnu. Aucune date ne peut être enregistrée.');
-  if (typeof value !== 'string' || !localMinutePattern.test(value) || !['', 'earlier', 'later'].includes(String(occurrence))) {
+  if (typeof value !== 'string' || !localMinutePattern.test(value) || (typeof occurrence !== 'string' || !['', 'earlier', 'later'].includes(occurrence))) {
     return fail('invalid', 'Renseignez une date et une heure valides, à la minute près.');
   }
   try {
@@ -61,7 +61,9 @@ export function parseLocalMinute(value: unknown, timeZone: unknown, occurrence: 
         { occurrence: 'later', instant: serialize(later), offset: later.offset },
       ]);
     }
-    return { ok: true, instant: serialize(occurrence === 'later' ? later : earlier), timeZone };
+    const instant = serialize(occurrence === 'later' ? later : earlier);
+    if (instantMilliseconds(instant) === null) return fail('invalid', 'Instant hors plage. Aucune donnée n’a été modifiée.');
+    return { ok: true, instant, timeZone };
   } catch { return fail('invalid', 'Date hors plage ou calendrier invalide. Aucune donnée n’a été modifiée.'); }
 }
 
@@ -72,7 +74,9 @@ export function addCalendarDays(instant: string, days: number, timeZone: string)
   }
   const result = Temporal.Instant.from(instant).toZonedDateTimeISO(timeZone).add({ days }, { overflow: 'reject' });
   if (result.year < 1 || result.year > 9999) throw new RangeError('Expiry outside the supported four-digit calendar.');
-  return result.toInstant().toString({ smallestUnit: 'millisecond' });
+  const serialized = result.toInstant().toString({ smallestUnit: 'millisecond' });
+  if (instantMilliseconds(serialized) === null) throw new RangeError('Expiry instant outside the supported calendar.');
+  return serialized;
 }
 
 export function formatStoredTime(value: string): string {
