@@ -7,7 +7,8 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 test('npm check keeps frontend coverage in the repository gate', async () => {
   const packageJson = JSON.parse(await read('package.json'));
 
-  assert.equal(packageJson.devDependencies['@vitest/coverage-v8'], '4.1.10');
+  assert.match(packageJson.devDependencies.vitest, /^\d+\.\d+\.\d+$/);
+  assert.equal(packageJson.devDependencies['@vitest/coverage-v8'], packageJson.devDependencies.vitest);
   assert.equal(packageJson.scripts['test:frontend:coverage'], 'vitest run --coverage');
   assert.match(packageJson.scripts.check, /test:frontend:coverage/);
 });
@@ -42,21 +43,22 @@ test('npm lockfile root metadata stays aligned with package metadata', async () 
   assert.equal(packageLock.name, packageJson.name);
   assert.equal(packageLock.packages[''].name, packageJson.name);
   assert.deepEqual(packageLock.packages[''].engines, packageJson.engines);
-  assert.equal(
-    packageLock.packages[''].devDependencies['@vitest/coverage-v8'],
-    packageJson.devDependencies['@vitest/coverage-v8'],
-  );
+  assert.deepEqual(packageLock.packages[''].dependencies, packageJson.dependencies);
+  assert.deepEqual(packageLock.packages[''].devDependencies, packageJson.devDependencies);
 });
 
-test('supply-chain policy audits build tooling and production separately', async () => {
+test('supply-chain policy audits build tooling and production separately without accepting lower-severity findings', async () => {
   const [packageJson, workflow] = await Promise.all([
     read('package.json').then(JSON.parse),
     read('.github/workflows/ci.yml'),
   ]);
 
-  assert.equal(packageJson.scripts['audit:full'], 'npm audit --audit-level=high');
-  assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev');
+  assert.equal(packageJson.scripts['audit:full'], 'npm audit --include=dev --audit-level=low');
+  assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev --audit-level=low');
   assert.deepEqual(packageJson.allowScripts, { 'esbuild@0.25.12': true });
-  assert.match(workflow, /npm run audit:full/);
-  assert.match(workflow, /npm run audit:prod/);
+  assert.match(workflow, /run: npm run audit:full\n/);
+  assert.match(workflow, /run: npm run audit:prod\n/);
+  assert.match(workflow, /git diff --exit-code -- package\.json package-lock\.json/);
+  assert.match(workflow, /npm ls vitest @vitest\/coverage-v8 @vitest\/mocker/);
+  assert.doesNotMatch(workflow, /continue-on-error:\s*true/);
 });

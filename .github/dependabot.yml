@@ -6,7 +6,23 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      vitest-toolchain:
+        applies-to: version-updates
+        patterns:
+          - vitest
+          - '@vitest/*'
+        update-types:
+          - minor
+          - patch
+      vitest-security:
+        applies-to: security-updates
+        patterns:
+          - vitest
+          - '@vitest/*'
       npm-minor-patch:
+        exclude-patterns:
+          - vitest
+          - '@vitest/*'
         update-types:
           - minor
           - patch

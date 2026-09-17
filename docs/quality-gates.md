@@ -10,7 +10,7 @@ ProtoCap uses `npm run check` as the repository-level local and CI quality gate.
 4. ESLint, including targeted type-aware async checks for TypeScript source under `src/`.
 5. A production frontend build through TypeScript and Vite.
 
-The GitHub Quality Gate then adds a production Docker build, browser-level checks, a high/critical advisory gate for the full development/build graph, and a separate production-dependency audit.
+The GitHub Quality Gate then adds a production Docker build, browser-level checks, a low-through-critical advisory gate for the complete development/build graph, and a separate production-dependency audit. Installation must preserve the reviewed manifests, and the installed Vitest dependency tree is logged and checked.
 
 The remediation reference, including the exact Node 24 commands, observed limitations and coverage denominator, is recorded in [`remediation-baseline.md`](remediation-baseline.md). A historical green workflow is not substituted for a command that could not be executed locally.
 
@@ -76,14 +76,18 @@ This keeps async mistakes visible without applying type-aware parser requirement
 
 ## Supply-chain audit policy
 
-Dependency risk is split by trust surface instead of treating every package as equivalent:
+Dependency risk is split by trust surface, while both surfaces block all actionable severity levels:
 
-- `npm run audit:full` runs `npm audit --audit-level=high` against the complete development/build/runtime graph and fails CI on high or critical advisories;
-- `npm run audit:prod` runs `npm audit --omit=dev` and remains the stricter production-runtime gate, where any reported vulnerability fails the command;
-- `package-lock.json` is committed and CI installs with `npm ci`, so reviewed transitive resolutions are reproducible;
+- `npm run audit:full` runs `npm audit --include=dev --audit-level=low`; explicit inclusion prevents a production-mode environment from silently excluding build/test tooling;
+- `npm run audit:prod` runs `npm audit --omit=dev --audit-level=low` against the production-runtime dependency graph;
+- `package-lock.json` is generated with npm and committed; CI installs with `npm ci` and rejects manifest drift;
+- Vitest and `@vitest/coverage-v8` use aligned exact versions. `tests/dependencySecurity.test.mjs` rejects the known vulnerable range, checks nested mocker copies in the lockfile and compares installed packages with the lockfile;
+- both npm scripts propagate failures, including registry errors. Tests inject an HTTP 503 registry on loopback to verify the failure path without an external network dependency;
 - dependency install scripts are reviewed explicitly. The current Vite toolchain requires the `esbuild@0.25.12` postinstall script, and `package.json` records that exact version in `allowScripts` rather than approving future esbuild versions implicitly.
 
-The WS-07 refresh removed the then-current full-graph advisories by updating only compatible transitive lockfile resolutions. Both the complete graph and the production-only graph subsequently audited at zero vulnerabilities.
+There are no active audit exceptions. The scope, owner and expiry requirements for any future exception are defined in [`ci-security.md`](ci-security.md); writing an exception in a document does not bypass the gate.
+
+The WS-07 refresh removed the advisories known at its historical execution date. PR-01 subsequently recorded a moderate Vitest advisory. The [PR-02 evidence](release-evidence/pr-02-dependency-security.md) supersedes that dependency status with a separately dated audit and fresh-install proof. None of these past results replaces the audit on a new PR.
 
 ## Known install-time warnings
 
@@ -92,7 +96,7 @@ The locked development/build dependency graph still emits two deprecation warnin
 - `source-map@0.8.0-beta.0` is deprecated by its maintainer;
 - `glob@11.1.0` emits npm's old-version/security-support deprecation notice.
 
-Both are transitive build dependencies under `vite-plugin-pwa -> workbox-build@7.4.1`. They are not direct application dependencies, are excluded from the production-only install, and the current audited graph reports no vulnerability for either package. Workbox 7.4.1 is the current upstream release and still carries this dependency debt, so forcing a major PWA-tooling migration solely to hide these warnings would add more release risk than it removes. The warnings remain visible and should be revisited when upstream Workbox replaces the deprecated dependencies.
+Both are transitive build dependencies under `vite-plugin-pwa -> workbox-build@7.4.1`. They are not direct application dependencies and are excluded from the production-only install. The dated PR-02 audits report no advisory for them; deprecation is still maintenance debt, not a security guarantee. A major PWA-tooling migration is outside this scoped fix and must be evaluated separately. The warnings remain visible.
 
 The prior npm `allow-scripts` warning for `esbuild@0.25.12` is intentionally resolved through the pinned `allowScripts` policy described above; it is not suppressed generically.
 
