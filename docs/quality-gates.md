@@ -12,6 +12,8 @@ ProtoCap uses `npm run check` as the repository-level local and CI quality gate.
 
 The GitHub Quality Gate then adds a production Docker build, browser-level checks, a high/critical advisory gate for the full development/build graph, and a separate production-dependency audit.
 
+The remediation reference, including the exact Node 24 commands, observed limitations and coverage denominator, is recorded in [`remediation-baseline.md`](remediation-baseline.md). A historical green workflow is not substituted for a command that could not be executed locally.
+
 ## Browser and accessibility policy
 
 Browser coverage is deliberately layered rather than multiplying every end-to-end journey across every engine:
@@ -23,6 +25,20 @@ Browser coverage is deliberately layered rather than multiplying every end-to-en
 The axe gate blocks automated WCAG A/AA findings with `critical` or `serious` impact. It is a regression detector, not a claim of full accessibility conformance: keyboard behavior, semantics and visual review still need human judgment.
 
 Cross-browser smoke scripts do not call a live AI provider. They run against the same deterministic local E2E server fixture used by the Chromium journeys.
+
+## Hermetic browser-test server
+
+Playwright always starts a fresh server through `scripts/e2e-server-harness.mjs`; `reuseExistingServer` is false in every environment. A process already listening on the test URL is therefore a hard failure instead of an implicitly trusted fixture.
+
+Playwright itself merges the parent process environment before applying `webServer.env`. The wrapper is consequently a required security boundary, not just a convenience: before importing `server.mjs`, it deletes the inherited environment and replaces it with a fixed synthetic allowlist. The DeepSeek key is explicitly empty, the clock zone is UTC, and modules, lexicon and routing are test fixtures. The production bootstrap and production environment are unchanged.
+
+`tests/e2eHarness.test.mjs` poisons the parent environment with sentinel values and verifies that none survive. The server is stopped through SIGTERM so repeated suites do not leave an unidentified process behind.
+
+## E2E selection policy
+
+The current browser commands name spec files explicitly. Every new `e2e/**/*.spec.ts` must therefore be added in the same pull request to at least one `test:e2e*` script, and that script must be invoked by `.github/workflows/ci.yml`.
+
+`tests/e2eSelection.test.mjs` enforces both sides of this mapping as part of `npm run test:unit`, which is already inside `npm run check`. A newly added but unselected spec fails the repository gate; an empty or unexpectedly undiscovered suite is not accepted as success. PR-11 may replace explicit lists with a more scalable selector, but it must preserve this invariant.
 
 ## Responsive architecture policy
 
