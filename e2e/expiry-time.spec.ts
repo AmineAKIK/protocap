@@ -162,7 +162,9 @@ test('T42: keyboard reaches every declaration control and scrolls the dialog wit
   await openExpiry(page);
   const before = await snapshot(page);
   const trigger = page.getByRole('button', { name: 'Déclarer un remplacement', exact: true });
-  await trigger.click();
+  // Start this keyboard journey on its invoking control. A pointer click does
+  // not establish the same preceding focus across engines, notably WebKit.
+  await trigger.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Déclarer un remplacement', exact: true });
   const close = dialog.getByRole('button', { name: 'Fermer', exact: true });
   const region = dialog.getByRole('region', { name: 'Déclarer un remplacement', exact: true });
