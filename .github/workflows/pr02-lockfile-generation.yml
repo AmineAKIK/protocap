@@ -37,8 +37,7 @@ jobs:
           assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), parent);
           assert.equal(Number(process.versions.node.split('.')[0]), 24);
           const initialPackage = JSON.parse(readFileSync('package.json', 'utf8'));
-          const initialLockText = readFileSync('package-lock.json', 'utf8');
-          const initialLock = JSON.parse(initialLockText);
+          const initialLock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
           const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
           const run = (args) => execFileSync('npm', args, { stdio: 'inherit', timeout: 240000 });
           function audit(extra) {
@@ -51,6 +50,7 @@ jobs:
             const report = JSON.parse(result.stdout);
             assert.ok(!report.error && report.auditReportVersion === 2 && report.metadata?.vulnerabilities && report.vulnerabilities);
             assert.equal(Number.isInteger(report.metadata.vulnerabilities.total), true);
+            assert.equal(result.status, report.metadata.vulnerabilities.total === 0 ? 0 : 1);
             return { exitCode: result.status, report };
           }
           run(['ci', '--ignore-scripts']);
@@ -75,12 +75,29 @@ jobs:
             changed.push({ path, before: previous?.version ?? null, after: next?.version ?? null });
           }
           console.log('PR02_CHANGED_PACKAGES', JSON.stringify(changed));
+          // These are direct Vitest dependencies in the upstream v4.1.11 manifest.
+          // The first preparation run rejected their drift before any Git object publication.
+          const reviewedTransitives = {
+            'node_modules/obug': { name: 'obug', before: '2.1.4', after: '2.2.1' },
+            'node_modules/tinyexec': { name: 'tinyexec', before: '1.3.0', after: '1.3.1' },
+            'node_modules/vitest/node_modules/picomatch': { name: 'picomatch', before: '4.0.5', after: '4.0.7' },
+          };
+          const requiredRanges = updatedLock.packages['node_modules/vitest'].dependencies;
           for (const { path } of changed) {
-            assert.ok(path === '' || path === 'node_modules/vitest' || path.startsWith('node_modules/@vitest/'), `out-of-scope lockfile change: ${path}`);
-            if (path) assert.equal(updatedLock.packages[path].version, '4.1.11');
+            if (path === '') continue;
+            const approved = reviewedTransitives[path];
+            assert.ok(approved || path === 'node_modules/vitest' || path.startsWith('node_modules/@vitest/'), `out-of-scope lockfile change: ${path}`);
+            assert.equal(updatedLock.packages[path].dev, true, `changed dependency must be dev-only: ${path}`);
+            if (approved) {
+              assert.equal(initialLock.packages[path].version, approved.before);
+              assert.equal(updatedLock.packages[path].version, approved.after);
+              assert.equal(typeof requiredRanges[approved.name], 'string', `${path} must remain a Vitest dependency`);
+            } else {
+              assert.equal(updatedLock.packages[path].version, '4.1.11');
+            }
           }
-          const productionBefore = Object.entries(initialLock.packages).filter(([path, entry]) => path && !entry.dev);
-          for (const [path, entry] of productionBefore) assert.deepEqual(updatedLock.packages[path], entry, `production graph changed: ${path}`);
+          const productionGraph = (lock) => Object.fromEntries(Object.entries(lock.packages).filter(([path, entry]) => path && !entry.dev));
+          assert.deepEqual(productionGraph(updatedLock), productionGraph(initialLock), 'production graph changed');
           run(['ci']);
           assert.equal(readFileSync('package-lock.json', 'utf8'), updatedLockText, 'npm ci must not rewrite the lockfile');
           const after = { full: audit(['--include=dev']), production: audit(['--omit=dev']) };
@@ -93,6 +110,7 @@ jobs:
             installed[name] = JSON.parse(readFileSync(`node_modules/${name}/package.json`, 'utf8')).version;
             assert.equal(installed[name], '4.1.11');
           }
+          run(['ls', 'vitest', '@vitest/coverage-v8', '@vitest/mocker']);
           const lockSha256 = createHash('sha256').update(updatedLockText).digest('hex');
           const evidence = {
             schemaVersion: 1, parent, executedAt: new Date().toISOString(),
@@ -101,6 +119,7 @@ jobs:
             generation: 'npm install --package-lock-only --ignore-scripts --save-dev --save-exact vitest@4.1.11 @vitest/coverage-v8@4.1.11',
             cleanInstall: 'npm ci completed and left lockfile unchanged',
             lockSha256, changedPackages: changed, productionGraphUnchanged: true,
+            reviewedTransitives, vitestRequiredRanges: requiredRanges,
             installed, acceptedExceptions: [], before, after,
             scope: 'Dependency generation and audits only; full candidate tests run on the final PR SHA.',
           };
