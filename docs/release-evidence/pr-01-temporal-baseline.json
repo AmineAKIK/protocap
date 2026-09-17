@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "e5adec6d7c656a9dd63cea2a6db2509b23dbdf10",
+  "executedAt": "2026-09-17T19:36:14.919Z",
+  "nodeVersion": "v24.19.0",
+  "note": "Characterization of inspected legacy expressions; this is evidence, not a regression test that preserves defects.",
+  "roundTrips": [
+    {
+      "timeZone": "UTC",
+      "instant": "2026-09-17T12:00:00.000Z",
+      "actualLocalMinute": "2026-09-17T12:00",
+      "legacyDefaultValue": "2026-09-17T12:00",
+      "legacyStoredInstant": "2026-09-17T12:00:00.000Z",
+      "offsetMinutes": 0,
+      "mismatchReproduced": false
+    },
+    {
+      "timeZone": "Europe/Paris",
+      "instant": "2026-09-17T12:00:00.000Z",
+      "actualLocalMinute": "2026-09-17T14:00",
+      "legacyDefaultValue": "2026-09-17T12:00",
+      "legacyStoredInstant": "2026-09-17T10:00:00.000Z",
+      "offsetMinutes": -120,
+      "mismatchReproduced": true
+    },
+    {
+      "timeZone": "Europe/Paris",
+      "instant": "2026-01-17T12:00:00.000Z",
+      "actualLocalMinute": "2026-01-17T13:00",
+      "legacyDefaultValue": "2026-01-17T12:00",
+      "legacyStoredInstant": "2026-01-17T11:00:00.000Z",
+      "offsetMinutes": -60,
+      "mismatchReproduced": true
+    },
+    {
+      "timeZone": "America/New_York",
+      "instant": "2026-09-17T12:00:00.000Z",
+      "actualLocalMinute": "2026-09-17T08:00",
+      "legacyDefaultValue": "2026-09-17T12:00",
+      "legacyStoredInstant": "2026-09-17T16:00:00.000Z",
+      "offsetMinutes": 240,
+      "mismatchReproduced": true
+    }
+  ],
+  "calendarDays": [
+    {
+      "timeZone": "Europe/Paris",
+      "start": "2026-03-27T11:00:00.000Z",
+      "expiry": "2026-04-01T10:00:00.000Z",
+      "elapsedHours": 119
+    },
+    {
+      "timeZone": "Europe/Paris",
+      "start": "2026-10-23T10:00:00.000Z",
+      "expiry": "2026-10-28T11:00:00.000Z",
+      "elapsedHours": 121
+    }
+  ],
+  "futureIntervention": {
+    "now": "2026-09-17T12:00:00.000Z",
+    "lastChangedAt": "2026-10-17T12:00:00.000Z",
+    "expiresAt": "2026-10-22T12:00:00.000Z",
+    "legacyElementStatus": "ok",
+    "futureInterventionTreatedAsOk": true
+  },
+  "reproduced": true
+}

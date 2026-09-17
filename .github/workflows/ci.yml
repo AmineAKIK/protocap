@@ -57,12 +57,24 @@ jobs:
 
       - name: Run critical Chromium journeys
         run: npm run test:e2e
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
 
       - name: Run responsive architecture contract
         run: npm run test:e2e:responsive
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
 
       - name: Run mobile Chromium and WebKit smoke tests
         run: npm run test:e2e:browser-smoke
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
 
       - name: Run accessibility smoke tests
         run: npm run test:e2e:a11y
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
