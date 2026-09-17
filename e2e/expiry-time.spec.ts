@@ -119,7 +119,7 @@ test.describe('Expiry temporal rejection and recovery boundary', () => {
   test('T05/T16: future legacy installation remains visible and unmodified', async ({ page }) => {
     await seedAt(page, '2026-09-18T12:00:00.000Z', '2026-09-23T12:00:00.000Z');
     await openExpiry(page);
-    await expect(page.getByText('État à vérifier').first()).toBeVisible();
+    await expect(page.getByText('État à vérifier', { exact: true }).filter({ visible: true })).toHaveCount(1);
     await expect(page.getByText(/état temporel incohérent ou incomplet/i)).toBeVisible();
     await expect(page.getByText(/Démarrage de la ligne autorisé/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
