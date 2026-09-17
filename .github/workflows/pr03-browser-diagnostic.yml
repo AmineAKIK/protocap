@@ -1,0 +1,29 @@
+name: PR-03 browser diagnosis
+on:
+  push:
+    branches: [work/pr03-correction-preparation]
+    paths: [.github/workflows/pr03-browser-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 52d2384405e14364393b1b96eb33a8863c2bbb9d
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci && npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Diagnose the first failure without retrying; not a substitute for the complete PR gate
+        run: npx playwright test e2e/expiry-time.spec.ts --project=chromium --project=chromium-mobile --project=webkit --max-failures=1 --retries=0
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
+      - name: Print synthetic error context when present
+        if: failure()
+        run: find test-results -name error-context.md -exec cat {} \;
