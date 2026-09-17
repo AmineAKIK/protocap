@@ -32,7 +32,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit full dependency graph for high advisories
+      - name: Verify installation preserves the reviewed manifests
+        run: git diff --exit-code -- package.json package-lock.json
+
+      - name: Verify installed Vitest dependency alignment
+        run: npm ls vitest @vitest/coverage-v8 @vitest/mocker
+
+      - name: Audit full dependency graph from low severity
         run: npm run audit:full
 
       - name: Audit production dependencies

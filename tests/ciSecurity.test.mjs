@@ -34,7 +34,7 @@ test('production dependency audit is a named repository script wired into CI', a
   const packageJson = JSON.parse(await read('package.json'));
   const workflow = await read('.github/workflows/ci.yml');
 
-  assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev');
+  assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev --audit-level=low');
   assert.match(workflow, /run:\s+npm run audit:prod/);
 });
 

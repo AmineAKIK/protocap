@@ -22,8 +22,8 @@
     "smoke:live": "node scripts/live-smoke.mjs",
     "check:server": "node --check server.mjs && node --check server/app.mjs && node --check server/celineAuthority.mjs && node --check server/celineCostGuard.mjs && node --check server/celineDomainEngine.mjs && node --check server/celineFallback.mjs && node --check server/celineOperationalState.mjs && node --check server/celineProviderContext.mjs && node --check server/celineRoutingContract.mjs && node --check server/celineRoutingDefault.mjs && node --check server/celineSemanticIndex.mjs && node --check server/celinePrompt.mjs && node --check server/ingressTrust.mjs && node --check server/lifecycle.mjs && node --check server/observability.mjs && node --check server/providers/deepSeekProvider.mjs && node --check server/readiness.mjs && node --check server/requestCancellation.mjs && node --check server/runtimeUtils.mjs && node --check server/security.mjs && node --check server/shiftGuideDefaults.mjs && node --check server/shiftGuideRevision.mjs && node --check shared/celineContract.js && node --check shared/configBudgets.js && node --check shared/shiftGuideContract.js && node --check shared/shiftGuidePersistence.js && node --check shared/shiftGuideProgress.js && node --check scripts/live-smoke.mjs",
     "check": "npm run check:server && npm run test:unit && npm run test:frontend:coverage && npm run lint && npm run build",
-    "audit:full": "npm audit --audit-level=high",
-    "audit:prod": "npm audit --omit=dev",
+    "audit:full": "npm audit --include=dev --audit-level=low",
+    "audit:prod": "npm audit --omit=dev --audit-level=low",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0"
   },
@@ -44,7 +44,7 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.0.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -56,7 +56,7 @@
     "typescript-eslint": "^8.67.0",
     "vite": "^6.0.1",
     "vite-plugin-pwa": "^0.21.1",
-    "vitest": "^4.1.10"
+    "vitest": "4.1.11"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
