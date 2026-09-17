@@ -87,7 +87,7 @@ Dependency risk is split by trust surface, while both surfaces block all actiona
 
 There are no active audit exceptions. The scope, owner and expiry requirements for any future exception are defined in [`ci-security.md`](ci-security.md); writing an exception in a document does not bypass the gate.
 
-The WS-07 refresh removed the advisories known at its historical execution date. PR-01 subsequently recorded a moderate Vitest advisory. The [PR-02 evidence](release-evidence/pr-02-dependency-security.md) supersedes that dependency status with a separately dated audit and fresh-install proof. None of these past results replaces the audit on a new PR.
+The WS-07 refresh removed the advisories known at its historical execution date. PR-01 subsequently recorded a moderate Vitest advisory. On 17 September 2026, the [PR-02 generation run](https://github.com/AmineAKIK/protocap/actions/runs/35273634056) reported **zero vulnerabilities** in both the full and production audits after a fresh installation. The [PR-02 evidence](release-evidence/pr-02-dependency-security.md) records the exact parent, lockfile hash, installed versions and before/after reports. This dated registry result is not a guarantee of general security and does not replace the audit on a new PR.
 
 ## Known install-time warnings
 
