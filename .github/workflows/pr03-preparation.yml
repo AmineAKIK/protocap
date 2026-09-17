@@ -85,7 +85,7 @@ jobs:
           writeFileSync('/tmp/pr03-changed-paths.json', JSON.stringify(paths));
           console.log('PR03_DEPENDENCIES_VERIFIED', JSON.stringify(evidence.addedPackages));
           NODE
-      - name: Publish candidate Git objects without changing a branch
+      - name: Publish content-addressed blobs only
         working-directory: candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -94,34 +94,27 @@ jobs:
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { readFileSync } from 'node:fs';
-          const parent = '375abcd08889ea485a41fd10b5ffdb8fd86e035d';
-          async function api(path, body) {
-            const response = await fetch(`https://api.github.com/repos/AmineAKIK/protocap/${path}`, {
-              method: body ? 'POST' : 'GET',
-              headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
-              ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(30000),
-            });
-            if (!response.ok) throw new Error(`Git object publication failed: HTTP ${response.status}`);
-            return response.json();
-          }
-          const current = await api('git/ref/heads/fix/expiry-time-contract');
-          assert.equal(current.object.sha, parent, 'Candidate changed during preparation');
-          const parentCommit = await api(`git/commits/${parent}`);
+          import { createHash } from 'node:crypto';
           const paths = JSON.parse(readFileSync('/tmp/pr03-changed-paths.json', 'utf8'));
           const tree = [];
           for (const path of paths) {
             assert.ok(!path.startsWith('.github/pr03/') && !path.includes('pr03-preparation'));
-            const blob = await api('git/blobs', { content: readFileSync(path, 'utf8'), encoding: 'utf-8' });
-            tree.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+            const content = readFileSync(path, 'utf8');
+            const response = await fetch('https://api.github.com/repos/AmineAKIK/protocap/git/blobs', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${process.env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+              body: JSON.stringify({ content, encoding: 'utf-8' }), signal: AbortSignal.timeout(30000),
+            });
+            if (!response.ok) throw new Error(`Blob publication failed: HTTP ${response.status}`);
+            const blob = await response.json();
+            const bytes = Buffer.from(content);
+            const expected = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            assert.equal(blob.sha, expected);
+            const entry = { path, mode: '100644', type: 'blob', sha: blob.sha };
+            tree.push(entry);
+            console.log('PR03_VERIFIED_BLOB', JSON.stringify(entry));
           }
-          const resultTree = await api('git/trees', { base_tree: parentCommit.tree.sha, tree });
-          const commit = await api('git/commits', {
-            message: 'fix(expiry): wire temporal declarations, preserve suspect data and execute browser regressions',
-            tree: resultTree.sha, parents: [parent],
-          });
-          console.log('PR03_CORRECTED_COMMIT', commit.sha);
-          console.log('PR03_CORRECTED_TREE', resultTree.sha);
-          console.log('PR03_PUBLISHED_PATHS', JSON.stringify(paths));
+          console.log('PR03_VERIFIED_TREE_ENTRIES', JSON.stringify(tree));
           NODE
       - name: Run repository checks on prepared content
         working-directory: candidate
