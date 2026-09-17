@@ -1,6 +1,6 @@
 export type ContactElementType = 'fillingBlock';
-export type ElementStatus = 'ok' | 'warning' | 'expired';
-export type LineStatus = 'conform' | 'watch' | 'nonConform';
+export type ElementStatus = 'ok' | 'warning' | 'expired' | 'unknown';
+export type LineStatus = 'conform' | 'watch' | 'nonConform' | 'unknown';
 
 export interface ContactElement {
   type: ContactElementType;
@@ -10,6 +10,9 @@ export interface ContactElement {
   validityDays: number;
   operator: string;
   comment?: string;
+  /** Absent for legacy records; never backfilled by guessing the writer's zone. */
+  timeZone?: string;
+  validityRule?: string;
 }
 
 export interface ConditioningLine {
@@ -31,4 +34,7 @@ export interface ChangeHistoryEntry {
   comment?: string;
   previousExpiresAt?: string;
   newExpiresAt: string;
+  /** Zone of the declared intervention, not necessarily the active block's zone. */
+  timeZone?: string;
+  validityRule?: string;
 }
