@@ -6,8 +6,9 @@ import {
   E2E_HARNESS_MARKER,
   replaceEnvironment,
 } from '../scripts/e2e-server-harness.mjs';
+import { E2E_SUITES } from '../scripts/e2e-suites.mjs';
 
-test('synthetic E2E environment replaces inherited values and disables the provider', () => {
+test('T29/T39: synthetic E2E environment replaces inherited values and disables the provider', () => {
   const inherited = {
     PATH: '/host/bin',
     DEEPSEEK_API_KEY: 'sentinel-must-not-survive',
@@ -24,7 +25,7 @@ test('synthetic E2E environment replaces inherited values and disables the provi
   assert.equal(Object.hasOwn(inherited, 'UNRELATED_SECRET'), false);
 });
 
-test('synthetic E2E environment is deterministic and contains no external provider configuration', () => {
+test('T29/T39: synthetic E2E environment is deterministic and contains no external provider configuration', () => {
   const first = createE2eServerEnvironment();
   const second = createE2eServerEnvironment();
 
@@ -38,10 +39,14 @@ test('synthetic E2E environment is deterministic and contains no external provid
   assert.ok(JSON.parse(first.SG_CELINE_ROUTING).routes.length > 0);
 });
 
-test('Playwright starts one identifiable synthetic server and never reuses an existing process', async () => {
+test('T39: Playwright starts one identifiable synthetic server and never reuses an existing process', async () => {
   const sentinel = 'sentinel-must-not-reach-the-provider';
-  const previous = process.env.DEEPSEEK_API_KEY;
+  const previousKey = process.env.DEEPSEEK_API_KEY;
+  const previousCi = process.env.CI;
+  const previousSuite = process.env.PLAYWRIGHT_SUITE;
   process.env.DEEPSEEK_API_KEY = sentinel;
+  process.env.CI = '1';
+  process.env.PLAYWRIGHT_SUITE = 'policy-test';
 
   try {
     const { default: config } = await import(`../playwright.config.ts?harness=${Date.now()}`);
@@ -56,22 +61,49 @@ test('Playwright starts one identifiable synthetic server and never reuses an ex
     });
     assert.deepEqual(webServer.gracefulShutdown, { signal: 'SIGTERM', timeout: 5_000 });
     assert.equal(Object.values(webServer.env).includes(sentinel), false);
+
+    assert.equal(config.retries, 1);
+    assert.equal(config.failOnFlakyTests, true);
+    assert.equal(config.outputDir, 'test-results/playwright/policy-test');
+    assert.equal(config.use.trace, 'retain-on-failure');
+    assert.equal(config.use.screenshot, 'only-on-failure');
+    assert.equal(config.use.video, 'retain-on-failure');
+    assert.ok(config.reporter.some(([name]) => name === 'json'));
+    assert.ok(config.reporter.some(([name]) => name === 'html'));
   } finally {
-    if (previous === undefined) delete process.env.DEEPSEEK_API_KEY;
-    else process.env.DEEPSEEK_API_KEY = previous;
+    if (previousKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = previousKey;
+    if (previousCi === undefined) delete process.env.CI;
+    else process.env.CI = previousCi;
+    if (previousSuite === undefined) delete process.env.PLAYWRIGHT_SUITE;
+    else process.env.PLAYWRIGHT_SUITE = previousSuite;
   }
 });
 
-test('CI poisons every browser run with provider sentinels', async () => {
+test('T39: public-demo Playwright config starts both origins without process reuse', async () => {
+  const previousCi = process.env.CI;
+  process.env.CI = '1';
+  try {
+    const { default: config } = await import(`../playwright.public-demo.config.ts?harness=${Date.now()}`);
+    assert.ok(Array.isArray(config.webServer));
+    assert.equal(config.webServer.length, 2);
+    for (const server of config.webServer) {
+      assert.equal(server.reuseExistingServer, false);
+      assert.deepEqual(server.gracefulShutdown, { signal: 'SIGTERM', timeout: 5_000 });
+      assert.equal(server.env.DEEPSEEK_API_KEY, '');
+    }
+    assert.equal(config.failOnFlakyTests, true);
+  } finally {
+    if (previousCi === undefined) delete process.env.CI;
+    else process.env.CI = previousCi;
+  }
+});
+
+test('T29/T38: CI poisons every protected browser run and isolates the public demo', async () => {
   const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
 
-  for (const script of [
-    'test:e2e',
-    'test:e2e:responsive',
-    'test:e2e:browser-smoke',
-    'test:e2e:a11y',
-  ]) {
-    const escapedScript = script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const suite of Object.values(E2E_SUITES).filter(({ script }) => script !== 'test:e2e:public-demo')) {
+    const escapedScript = suite.script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     assert.match(
       workflow,
       new RegExp(
@@ -81,4 +113,9 @@ test('CI poisons every browser run with provider sentinels', async () => {
       ),
     );
   }
+
+  assert.match(
+    workflow,
+    /run: npm run test:e2e:public-demo\n\s+env:\n\s+DEEPSEEK_API_KEY: ''\n\s+SG_SYSTEM_PROMPT: public-demo-host-config-must-not-be-used/,
+  );
 });
