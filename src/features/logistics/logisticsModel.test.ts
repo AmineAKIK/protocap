@@ -23,6 +23,13 @@ describe('Logistics transitions', () => {
     expect(canTransitionLogisticsStatus(from, to)).toBe(false);
   });
 
+  it('T22: non-terminal transitions do not invent a completion time', () => {
+    expect(transitionLogisticsRequest(base, 'seen', '2026-09-18T08:10:00.000Z')).toEqual({
+      ok: true,
+      request: { ...base, status: 'seen' },
+    });
+  });
+
   it('T20/T22: terminal transition gets the real closure time and terminals stay stable', () => {
     const done = transitionLogisticsRequest(base, 'pickedUp', '2026-09-18T08:15:00.000Z');
     expect(done).toEqual({
