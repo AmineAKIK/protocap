@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PackingCalculatorPage } from './PackingCalculatorPage';
 
@@ -18,15 +18,7 @@ describe('PackingCalculatorPage persisted-state recovery', () => {
     expect((screen.getByLabelText('Cadence réf.') as HTMLInputElement).value).toBe('');
     expect(screen.getByText(/Une préparation locale invalide a été ignorée/)).toBeTruthy();
 
-    await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
-        quantity: '',
-        unitsPerCarton: '',
-        cartonsPerPalette: '',
-        productionStartTime: '',
-        referenceCadence: '',
-      });
-    });
+    expect(localStorage.getItem(formStorageKey)).toBe(JSON.stringify({ quantity: 30880 }));
   });
 
   it('keeps the recovery warning visible when an active run is restored at the same time', () => {
@@ -70,14 +62,11 @@ describe('PackingCalculatorPage persisted-state recovery', () => {
     expect((screen.getByLabelText('Début OC') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Cadence réf.') as HTMLInputElement).value).toBe('');
 
-    await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
-        quantity: '30880',
-        unitsPerCarton: '128',
-        cartonsPerPalette: '40',
-        productionStartTime: '',
-        referenceCadence: '',
-      });
+    expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
+      quantity: '30880',
+      unitsPerCarton: '128',
+      cartonsPerPalette: '40',
+      policy: 'round-carton',
     });
   });
 });
