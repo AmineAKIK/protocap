@@ -23,6 +23,7 @@ type ShiftGuideAuthStatus = 'checking' | 'locked' | 'unlocked';
 
 interface ShiftGuideAuthContextValue {
   status: ShiftGuideAuthStatus;
+  exiting: boolean;
   unlock: (code: string) => Promise<ShiftGuideAuthResult>;
   startDemo: () => Promise<ShiftGuideAuthResult>;
   logout: () => Promise<void>;
@@ -32,11 +33,14 @@ const ShiftGuideAuthContext = createContext<ShiftGuideAuthContextValue | null>(n
 
 export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ShiftGuideAuthStatus>('checking');
+  const [exiting, setExiting] = useState(false);
+  const exitingRef = useRef(false);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<number | null>(null);
   const authGenerationRef = useRef(0);
   const validationPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const applyValidationResult = useCallback((valid: boolean) => {
+    if (exitingRef.current) return;
     if (!valid) {
       setSessionExpiresAt(null);
       setStatus('locked');
@@ -54,6 +58,7 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const validateSession = useCallback(() => {
+    if (exitingRef.current) return Promise.resolve(false);
     if (!validationPromiseRef.current) {
       validationPromiseRef.current = validateShiftGuideSession().finally(() => {
         validationPromiseRef.current = null;
@@ -128,6 +133,7 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   }, [sessionExpiresAt, status]);
 
   const unlock = useCallback(async (code: string) => {
+    if (exitingRef.current) return { ok: false, error: 'Session terminée.' };
     const result = await unlockShiftGuide(code);
     if (result.ok) {
       authGenerationRef.current += 1;
@@ -143,6 +149,7 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startDemo = useCallback(async () => {
+    if (exitingRef.current) return { ok: false, error: 'Session terminée.' };
     const result = await startPublicShiftGuideDemo();
     if (result.ok) {
       authGenerationRef.current += 1;
@@ -158,13 +165,18 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    exitingRef.current = true;
+    setExiting(true);
     authGenerationRef.current += 1;
     setSessionExpiresAt(null);
     setStatus('locked');
     await logoutShiftGuide();
   }, []);
 
-  const value = useMemo(() => ({ status, unlock, startDemo, logout }), [status, unlock, startDemo, logout]);
+  const value = useMemo(
+    () => ({ status, exiting, unlock, startDemo, logout }),
+    [status, exiting, unlock, startDemo, logout]
+  );
 
   return (
     <ShiftGuideAuthContext.Provider value={value}>
