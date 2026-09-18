@@ -13,13 +13,6 @@ import {
 import { isShiftGuideData } from '../types/shiftGuide';
 import type { ShiftGuideData } from '../types/shiftGuide';
 
-interface ShiftGuideUnlockResponse extends ShiftGuideData {
-  token: string;
-  expiresAt: number;
-  configRevision: string;
-  celineAuthorityRevision: string;
-}
-
 export interface ShiftGuideAuthResult {
   ok: boolean;
   error?: string;
