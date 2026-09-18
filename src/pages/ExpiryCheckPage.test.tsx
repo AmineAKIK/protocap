@@ -11,9 +11,15 @@ const now = new Date('2026-09-17T12:00:30.000Z');
 function fixture(): ConditioningLine {
   return { id: 'a', name: 'Ligne de conditionnement A', vat: 'Cuve 1', product: 'Produit fictif', conditioningStartedAt: '2026-09-15T12:00:00.000Z', elements: [{ type: 'fillingBlock', label: 'Bloc', lastChangedAt: '2026-09-15T12:00:00.000Z', expiresAt: '2026-09-20T12:00:00.000Z', validityDays: 5, operator: 'Fixture' }] };
 }
-function seed(lines: ConditioningLine[] = [fixture()]) {
+function seed(lines: ConditioningLine[] = [fixture()], history: unknown[] = []) {
   localStorage.setItem(linesKey, JSON.stringify(lines));
-  localStorage.setItem(historyKey, '[]');
+  localStorage.setItem(historyKey, JSON.stringify(history));
+  localStorage.setItem(aggregateKey, JSON.stringify({
+    schemaVersion: 2,
+    revision: 1,
+    lines,
+    history,
+  }));
 }
 function snapshot() { return [localStorage.getItem(linesKey), localStorage.getItem(historyKey)]; }
 function aggregate() {
@@ -28,8 +34,9 @@ function open(kind: 'replacement' | 'refill') {
   fireEvent.click(screen.getByRole('button', { name: kind === 'replacement' ? 'Déclarer un remplacement' : 'Ajouter une recharge de cuve' }));
 }
 async function submit(kind: 'replacement' | 'refill') {
-  fireEvent.click(screen.getByRole('button', { name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge' }));
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Enregistrement…' })).toBeNull());
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge' }));
+  });
 }
 function dateInput(kind: 'replacement' | 'refill') {
   return screen.getByLabelText(kind === 'replacement' ? 'Date / heure du remplacement' : 'Date / heure');
@@ -61,11 +68,11 @@ for (const kind of ['replacement', 'refill'] as const) describe(`real page ${kin
   it('T03: refuses empty dates and whitespace-only operators through the real handler', async () => {
     render(<ExpiryCheckPage />); open(kind);
     const before = snapshot();
-    fireEvent.change(dateInput(kind), { target: { value: '' } }); submit(kind);
+    fireEvent.change(dateInput(kind), { target: { value: '' } }); await submit(kind);
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(snapshot()).toEqual(before);
     fireEvent.change(dateInput(kind), { target: { value: formatLocalMinute(now, browserTimeZone()) } });
-    fireEvent.change(screen.getByLabelText('Opérateur'), { target: { value: '   ' } }); submit(kind);
+    fireEvent.change(screen.getByLabelText('Opérateur'), { target: { value: '   ' } }); await submit(kind);
     expect(screen.getByLabelText('Opérateur').getAttribute('aria-invalid')).toBe('true');
     expect(snapshot()).toEqual(before);
   });
@@ -117,7 +124,7 @@ describe('T05/T16: readable suspicious data is never normalized into a green dem
   });
   it('displays ungroupable legacy history without changing it or fabricating a date', () => {
     const entry = { id: 'orphan', lineId: 'a', lineName: 'A', elementLabel: 'Recharge de cuve', changedAt: 'date-inconnue', newExpiresAt: 'invalid', operator: 'Fixture', comment: 'Trace à préserver' };
-    localStorage.setItem(historyKey, JSON.stringify([entry]));
+    seed([fixture()], [entry]);
     const before = snapshot(); render(<ExpiryCheckPage />);
     expect(screen.getByText(/Traces non rattachables/)).toBeTruthy();
     expect(screen.getByText('date-inconnue')).toBeTruthy();
@@ -189,6 +196,7 @@ describe('PR-04 live clock coherence', () => {
 
 describe('PR-06 aggregate persistence and recovery', () => {
   it('T14: migrates both v8 keys into one aggregate and preserves source bytes across remount', async () => {
+    localStorage.removeItem(aggregateKey);
     const sourceBefore = snapshot();
     const view = render(<ExpiryCheckPage />);
     await waitFor(() => expect(localStorage.getItem(aggregateKey)).not.toBeNull());
@@ -238,14 +246,15 @@ describe('PR-06 aggregate persistence and recovery', () => {
     expect(snapshot()).toEqual(sourceBefore);
   });
 
-  it('T15/T42: a future aggregate version makes legacy evidence read-only without rewriting it', () => {
+  it('T15/T42: a future aggregate version makes current evidence read-only without rewriting it', () => {
     localStorage.setItem('lineops.expiry.aggregate.v3', JSON.stringify({ schemaVersion: 3, future: true }));
     const before = snapshot();
+    const current = localStorage.getItem(aggregateKey);
     render(<ExpiryCheckPage />);
 
     expect(screen.getByRole('alert').textContent).toMatch(/lecture seule/i);
     expect((screen.getByRole('button', { name: 'Déclarer un remplacement' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(localStorage.getItem('lineops.expiry.aggregate.v2')).toBeNull();
+    expect(localStorage.getItem(aggregateKey)).toBe(current);
     expect(snapshot()).toEqual(before);
   });
 
@@ -255,6 +264,7 @@ describe('PR-06 aggregate persistence and recovery', () => {
       changedAt: 'date-inconnue', newExpiresAt: 'date-inconnue', operator: 'Archive',
     };
     localStorage.setItem(historyKey, JSON.stringify([orphan]));
+    localStorage.removeItem(aggregateKey);
     const sourceBefore = snapshot();
     render(<ExpiryCheckPage />);
     await waitFor(() => expect(localStorage.getItem(aggregateKey)).not.toBeNull());

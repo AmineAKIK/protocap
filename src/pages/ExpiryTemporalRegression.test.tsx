@@ -23,6 +23,12 @@ beforeEach(() => {
       expiresAt: '2026-09-20T12:00:00.000Z', validityDays: 5, operator: 'Fixture' }],
   }]));
   localStorage.setItem(historyKey, '[]');
+  localStorage.setItem('lineops.expiry.aggregate.v2', JSON.stringify({
+    schemaVersion: 2,
+    revision: 1,
+    lines: JSON.parse(localStorage.getItem(linesKey)!),
+    history: [],
+  }));
 });
 afterEach(() => { vi.useRealTimers(); });
 
