@@ -68,7 +68,7 @@ test('T30/T38/T39: check:ci produces separate evidence and runs the built contai
     'coverage/server',
     'playwright-report',
     'test-results',
-  ]) assert.match(workflow, new RegExp(`^\\s+\${path.replaceAll('/', '\\/')}$`, 'm'));
+  ]) assert.match(workflow, new RegExp(`^\\s+${path.replaceAll('/', '\\/')}$`, 'm'));
 
   assert.match(codeql, /^name: CodeQL$/m);
   assert.match(codeql, /name: CodeQL JavaScript\/TypeScript/);
