@@ -400,10 +400,10 @@ export function ExpiryCheckPage() {
                         : 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-400'
                       : status === 'watch'
                         ? isSelected
-                          ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
+                          ? 'border-amber-700 bg-amber-700 text-white shadow-sm'
                           : 'border-amber-200 bg-amber-50 text-amber-900 hover:border-amber-400'
                         : isSelected
-                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                          ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
                           : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400';
                   return (
                     <button
@@ -413,7 +413,7 @@ export function ExpiryCheckPage() {
                       className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                     >
                       {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
-                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected && status !== 'unknown' ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
+                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected && status !== 'unknown' ? 'text-white' : ''}`}>{statusLabel(status)}</span>
                     </button>
                   );
                 })}
