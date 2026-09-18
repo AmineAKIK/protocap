@@ -243,13 +243,18 @@ export function createServerApp({
   });
 
   app.get('/api/public-demo', (_req, res) => {
-    const externalUrl = typeof publicDemo.url === 'string' && publicDemo.url.length > 0
+    const externalOrigin = typeof publicDemo.url === 'string' && publicDemo.url.length > 0
       ? publicDemo.url
       : null;
+    const entryUrl = publicDemo.selfServe
+      ? '/demo'
+      : externalOrigin
+        ? new URL('/demo', externalOrigin).toString()
+        : null;
     return res.json({
-      available: Boolean(publicDemo.selfServe || externalUrl),
+      available: Boolean(publicDemo.selfServe || entryUrl),
       selfServe: Boolean(publicDemo.selfServe),
-      url: publicDemo.selfServe ? '/shiftguide' : externalUrl,
+      entryUrl,
     });
   });
 
