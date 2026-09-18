@@ -16,6 +16,7 @@ import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { initialChangeHistory, initialConditioningLines } from '../data/expiryData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useNow } from '../hooks/useNow';
 import type { ChangeHistoryEntry, ConditioningLine } from '../types/expiry';
 import { hoursUntil } from '../utils/date';
 import { DeclarationForm } from '../features/expiry/DeclarationForm';
@@ -33,19 +34,19 @@ const statusTone = {
   unknown: 'slate'
 } as const;
 
-function getBlockStatus(line: ConditioningLine) {
-  return getLineStatus(line) === 'unknown' ? 'unknown' : getTemporalBlockStatus(line);
+function getBlockStatus(line: ConditioningLine, now: Date) {
+  return getLineStatus(line, now) === 'unknown' ? 'unknown' : getTemporalBlockStatus(line, now);
 }
 
-function canGroupHistoryEntry(entry: ChangeHistoryEntry) {
+function canGroupHistoryEntry(entry: ChangeHistoryEntry, now: Date) {
   const changedAt = instantMilliseconds(entry.changedAt);
   const expiresAt = instantMilliseconds(entry.newExpiresAt);
-  return changedAt !== null && expiresAt !== null && changedAt <= Date.now() && expiresAt > changedAt;
+  return changedAt !== null && expiresAt !== null && changedAt <= now.getTime() && expiresAt > changedAt;
 }
 
-function remainingLabel(line: ConditioningLine) {
-  if (getBlockStatus(line) === 'unknown') return 'État à vérifier';
-  const remaining = hoursUntil(earliestExpiry(line));
+function remainingLabel(line: ConditioningLine, now: Date) {
+  if (getBlockStatus(line, now) === 'unknown') return 'État à vérifier';
+  const remaining = hoursUntil(earliestExpiry(line), now);
   if (remaining <= 0) return 'À remplacer';
   const totalHours = Math.ceil(remaining);
   const days = Math.floor(totalHours / 24);
@@ -80,24 +81,25 @@ function isVatHistoryEntry(entry: ChangeHistoryEntry) {
   return entry.elementLabel.toLowerCase().includes('cuve');
 }
 
-function BlockValidityBar({ line }: { line: ConditioningLine }) {
+function BlockValidityBar({ line, now }: { line: ConditioningLine; now: Date }) {
   const validityDays = line.elements[0]?.validityDays ?? 5;
   const changedAt = latestChange(line);
   const expiresAt = earliestExpiry(line);
-  const pct = remainingValidityPercent(line);
-  const blockStatus = getBlockStatus(line);
+  const pct = remainingValidityPercent(line, now);
+  const blockStatus = getBlockStatus(line, now);
 
-  const barColor = (blockStatus === 'expired' || blockStatus === 'unknown') ? 'bg-rose-500' : blockStatus === 'warning' ? 'bg-amber-400' : 'bg-emerald-500';
-  const label = remainingLabel(line);
+  const barColor = blockStatus === 'unknown' ? 'bg-slate-500' : blockStatus === 'expired' ? 'bg-rose-500' : blockStatus === 'warning' ? 'bg-amber-400' : 'bg-emerald-500';
+  const label = remainingLabel(line, now);
 
   if (pct === null) return <p className="break-normal text-sm font-semibold text-slate-700">Validité indéterminée — données à vérifier.</p>;
 
   return (
     <div className="min-w-0">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-1 text-xs text-slate-500">
-        <span className="break-normal">Validité restante ({validityDays} jours calendaires)</span>
+        <span className="break-normal">Validité estimée restante ({validityDays} jours calendaires)</span>
         <span className={
-          (blockStatus === 'expired' || blockStatus === 'unknown') ? 'font-bold text-rose-600' :
+          blockStatus === 'unknown' ? 'font-bold text-slate-700' :
+          blockStatus === 'expired' ? 'font-bold text-rose-700' :
           blockStatus === 'warning' ? 'font-bold text-amber-700' :
           'font-medium text-emerald-700'
         }>
@@ -107,16 +109,18 @@ function BlockValidityBar({ line }: { line: ConditioningLine }) {
       <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
         <div className={`h-3 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-slate-500">
+      <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-xs text-slate-600">
         <span>Posé le {formatDateTime(changedAt)}</span>
         <span>Limite {formatDateTime(expiresAt)}</span>
       </div>
+      <p className="mt-2 break-normal text-xs text-slate-600">Calcul local · validité estimée à partir de la dernière déclaration enregistrée.</p>
     </div>
   );
 }
 
-function BlockedModal({ line, onClose, onDeclare }: {
+function BlockedModal({ line, now, onClose, onDeclare }: {
   line: ConditioningLine;
+  now: Date;
   onClose: () => void;
   onDeclare: () => void;
 }) {
@@ -135,7 +139,7 @@ function BlockedModal({ line, onClose, onDeclare }: {
             <p className="min-w-0 break-normal font-bold text-rose-900">Bloc de remplissage</p>
             <Badge tone="red">Expiré</Badge>
           </div>
-          <BlockValidityBar line={line} />
+          <BlockValidityBar line={line} now={now} />
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -156,34 +160,35 @@ function BlockedModal({ line, onClose, onDeclare }: {
 export function ExpiryCheckPage() {
   const [lines, setLines] = useLocalStorage<ConditioningLine[]>('lineops.expiry.lines', initialConditioningLines);
   const [history, setHistory] = useLocalStorage<ChangeHistoryEntry[]>('lineops.expiry.history', initialChangeHistory);
+  const now = useNow();
   const [selectedLineId, setSelectedLineId] = useState(lines[0]?.id ?? '');
   const [declareModalOpen, setDeclareModalOpen] = useState(false);
   const [blockedModalOpen, setBlockedModalOpen] = useState(() =>
-    lines[0] ? getLineStatus(lines[0]) === 'nonConform' : false
+    lines[0] ? getLineStatus(lines[0], now) === 'nonConform' : false
   );
   const [vatModalOpen, setVatModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'tour' | 'line'>('line');
 
   const selectedLine = lines.find((l) => l.id === selectedLineId) ?? lines[0];
-  const lineStatus = getLineStatus(selectedLine);
+  const lineStatus = getLineStatus(selectedLine, now);
   const isBlocked = lineStatus === 'nonConform';
   const isUnknown = lineStatus === 'unknown';
 
   function handleLineSelect(line: ConditioningLine) {
     setSelectedLineId(line.id);
-    setBlockedModalOpen(getLineStatus(line) === 'nonConform');
+    setBlockedModalOpen(getLineStatus(line, now) === 'nonConform');
   }
 
   const stats = useMemo(() => {
-    const statuses = lines.map((l) => getLineStatus(l));
+    const statuses = lines.map((l) => getLineStatus(l, now));
     return {
       conform: statuses.filter((s) => s === 'conform').length,
       watch: statuses.filter((s) => s === 'watch').length,
       blocked: statuses.filter((s) => s === 'nonConform').length,
       unknown: statuses.filter((s) => s === 'unknown').length
     };
-  }, [lines]);
+  }, [lines, now]);
 
   function handleDeclaration(kind: DeclarationKind, draft: DeclarationDraft): DeclarationError | null {
     // All validation and date calculations finish before either legacy storage setter.
@@ -213,10 +218,10 @@ export function ExpiryCheckPage() {
     </div>
   );
 
-  const blockStatus = getBlockStatus(selectedLine);
+  const blockStatus = getBlockStatus(selectedLine, now);
   const selectedLineHistory = history.filter((entry) => entry.lineId === selectedLine.id);
   const currentBlockChangedAt = new Date(latestChange(selectedLine)).getTime();
-  const blockHistory = selectedLineHistory.filter(isBlockHistoryEntry).filter(canGroupHistoryEntry);
+  const blockHistory = selectedLineHistory.filter(isBlockHistoryEntry).filter((entry) => canGroupHistoryEntry(entry, now));
   const hasCurrentBlockHistory = blockHistory.some(
     (entry) => Math.abs(new Date(entry.changedAt).getTime() - currentBlockChangedAt) < 1000
   );
@@ -234,7 +239,7 @@ export function ExpiryCheckPage() {
     .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   const vatEntries = selectedLineHistory
     .filter(isVatHistoryEntry)
-    .filter(canGroupHistoryEntry)
+    .filter((entry) => canGroupHistoryEntry(entry, now))
     .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   const blockHistoryGroups = blockInstances.map((block, index) => {
     const blockStartedAt = new Date(block.changedAt).getTime();
@@ -320,7 +325,7 @@ export function ExpiryCheckPage() {
             <div className="-mx-2 mt-1 max-w-full overflow-x-auto px-2 pb-1 sm:mt-3">
               <div className="flex w-max min-w-full gap-2">
                 {lines.map((line) => {
-                  const status = getLineStatus(line);
+                  const status = getLineStatus(line, now);
                   const isSelected = line.id === selectedLine.id;
                   const selectorTone =
                     status === 'unknown' ? 'border-slate-400 bg-slate-100 text-slate-900' :
@@ -394,7 +399,8 @@ export function ExpiryCheckPage() {
 
               <div className="mt-3 grid min-w-0 gap-3 sm:mt-5 sm:gap-4 xl:grid-cols-2">
                 <div className={`min-w-0 rounded-xl border-2 p-3 sm:p-5 ${
-                  (blockStatus === 'expired' || blockStatus === 'unknown') ? 'border-rose-300 bg-rose-50' :
+                  blockStatus === 'unknown' ? 'border-slate-300 bg-slate-50' :
+                  blockStatus === 'expired' ? 'border-rose-300 bg-rose-50' :
                   blockStatus === 'warning' ? 'border-amber-200 bg-amber-50/40' :
                   'border-slate-200 bg-white'
                 }`}>
@@ -409,21 +415,21 @@ export function ExpiryCheckPage() {
                       <p className="mt-1 break-normal text-base font-black tabular-nums text-slate-950 sm:mt-2 sm:text-xl">{formatDateOnly(latestChange(selectedLine))}</p>
                       <p className="text-sm font-bold tabular-nums text-slate-700 sm:text-lg">{formatTimeOnly(latestChange(selectedLine))}</p>
                     </div>
-                    <div className={`min-w-0 rounded-xl p-2.5 ring-1 sm:p-4 ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
+                    <div className={`min-w-0 rounded-xl p-2.5 ring-1 sm:p-4 ${blockStatus === 'unknown' ? 'bg-slate-100 ring-slate-300' : blockStatus === 'expired' ? 'bg-rose-100 ring-rose-200' : blockStatus === 'warning' ? 'bg-amber-100 ring-amber-200' : 'bg-emerald-50 ring-emerald-200'}`}>
                       <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
-                      <p className={`mt-1 break-normal text-base font-black tabular-nums sm:mt-2 sm:text-xl ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
-                      <p className={`text-sm font-bold tabular-nums sm:text-lg ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
+                      <p className={`mt-1 break-normal text-base font-black tabular-nums sm:mt-2 sm:text-xl ${blockStatus === 'unknown' ? 'text-slate-800' : blockStatus === 'expired' ? 'text-rose-800' : blockStatus === 'warning' ? 'text-amber-900' : 'text-emerald-900'}`}>{formatDateOnly(earliestExpiry(selectedLine))}</p>
+                      <p className={`text-sm font-bold tabular-nums sm:text-lg ${blockStatus === 'unknown' ? 'text-slate-700' : blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-800'}`}>{formatTimeOnly(earliestExpiry(selectedLine))}</p>
                     </div>
                   </div>
 
                   <div className="my-3 sm:my-5">
-                    <BlockValidityBar line={selectedLine} />
+                    <BlockValidityBar line={selectedLine} now={now} />
                   </div>
 
                   <dl className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-sm sm:gap-y-2">
                     <dt className="min-w-0 break-normal text-slate-600">Temps restant</dt>
-                    <dd className={`text-right font-black ${(blockStatus === 'expired' || blockStatus === 'unknown') ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
-                      {remainingLabel(selectedLine)}
+                    <dd className={`text-right font-black ${blockStatus === 'unknown' ? 'text-slate-700' : blockStatus === 'expired' ? 'text-rose-700' : blockStatus === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                      {remainingLabel(selectedLine, now)}
                     </dd>
                     <dt className="min-w-0 break-normal text-slate-600">Validité</dt>
                     <dd className="text-right font-medium text-slate-800">{isUnknown ? 'À vérifier' : `${selectedLine.elements[0].validityDays} jours calendaires`}</dd>
@@ -465,7 +471,7 @@ export function ExpiryCheckPage() {
                       </div>
                     )}
                   </div>
-                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" disabled={isUnknown} icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
+                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" disabled={isUnknown || isBlocked} icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
                     Ajouter une recharge de cuve
                   </Button>
                 </div>
@@ -566,7 +572,7 @@ export function ExpiryCheckPage() {
           </div>
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
             {washerBoard.map((line) => {
-              const status = getBlockStatus(line);
+              const status = getBlockStatus(line, now);
               const expiry = earliestExpiry(line);
               return (
                 <button
@@ -574,7 +580,7 @@ export function ExpiryCheckPage() {
                   type="button"
                   onClick={() => { handleLineSelect(line); setMobileView('line'); }}
                   className={`min-w-0 rounded-xl border p-3 text-left transition hover:border-teal-300 sm:p-4 ${
-                    (status === 'expired' || status === 'unknown') ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
+                    status === 'unknown' ? 'border-slate-300 bg-slate-50' : status === 'expired' ? 'border-rose-300 bg-rose-50' : status === 'warning' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/60'
                   }`}
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
@@ -584,8 +590,8 @@ export function ExpiryCheckPage() {
                     </div>
                     <Badge tone={statusTone[status]}>{statusLabel(status)}</Badge>
                   </div>
-                  <p className={`mt-2 break-normal text-sm font-bold sm:mt-3 sm:text-base ${(status === 'expired' || status === 'unknown') ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
-                    {remainingLabel(line)}
+                  <p className={`mt-2 break-normal text-sm font-bold sm:mt-3 sm:text-base ${status === 'unknown' ? 'text-slate-700' : status === 'expired' ? 'text-rose-700' : status === 'warning' ? 'text-amber-800' : 'text-emerald-700'}`}>
+                    {remainingLabel(line, now)}
                   </p>
                   <div className="mt-2 min-w-0 rounded-xl bg-white/85 p-2 ring-1 ring-slate-200 sm:mt-3 sm:p-3">
                     <p className="label text-[10px] sm:text-xs">Péremption bloc</p>
@@ -602,6 +608,7 @@ export function ExpiryCheckPage() {
       {blockedModalOpen && isBlocked && (
         <BlockedModal
           line={selectedLine}
+          now={now}
           onClose={() => setBlockedModalOpen(false)}
           onDeclare={openDeclareFromBlockedModal}
         />

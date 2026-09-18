@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConditioningLine } from '../types/expiry';
 import { browserTimeZone, formatLocalMinute } from '../features/expiry/time';
@@ -25,7 +25,7 @@ function dateInput(kind: 'replacement' | 'refill') {
   return screen.getByLabelText(kind === 'replacement' ? 'Date / heure du remplacement' : 'Date / heure');
 }
 
-beforeEach(() => { localStorage.clear(); vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(now); seed(); });
+beforeEach(() => { localStorage.clear(); vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] }); vi.setSystemTime(now); seed(); });
 afterEach(() => { vi.useRealTimers(); });
 
 for (const kind of ['replacement', 'refill'] as const) describe(`real page ${kind} integration`, () => {
@@ -106,6 +106,68 @@ describe('T05/T16: readable suspicious data is never normalized into a green dem
     const before = snapshot(); render(<ExpiryCheckPage />);
     expect(screen.getByText(/Traces non rattachables/)).toBeTruthy();
     expect(screen.getByText('date-inconnue')).toBeTruthy();
+    expect(snapshot()).toEqual(before);
+  });
+});
+
+
+describe('PR-04 live clock coherence', () => {
+  function statValue(label: string) {
+    const labelNode = screen.getByText(label, { exact: true, selector: 'p' });
+    return within(labelNode.parentElement as HTMLElement);
+  }
+
+  it('T06: crosses the 48-hour warning and expiry boundaries without interaction or storage mutation', () => {
+    const line = fixture();
+    line.elements[0].expiresAt = '2026-09-19T13:00:30.000Z'; // 49 h from the test clock.
+    seed([line]);
+    const before = snapshot();
+    render(<ExpiryCheckPage />);
+
+    expect(screen.getByText(/Démarrage de la ligne autorisé/)).toBeTruthy();
+    expect(statValue('OK').getByText('1')).toBeTruthy();
+    expect(statValue('Vigilance').getByText('0')).toBeTruthy();
+    expect(statValue('Bloqués').getByText('0')).toBeTruthy();
+
+    act(() => {
+      vi.setSystemTime(new Date('2026-09-17T13:00:30.000Z'));
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByText(/Vigilance — bloc de remplissage/)).toBeTruthy();
+    expect(statValue('OK').getByText('0')).toBeTruthy();
+    expect(statValue('Vigilance').getByText('1')).toBeTruthy();
+    expect(screen.getAllByText('Bientôt expiré').length).toBeGreaterThan(0);
+
+    act(() => {
+      vi.setSystemTime(new Date('2026-09-19T13:00:30.000Z'));
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByText(/démarrage non conforme/i)).toBeTruthy();
+    expect(statValue('Vigilance').getByText('0')).toBeTruthy();
+    expect(statValue('Bloqués').getByText('1')).toBeTruthy();
+    expect(screen.getAllByText('Expiré').length).toBeGreaterThan(0);
+    expect((screen.getByRole('button', { name: 'Ajouter une recharge de cuve' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Calcul local · validité estimée/)).toBeTruthy();
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('T08: an already-open refill form revalidates against the current clock before any write', () => {
+    const line = fixture();
+    line.elements[0].expiresAt = '2026-09-17T12:30:30.000Z';
+    seed([line]);
+    render(<ExpiryCheckPage />);
+    open('refill');
+    fireEvent.change(screen.getByLabelText('Opérateur'), { target: { value: 'Alice' } });
+    const writes = vi.spyOn(Storage.prototype, 'setItem');
+    writes.mockClear();
+    const before = snapshot();
+
+    // Do not tick useNow: the form is intentionally stale while wall time advances.
+    vi.setSystemTime(new Date('2026-09-17T12:31:30.000Z'));
+    submit('refill');
+
+    expect(screen.getByRole('alert').textContent).toContain('expiré');
+    expect(writes).not.toHaveBeenCalled();
     expect(snapshot()).toEqual(before);
   });
 });
