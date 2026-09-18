@@ -6,6 +6,10 @@ const demoOrigin = 'http://127.0.0.1:4175';
 
 test.describe('PR-10b direct public ShiftGuide demo entry', () => {
   test('T24/T25/T36/T42/T43: protected CTA opens the demo cockpit in one click with no lock screen', async ({ page }) => {
+    await page.goto(`${protectedOrigin}/`);
+    await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
+    await expect(page.getByText('ShiftGuide · démo publique')).toHaveCount(0);
+
     await page.goto(`${protectedOrigin}/shiftguide`);
     await expect(page.getByText('Accès restreint')).toBeVisible();
 
@@ -33,6 +37,16 @@ test.describe('PR-10b direct public ShiftGuide demo entry', () => {
     )).toEqual([]);
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
+  });
+
+
+  test('T45: demo origin exposes ShiftGuide only and redirects ProtoCap public routes away', async ({ page }) => {
+    for (const path of ['/', '/rapport', '/expiry-check']) {
+      await page.goto(`${demoOrigin}${path}`);
+      await page.waitForURL(`${demoOrigin}/shiftguide`);
+      await expect(page.getByText(/Démo publique · données fictives · réponses scénarisées/)).toBeVisible();
+      await expect(page.getByRole('heading', { name: /ProtoCap/ })).toHaveCount(0);
+    }
   });
 
   test('T29/T45: API contract exposes a direct entry and demo origin never exposes protected unlock', async ({ request, page }) => {
