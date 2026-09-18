@@ -11,6 +11,7 @@ export function createPublicDemoE2eEnvironment() {
     PORT: '4175',
     HOST: '127.0.0.1',
     PROTOCAP_DEMO_PROVIDER: '1',
+    PROTOCAP_PUBLIC_URL: 'http://127.0.0.1:4176',
   });
 }
 
