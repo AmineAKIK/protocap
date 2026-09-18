@@ -361,3 +361,55 @@ test('Celine HTTP route maps provider failures', async () => {
     assert.equal(response.status, 429);
   });
 });
+
+
+test('T29/T45: public demo session is self-serve only on demo origin and cannot authenticate protected origin', async () => {
+  const demoProvider = {
+    async complete() {
+      return JSON.stringify({ kind: 'route', id: 'module_standard' });
+    },
+  };
+
+  let demoToken;
+  await withServer({
+    celineProvider: demoProvider,
+    publicDemo: { selfServe: true, url: null },
+  }, async (demoBaseUrl) => {
+    const availability = await fetch(`${demoBaseUrl}/api/public-demo`);
+    assert.equal(availability.status, 200);
+    assert.deepEqual(await availability.json(), {
+      available: true,
+      selfServe: true,
+      url: '/shiftguide',
+    });
+
+    const protectedUnlock = await fetch(`${demoBaseUrl}/api/shiftguide/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'access-code' }),
+    });
+    assert.equal(protectedUnlock.status, 404);
+
+    const session = await fetch(`${demoBaseUrl}/api/public-demo/session`, { method: 'POST' });
+    assert.equal(session.status, 200);
+    const body = await session.json();
+    assert.equal(body.profile, 'demo');
+    demoToken = body.token;
+    assert.equal(typeof demoToken, 'string');
+  });
+
+  await withServer({}, async (protectedBaseUrl) => {
+    const availability = await fetch(`${protectedBaseUrl}/api/public-demo`);
+    assert.equal(availability.status, 200);
+    assert.deepEqual(await availability.json(), {
+      available: false,
+      selfServe: false,
+      url: null,
+    });
+
+    const reused = await fetch(`${protectedBaseUrl}/api/shiftguide/session`, {
+      headers: { Authorization: `Bearer ${demoToken}` },
+    });
+    assert.equal(reused.status, 401);
+  });
+});
