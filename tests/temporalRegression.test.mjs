@@ -5,6 +5,7 @@ import test from 'node:test';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const page = read('src/pages/ExpiryCheckPage.tsx');
 const form = read('src/features/expiry/DeclarationForm.tsx');
+const workspace = read('src/features/expiry/useExpiryWorkspace.ts');
 const time = read('src/features/expiry/time.ts');
 const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
@@ -13,7 +14,10 @@ test('PR-03 forbids UTC slicing and connects the real page to the validated decl
   assert.doesNotMatch(page + form, /toISOString\(\)\.slice\(0,\s*16\)/);
   assert.match(form, /formatLocalMinute\(new Date\(\), timeZone\)/);
   assert.match(page, /<DeclarationForm/);
-  assert.match(page, /prepareDeclaration\(lines,/);
+  assert.match(page, /commitExpiryDeclaration\(selectedLine\.id, kind, draft, id\)/);
+  assert.match(workspace, /runWithRequiredWebLock\(EXPIRY_LOCK_NAME/);
+  assert.match(workspace, /loadExpiryWorkspace\(initialConditioningLines, initialChangeHistory\)/);
+  assert.match(workspace, /prepareDeclaration\(latest\.aggregate\.lines, lineId, kind, draft, new Date\(\), operationId\)/);
   assert.doesNotMatch(page, /new Date\(changedAt\)/);
 });
 
