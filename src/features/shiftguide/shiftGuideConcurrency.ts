@@ -7,8 +7,14 @@ interface LockManagerLike {
 
 type LockManagerResolver = () => LockManagerLike | null;
 
+export class ShiftGuideConcurrencyUnavailableError extends Error {
+  constructor() {
+    super('Reliable cross-tab coordination is unavailable.');
+    this.name = 'ShiftGuideConcurrencyUnavailableError';
+  }
+}
+
 export class ShiftGuideMutationCoordinator {
-  private localTail: Promise<void> = Promise.resolve();
   private degraded = false;
 
   constructor(private readonly resolveLockManager: LockManagerResolver) {}
@@ -27,12 +33,6 @@ export class ShiftGuideMutationCoordinator {
     }
   }
 
-  private enqueueLocally<T>(task: () => Promise<T> | T): Promise<T> {
-    const run = this.localTail.then(task, task);
-    this.localTail = run.then(() => undefined, () => undefined);
-    return run;
-  }
-
   async runExclusive<T>(name: string, task: () => Promise<T> | T): Promise<T> {
     let lockManager: LockManagerLike | null;
     try {
@@ -44,7 +44,7 @@ export class ShiftGuideMutationCoordinator {
 
     if (!lockManager || typeof lockManager.request !== 'function') {
       this.markDegraded();
-      return this.enqueueLocally(task);
+      throw new ShiftGuideConcurrencyUnavailableError();
     }
 
     let enteredCriticalSection = false;
@@ -56,7 +56,7 @@ export class ShiftGuideMutationCoordinator {
     } catch (error) {
       if (enteredCriticalSection) throw error;
       this.markDegraded();
-      return this.enqueueLocally(task);
+      throw new ShiftGuideConcurrencyUnavailableError();
     }
   }
 }

@@ -46,7 +46,7 @@ export function ShiftGuideLayout() {
   const degradedMessage = persistentStorageDegraded
     ? 'Persistance locale indisponible. Le travail reste utilisable dans cette page, mais certains changements peuvent être perdus après rechargement.'
     : concurrencyProtectionDegraded
-      ? 'Protection multi-onglets indisponible. Évite de modifier ShiftGuide dans plusieurs onglets en même temps.'
+      ? 'Protection multi-onglets indisponible. Les mutations durables ShiftGuide sont mises en lecture seule sur cet onglet.'
       : null;
 
   const celineViewportStyle =
