@@ -94,17 +94,19 @@ export function useExpiryWorkspace() {
       if (latest.status === 'degraded') {
         return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'access' } as ExpiryWriteResult;
       }
-      if (latest.status === 'migration-pending' || latest.status === 'memory') {
-        const migrated = persistExpiryTransition(latest.aggregate.revision, latest.aggregate);
-        if (migrated.status === 'degraded') return migrated;
-        latest = { aggregate: migrated.aggregate, status: 'ready', issues: [] };
-      }
-
       const existing = latest.aggregate.history.find((entry) => entry.id === operationId);
       if (existing) {
-        return { status: 'persisted', key: EXPIRY_AGGREGATE_KEY, aggregate: latest.aggregate, idempotent: true } as ExpiryWriteResult;
+        if (latest.status === 'ready') {
+          return { status: 'persisted', key: EXPIRY_AGGREGATE_KEY, aggregate: latest.aggregate, idempotent: true } as ExpiryWriteResult;
+        }
+        const migrated = persistExpiryTransition(latest.aggregate.revision, latest.aggregate);
+        return migrated.status === 'persisted'
+          ? { ...migrated, idempotent: true }
+          : migrated;
       }
 
+      // Validate against the latest state while holding the lock before any migration/write.
+      // Invalid or future drafts therefore produce zero durable writes even from memory/v1/v8 sources.
       const prepared = prepareDeclaration(latest.aggregate.lines, lineId, kind, draft, new Date(), operationId);
       if (!prepared.ok) return { status: 'invalid', error: prepared.error } as ExpiryDeclarationResult;
 
