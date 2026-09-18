@@ -36,14 +36,17 @@ export async function fetchPublicDemoAvailability(): Promise<PublicDemoAvailabil
 
 export function usePublicDemoAvailability() {
   const [state, setState] = useState<PublicDemoAvailability>(unavailable);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     let active = true;
     void fetchPublicDemoAvailability().then((result) => {
-      if (active) setState(result);
+      if (!active) return;
+      setState(result);
+      setResolved(true);
     });
     return () => { active = false; };
   }, []);
 
-  return state;
+  return { ...state, resolved };
 }
