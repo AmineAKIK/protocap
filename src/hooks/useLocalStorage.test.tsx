@@ -61,7 +61,7 @@ describe('useLocalStorage non-destructive hydration', () => {
       unitsPerCarton: '128',
       cartonsPerPalette: '40',
     });
-    expect(result.current[2]).toBe('recovered');
+    expect(result.current[2]).toBe('normalized');
     expect(localStorage.getItem(packingFormKey)).toBe(raw);
     expect(writes).not.toHaveBeenCalled();
   });
@@ -95,6 +95,37 @@ describe('useLocalStorage non-destructive hydration', () => {
     rerender({ logicalKey: 'lineops.expiry.history' });
     await waitFor(() => expect(result.current[2]).toBe('persisted'));
     expect(writes).not.toHaveBeenCalled();
+  });
+
+
+  it('T17: rebases a functional setter on the new key even before the key-change effect runs', () => {
+    const expiryLine = {
+      id: 'line-a', name: 'Ligne A', vat: 'Cuve 1', product: 'Produit',
+      conditioningStartedAt: '2026-09-17T10:00:00.000Z',
+      elements: [{ type: 'fillingBlock', label: 'Bloc', lastChangedAt: '2026-09-17T10:00:00.000Z',
+        expiresAt: '2026-09-22T10:00:00.000Z', validityDays: 5, operator: 'Fixture' }],
+    };
+    localStorage.setItem('lineops.expiry.lines.v8', JSON.stringify([expiryLine]));
+    localStorage.setItem('lineops.expiry.history.v8', JSON.stringify([]));
+
+    const { result, rerender } = renderHook(
+      ({ logicalKey }) => useLocalStorage<unknown[]>(logicalKey, []),
+      { initialProps: { logicalKey: 'lineops.expiry.lines' } },
+    );
+
+    rerender({ logicalKey: 'lineops.expiry.history' });
+    let write;
+    act(() => {
+      write = result.current[1]((current) => [...current, {
+        id: 'history-entry', lineId: 'line-a', lineName: 'Ligne A', elementLabel: 'Bloc de remplissage',
+        changedAt: '2026-09-17T10:00:00.000Z', operator: 'Fixture',
+        newExpiresAt: '2026-09-22T10:00:00.000Z',
+      }]);
+    });
+
+    expect(write).toMatchObject({ status: 'persisted', key: 'lineops.expiry.history.v8' });
+    expect(JSON.parse(localStorage.getItem('lineops.expiry.history.v8') ?? 'null')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('lineops.expiry.lines.v8') ?? 'null')).toEqual([expiryLine]);
   });
 
   it('T10: reports a read access failure without attempting a repair write', () => {

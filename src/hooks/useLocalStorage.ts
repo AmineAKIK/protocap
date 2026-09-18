@@ -7,7 +7,7 @@ import {
   type PublicStorageWriteResult,
 } from '../persistence/publicLocalStorage';
 
-export type LocalStoragePersistenceStatus = 'memory' | 'persisted' | 'recovered' | 'degraded' | 'readonly';
+export type LocalStoragePersistenceStatus = 'memory' | 'persisted' | 'normalized' | 'recovered' | 'degraded' | 'readonly';
 
 interface LocalStorageSnapshot<T> {
   logicalKey: string;
@@ -28,7 +28,7 @@ function loadSnapshot<T>(
 
   if (read.status === 'loaded') {
     value = read.value;
-    persistenceStatus = read.normalized ? 'recovered' : 'persisted';
+    persistenceStatus = read.normalized ? 'normalized' : 'persisted';
   } else if (read.status === 'invalid') {
     // Safe fallback in memory only. The original bytes remain untouched for migration/recovery.
     persistenceStatus = 'recovered';
@@ -67,7 +67,16 @@ export function useLocalStorage<T>(
   }, [initialValue, key, normalize]);
 
   const setValue = useCallback((action: SetStateAction<T>): PublicStorageWriteResult => {
-    const currentValue = valueRef.current;
+    // A consumer can call its setter before the key-change effect has committed.
+    // Rebase on the requested key first so an old-key value can never be written under a new key.
+    let currentValue = valueRef.current;
+    if (keyRef.current !== key) {
+      const currentKeySnapshot = loadSnapshot(key, initialValue, normalize);
+      keyRef.current = key;
+      valueRef.current = currentKeySnapshot.value;
+      currentValue = currentKeySnapshot.value;
+      setSnapshot(currentKeySnapshot);
+    }
     const nextValue = typeof action === 'function'
       ? (action as (previous: T) => T)(currentValue)
       : action;
@@ -85,7 +94,7 @@ export function useLocalStorage<T>(
           : 'degraded',
     });
     return result;
-  }, [key]);
+  }, [initialValue, key, normalize]);
 
   return [snapshot.value, setValue, snapshot.persistenceStatus] as const;
 }

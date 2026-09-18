@@ -21,6 +21,23 @@ describe('public local-storage contract', () => {
     expect(localStorage.getItem(key)).toBe(raw);
   });
 
+  it('T10: distinguishes an ordinary write failure from quota and access failures', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Synthetic write failure');
+    });
+    expect(writePublicStorageValue(logicalKey, form)).toMatchObject({
+      status: 'degraded', reason: 'write', errorName: 'Error',
+    });
+  });
+
+  it('T10: rejects an invalid write schema before touching storage', () => {
+    const writes = vi.spyOn(Storage.prototype, 'setItem');
+    expect(writePublicStorageValue(logicalKey, { quantity: 1 })).toMatchObject({
+      status: 'degraded', reason: 'schema',
+    });
+    expect(writes).not.toHaveBeenCalled();
+  });
+
   it('T10: marks verification failure when setItem cannot be confirmed', () => {
     const originalGetItem = Storage.prototype.getItem;
     const get = vi.spyOn(Storage.prototype, 'getItem');
@@ -30,6 +47,17 @@ describe('public local-storage contract', () => {
     });
 
     expect(writePublicStorageValue(logicalKey, form)).toMatchObject({ status: 'degraded', reason: 'verify' });
+  });
+
+  it('T10: reports verification access failure after a successful write', () => {
+    const originalGetItem = Storage.prototype.getItem;
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, requested: string) {
+      if (requested === key) throw new DOMException('Blocked', 'SecurityError');
+      return originalGetItem.call(this, requested);
+    });
+    expect(writePublicStorageValue(logicalKey, form)).toMatchObject({
+      status: 'degraded', reason: 'verify', errorName: 'SecurityError',
+    });
   });
 
   it('T15: identifies the newest future version without rewriting either version', () => {

@@ -11,7 +11,7 @@ Le setter renvoyait seulement `persisted|degraded`, sans distinguer quota, accè
 ## Contrat PR-05
 
 - aucune écriture lors d'un mount, StrictMode, changement de clé, parse invalide, schéma invalide ou normalisation ;
-- les octets invalides restent intacts pour PR-06/08 ; le fallback sûr n'existe qu'en mémoire et porte le statut `recovered` ;
+- les octets invalides restent intacts pour PR-06/08 ; le fallback sûr n'existe qu'en mémoire et porte le statut `recovered` ; une valeur legacy valide normalisée en mémoire porte `normalized`, pas un faux statut d'erreur ni `persisted` ;
 - une clé absente est `memory`, pas artificiellement `persisted` ;
 - une version publique plus récente rend le hook `readonly` et bloque toute écriture de l'ancien schéma ;
 - chaque écriture valide le schéma runtime, sérialise, appelle `setItem`, puis relit exactement la valeur ; le résultat typé expose `persisted` ou `degraded` avec la cause ;
@@ -25,7 +25,7 @@ Le document historique `ws-05-persistence-local-data-integrity.md` n'est pas ré
 
 - T10 : accès lecture/écriture, quota, sérialisation, schéma, parse et vérification renvoient des résultats typés sans faux succès ;
 - T15 : JSON/schéma invalide et version future restent non destructifs ;
-- T17 : StrictMode, mount et changement de clé n'écrivent pas de valeur initiale parasite ;
+- T17 : StrictMode, mount et changement de clé n'écrivent pas de valeur initiale parasite ; un setter fonctionnel appelé avant l'effet de changement de clé se rebase sur la nouvelle clé ;
 - T18 : non-régression Packing via sa suite existante et adaptation explicite du seul appel qui consomme le résultat du setter.
 
 Les résultats CI et le SHA final sont ajoutés à la PR après exécution réelle.
