@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LogisticsRequest } from '../../types/logistics';
 import {
   LOGISTICS_LEGACY_KEY,
@@ -18,7 +18,10 @@ const request: LogisticsRequest = {
   status: 'waiting',
 };
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  vi.restoreAllMocks();
+  localStorage.clear();
+});
 
 describe('Logistics revisioned persistence', () => {
   it('T40: v8 is migrated non-destructively into v9', () => {
@@ -44,6 +47,26 @@ describe('Logistics revisioned persistence', () => {
     const stored = JSON.parse(localStorage.getItem(LOGISTICS_WORKSPACE_KEY)!);
     expect(stored.revision).toBe(2);
     expect(stored.requests.map((entry: LogisticsRequest) => entry.id)).toEqual(['LOG-202', 'LOG-201']);
+  });
+
+  it('T10/T31: a write that cannot be read back is not reported as persisted', () => {
+    const nativeGetItem = Storage.prototype.getItem;
+    let workspaceReads = 0;
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function getItem(
+      this: Storage,
+      key: string,
+    ) {
+      if (key === LOGISTICS_WORKSPACE_KEY) {
+        workspaceReads += 1;
+        if (workspaceReads === 2) return '{"tampered":true}';
+      }
+      return nativeGetItem.call(this, key);
+    });
+
+    expect(persistLogisticsWorkspace(0, [request])).toMatchObject({
+      status: 'degraded',
+      reason: 'verify',
+    });
   });
 
   it('T41: a future v10 makes the v9 reader read-only', () => {

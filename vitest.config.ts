@@ -1,6 +1,12 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+/**
+ * Risk-targeted coverage gate.
+ *
+ * This denominator is intentionally stable during PR-11 so a wider global
+ * report cannot hide a regression in the previously gated modules.
+ */
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -11,12 +17,15 @@ export default defineConfig({
     restoreMocks: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json-summary'],
+      reportsDirectory: 'coverage/frontend-targeted',
+      reporter: ['text', 'json-summary', 'html', 'lcov'],
+      reportOnFailure: true,
       include: [
         'src/components/AccessibleDialog.tsx',
         'src/components/Button.tsx',
         'src/context/ShiftGuideAuthContext.tsx',
         'src/features/shiftguide/celineClient.ts',
+        'src/features/shiftguide/demoRuntime.ts',
         'src/features/shiftguide/shiftGuideConcurrency.ts',
         'src/features/shiftguide/shiftGuideStorage.ts',
         'src/features/shiftguide/useShiftGuideProgressOverview.ts',
@@ -46,6 +55,18 @@ export default defineConfig({
         branches: 50,
         functions: 50,
         lines: 60,
+        'src/features/shiftguide/demoRuntime.ts': {
+          statements: 90,
+          branches: 85,
+          functions: 85,
+          lines: 90,
+        },
+        'src/features/logistics/logisticsModel.ts': {
+          statements: 90,
+          branches: 85,
+          functions: 85,
+          lines: 90,
+        },
       },
     },
   },

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { E2E_SUITES } from '../scripts/e2e-suites.mjs';
 
 async function read(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -47,16 +48,18 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
   const browserSmoke = await read('e2e/browser-smoke.spec.ts');
 
   assert.equal(packageJson.devDependencies['@axe-core/playwright'], '4.13.0');
-  assert.match(packageJson.scripts['test:e2e'], /--project=chromium/);
-  assert.match(packageJson.scripts['test:e2e'], /packing-calculator\.spec\.ts/);
-  assert.match(packageJson.scripts['test:e2e:browser-smoke'], /--project=chromium-mobile/);
-  assert.match(packageJson.scripts['test:e2e:browser-smoke'], /--project=webkit/);
-  assert.match(packageJson.scripts['test:e2e:a11y'], /accessibility\.spec\.ts --project=chromium/);
+  assert.deepEqual(E2E_SUITES.critical.projects, ['chromium']);
+  assert.ok(E2E_SUITES.critical.specs.includes('e2e/packing-calculator.spec.ts'));
+  assert.deepEqual(E2E_SUITES['browser-smoke'].projects, ['chromium-mobile', 'webkit']);
+  assert.deepEqual(E2E_SUITES.accessibility.projects, ['chromium']);
+  assert.deepEqual(E2E_SUITES.accessibility.specs, ['e2e/accessibility.spec.ts']);
 
   assert.match(playwright, /name:\s*'chromium-mobile'/);
   assert.match(playwright, /devices\['Pixel 7'\]/);
   assert.match(playwright, /name:\s*'webkit'/);
   assert.match(playwright, /devices\['Desktop Safari'\]/);
+  assert.match(playwright, /failOnFlakyTests:\s*ci/);
+  assert.match(playwright, /trace:\s*'retain-on-failure'/);
 
   assert.match(workflow, /playwright install --with-deps chromium webkit/);
   assert.match(workflow, /run:\s+npm run test:e2e:browser-smoke/);
@@ -74,17 +77,14 @@ test('browser quality gate keeps desktop journeys focused and adds cross-browser
 });
 
 test('responsive architecture contract is a named CI quality gate backed by a shared viewport harness', async () => {
-  const packageJson = JSON.parse(await read('package.json'));
   const workflow = await read('.github/workflows/ci.yml');
   const harness = await read('e2e/responsive-harness.ts');
   const contract = await read('e2e/responsive-contract.spec.ts');
   const architecture = await read('docs/responsive-architecture.md');
-  const responsiveCommand = packageJson.scripts['test:e2e:responsive'];
 
-  assert.match(responsiveCommand, /^npm run build && playwright test /);
-  assert.match(responsiveCommand, /e2e\/responsive-contract\.spec\.ts/);
-  assert.match(responsiveCommand, /e2e\/packing-responsive-contract\.spec\.ts/);
-  assert.match(responsiveCommand, /--project=chromium$/);
+  assert.deepEqual(E2E_SUITES.responsive.projects, ['chromium']);
+  assert.ok(E2E_SUITES.responsive.specs.includes('e2e/responsive-contract.spec.ts'));
+  assert.ok(E2E_SUITES.responsive.specs.includes('e2e/packing-responsive-contract.spec.ts'));
   assert.match(workflow, /Run responsive architecture contract/);
   assert.match(workflow, /run:\s+npm run test:e2e:responsive/);
   assert.match(harness, /phoneMin:.*width:\s*320,\s*height:\s*568/);
