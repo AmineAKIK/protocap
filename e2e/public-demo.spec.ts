@@ -40,13 +40,23 @@ test.describe('PR-10b direct public ShiftGuide demo entry', () => {
   });
 
 
-  test('T45: demo origin exposes ShiftGuide only and redirects ProtoCap public routes away', async ({ page }) => {
+  test('T45: demo origin serves ShiftGuide only and sends ProtoCap routes back to the real app', async ({ page }) => {
     for (const path of ['/', '/rapport', '/expiry-check']) {
       await page.goto(`${demoOrigin}${path}`);
-      await page.waitForURL(`${demoOrigin}/shiftguide`);
-      await expect(page.getByText(/Démo publique · données fictives · réponses scénarisées/)).toBeVisible();
-      await expect(page.getByRole('heading', { name: /ProtoCap/ })).toHaveCount(0);
+      await page.waitForURL(`${protectedOrigin}${path}`);
+      await expect(page.getByText(/Démo publique · données fictives · réponses scénarisées/)).toHaveCount(0);
     }
+  });
+
+  test('T45: leaving ShiftGuide demo returns to the real ProtoCap origin', async ({ page }) => {
+    await page.goto(`${demoOrigin}/shiftguide`);
+    await expect(page.getByText(/Démo publique · données fictives · réponses scénarisées/)).toBeVisible();
+
+    await page.getByRole('button', { name: 'Quitter' }).first().click();
+
+    await page.waitForURL(`${protectedOrigin}/`);
+    await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
+    await expect(page.getByText(/Démo publique · données fictives · réponses scénarisées/)).toHaveCount(0);
   });
 
   test('T29/T45: API contract exposes a direct entry and demo origin never exposes protected unlock', async ({ request, page }) => {
