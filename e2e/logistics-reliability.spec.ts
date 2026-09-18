@@ -60,6 +60,8 @@ test.describe('PR-07 Logistics reliable persistence', () => {
       };
     }, KEY);
     await open(page);
+    const boardTab = page.getByRole('button', { name: /Board logistique/ });
+    if (await boardTab.isVisible()) await boardTab.click();
     await page.getByText(/Terminées \/ Annulées/).click();
     await expect(page.getByText('Clôture : heure inconnue')).toBeVisible();
     await expect(page.getByText('Durée inconnue')).toBeVisible();

@@ -239,6 +239,18 @@ export function LogisticsCallPage() {
         </div>
       ) : null}
 
+      {confirmation ? (
+        <div role="status" aria-live="polite" className="mb-4 flex min-w-0 items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
+          <Check size={18} className="shrink-0 text-emerald-600" />
+          <span className="min-w-0 break-normal">{confirmation}</span>
+        </div>
+      ) : null}
+      {persistenceError ? (
+        <div ref={errorRef} tabIndex={-1} role="alert" className="mb-4 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
+          {persistenceError}
+        </div>
+      ) : null}
+
       <div
         className="sticky top-[var(--app-header-height)] z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 p-2 backdrop-blur xl:hidden"
         role="group"
@@ -286,18 +298,6 @@ export function LogisticsCallPage() {
                 <p className="break-normal text-sm text-slate-500">L'appel est horodaté et envoyé au board logistique.</p>
               </div>
             </div>
-
-            {confirmation ? (
-              <div role="status" aria-live="polite" className="mb-5 flex min-w-0 items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
-                <Check size={18} className="shrink-0 text-emerald-600" />
-                <span className="min-w-0 break-normal">{confirmation}</span>
-              </div>
-            ) : null}
-            {persistenceError ? (
-              <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
-                {persistenceError}
-              </div>
-            ) : null}
 
             <form className="grid min-w-0 gap-4" onSubmit={createRequest} onInput={() => { pendingCreateRef.current = null; setPersistenceError(''); }}>
               <div className="grid min-w-0 gap-4 sm:grid-cols-2">
