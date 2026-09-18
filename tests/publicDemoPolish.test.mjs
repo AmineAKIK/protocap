@@ -87,18 +87,20 @@ test('browser-local modules do not claim shared synchronization', async () => {
 });
 
 test('release documentation matches the current CI and records known install warnings', async () => {
-  const [readme, qualityGates] = await Promise.all([
+  const [readme, qualityGates, ciSecurity] = await Promise.all([
     read('README.md'),
     read('docs/quality-gates.md'),
+    read('docs/ci-security.md'),
   ]);
+  const qualityPolicy = `${qualityGates}\n${ciSecurity}`;
 
   assert.match(readme, /installs Chromium and WebKit/);
   assert.match(readme, /mobile Chromium\/WebKit browser smoke tests/);
   assert.match(readme, /axe accessibility regression scans/);
 
-  assert.match(qualityGates, /source-map@0\.8\.0-beta\.0/);
-  assert.match(qualityGates, /glob@11\.1\.0/);
-  assert.match(qualityGates, /esbuild@0\.25\.12/);
-  assert.match(qualityGates, /zero vulnerabilities/);
-  assert.match(qualityGates, /npm cache clean --force/);
+  assert.match(qualityPolicy, /source-map@0\.8\.0-beta\.0/);
+  assert.match(qualityPolicy, /glob@11\.1\.0/);
+  assert.match(qualityPolicy, /esbuild@0\.25\.12/);
+  assert.match(qualityPolicy, /zero vulnerabilities/);
+  assert.match(qualityPolicy, /npm cache clean --force/);
 });
