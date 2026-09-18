@@ -72,8 +72,12 @@ function ShiftGuideDemoBootstrap({
 }
 
 function ShiftGuideGuard() {
-  const { status, unlock, startDemo } = useShiftGuideAuth();
+  const { status, exiting, unlock, startDemo } = useShiftGuideAuth();
   const demo = usePublicDemoAvailability();
+
+  if (exiting) {
+    return <RouteFallback label="Retour à ProtoCap…" />;
+  }
 
   if (status === 'checking' || !demo.resolved) {
     return <RouteFallback label="Vérification de la session ShiftGuide…" />;
