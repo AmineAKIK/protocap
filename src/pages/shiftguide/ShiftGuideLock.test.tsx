@@ -7,7 +7,7 @@ import { ShiftGuideLock } from './ShiftGuideLock';
 function renderLock(onUnlock: (code: string) => Promise<{ ok: boolean; error?: string }>) {
   return render(
     <MemoryRouter>
-      <ShiftGuideLock onUnlock={onUnlock} />
+      <ShiftGuideLock onUnlock={onUnlock} onStartDemo={vi.fn().mockResolvedValue({ ok: true })} />
     </MemoryRouter>
   );
 }
