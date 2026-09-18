@@ -38,10 +38,13 @@ function shutdown(signal = 'SIGTERM') {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-const exits = await Promise.all([
-  new Promise((resolve) => api.once('exit', (code, signal) => resolve({ name: 'api', code, signal }))),
-  new Promise((resolve) => ui.once('exit', (code, signal) => resolve({ name: 'ui', code, signal }))),
-]);
-const unexpected = exits.find((entry) => entry.code && entry.code !== 0);
+function exitOf(name, child) {
+  return new Promise((resolve) => child.once('exit', (code, signal) => resolve({ name, code, signal })));
+}
+
+const apiExit = exitOf('api', api);
+const uiExit = exitOf('ui', ui);
+const first = await Promise.race([apiExit, uiExit]);
 shutdown();
-if (unexpected) process.exitCode = unexpected.code;
+await Promise.all([apiExit, uiExit]);
+if (first.code && first.code !== 0) process.exitCode = first.code;
