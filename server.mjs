@@ -29,6 +29,7 @@ function readBoundedInteger(name, raw, fallback, min, max) {
 }
 
 const port = process.env.PORT || 3000;
+const host = process.env.HOST?.trim() || undefined;
 const shiftGuideCode = process.env.SHIFTGUIDE_CODE ?? '';
 const deepSeekApiKey = process.env.DEEPSEEK_API_KEY ?? '';
 const celineModel = process.env.CELINE_MODEL?.trim() || 'deepseek-v4-flash';
@@ -94,9 +95,10 @@ const cleanupTimer = setInterval(
 cleanupTimer.unref();
 
 const log = createStructuredLogger(console);
-const server = app.listen(port, () => {
+const server = app.listen(port, host, () => {
   log.info('server_started', {
     port: Number(port),
+    host: host ?? 'default',
     shiftGuideConfigured: isConfiguredSecret(shiftGuideCode),
     deepSeekConfigured: isConfiguredSecret(deepSeekApiKey),
     runtimeProfile: demoMode ? 'demo' : (process.env.PROTOCAP_RUNTIME_PROFILE || 'production'),
