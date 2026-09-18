@@ -84,7 +84,7 @@ export function useExpiryWorkspace() {
     }
 
     const locked = await runWithRequiredWebLock(EXPIRY_LOCK_NAME, () => {
-      let latest = loadExpiryWorkspace(initialConditioningLines, initialChangeHistory);
+      const latest = loadExpiryWorkspace(initialConditioningLines, initialChangeHistory);
       if (latest.status === 'readonly') {
         return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'future-version' } as ExpiryWriteResult;
       }
