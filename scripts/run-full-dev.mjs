@@ -14,6 +14,7 @@ function start(command, args, env) {
 const api = start(process.execPath, ['server.mjs'], {
   ...process.env,
   PORT: apiPort,
+  HOST: '127.0.0.1',
   PROTOCAP_RUNTIME_PROFILE: 'development',
 });
 const ui = start(process.execPath, ['./node_modules/vite/bin/vite.js', '--host', host, '--port', vitePort], {
