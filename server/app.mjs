@@ -585,9 +585,29 @@ export function createServerApp({
           return res.set('Cache-Control', 'no-store').type('application/javascript').send(worker);
         }
 
+        if (path === '/manifest.webmanifest') {
+          const manifest = {
+            id: '/shiftguide',
+            name: 'ShiftGuide démo',
+            short_name: 'ShiftGuide démo',
+            description: 'Démo publique ShiftGuide avec données fictives et réponses scénarisées.',
+            lang: 'fr',
+            theme_color: '#0f766e',
+            background_color: '#f8fafc',
+            display: 'standalone',
+            start_url: '/demo',
+            scope: '/',
+            icons: [{ src: '/pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+          };
+          return res
+            .set('Cache-Control', 'no-store')
+            .type('application/manifest+json')
+            .send(JSON.stringify(manifest));
+        }
+
         const isStaticAsset =
           path.startsWith('/assets/') ||
-          ['/registerSW.js', '/pwa-icon.svg', '/favicon.ico', '/manifest.webmanifest'].includes(path) ||
+          ['/registerSW.js', '/pwa-icon.svg', '/favicon.ico'].includes(path) ||
           /^\/workbox-[a-zA-Z0-9_-]+\.js$/.test(path);
 
         if (isShiftGuideRoute && !extname(path)) {
