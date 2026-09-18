@@ -13,16 +13,18 @@ test('npm check keeps frontend coverage in the repository gate', async () => {
   assert.match(packageJson.scripts.check, /test:frontend:coverage/);
 });
 
-test('Vitest coverage is scoped to tested behavior with explicit floors', async () => {
-  const config = await read('vitest.config.ts');
+test('Vitest targeted coverage keeps explicit floors and failure evidence', async () => {
+  const { default: config } = await import(`../vitest.config.ts?quality=${Date.now()}`);
+  const coverage = config.test.coverage;
 
-  assert.match(config, /provider: 'v8'/);
-  assert.match(config, /reporter: \['text', 'json-summary'\]/);
-  assert.match(config, /src\/features\/shiftguide\/celineClient\.ts/);
-  assert.match(config, /statements: 60/);
-  assert.match(config, /branches: 50/);
-  assert.match(config, /functions: 50/);
-  assert.match(config, /lines: 60/);
+  assert.equal(coverage.provider, 'v8');
+  assert.deepEqual(coverage.reporter, ['text', 'json-summary', 'html', 'lcov']);
+  assert.equal(coverage.reportOnFailure, true);
+  assert.ok(coverage.include.includes('src/features/shiftguide/celineClient.ts'));
+  assert.equal(coverage.thresholds.statements, 60);
+  assert.equal(coverage.thresholds.branches, 50);
+  assert.equal(coverage.thresholds.functions, 50);
+  assert.equal(coverage.thresholds.lines, 60);
 });
 
 test('TypeScript source enables targeted type-aware async linting', async () => {
