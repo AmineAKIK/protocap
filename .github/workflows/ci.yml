@@ -17,7 +17,9 @@ jobs:
   quality:
     name: Quality gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      E2E_SKIP_BUILD: '1'
 
     steps:
       - name: Checkout
@@ -46,17 +48,20 @@ jobs:
 
       - name: Verify generated directories are not tracked
         run: |
-          if git ls-files node_modules dist coverage | grep -q .; then
+          if git ls-files node_modules dist coverage playwright-report test-results | grep -q .; then
             echo "Generated directories must not be tracked."
-            git ls-files node_modules dist coverage | head -50
+            git ls-files node_modules dist coverage playwright-report test-results | head -50
             exit 1
           fi
 
-      - name: Run repository checks
-        run: npm run check
+      - name: Run repository checks and coverage evidence
+        run: npm run check:ci
 
       - name: Build production container
         run: docker build --tag protocap-ci .
+
+      - name: Start built container on isolated synthetic profile
+        run: node scripts/container-runtime-smoke.mjs protocap-ci
 
       - name: Install browser engines for E2E
         run: npx playwright install --with-deps chromium webkit
@@ -108,3 +113,17 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ''
           SG_SYSTEM_PROMPT: public-demo-host-config-must-not-be-used
+
+      - name: Upload quality evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: quality-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            coverage/frontend-targeted
+            coverage/frontend-global
+            coverage/server
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 14
