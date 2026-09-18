@@ -13,6 +13,7 @@ import {
   lockShiftGuide,
   logoutShiftGuide,
   SHIFTGUIDE_SESSION_INVALIDATED_EVENT,
+  startPublicShiftGuideDemo,
   unlockShiftGuide,
   validateShiftGuideSession,
 } from '../hooks/useShiftGuideAuth';
@@ -23,6 +24,7 @@ type ShiftGuideAuthStatus = 'checking' | 'locked' | 'unlocked';
 interface ShiftGuideAuthContextValue {
   status: ShiftGuideAuthStatus;
   unlock: (code: string) => Promise<ShiftGuideAuthResult>;
+  startDemo: () => Promise<ShiftGuideAuthResult>;
   logout: () => Promise<void>;
 }
 
@@ -140,6 +142,21 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
     return result;
   }, []);
 
+  const startDemo = useCallback(async () => {
+    const result = await startPublicShiftGuideDemo();
+    if (result.ok) {
+      authGenerationRef.current += 1;
+      const expiresAt = getShiftGuideSessionExpiry();
+      if (!expiresAt || expiresAt <= Date.now()) {
+        lockShiftGuide();
+        return { ok: false, error: 'Session invalide.' };
+      }
+      setSessionExpiresAt(expiresAt);
+      setStatus('unlocked');
+    }
+    return result;
+  }, []);
+
   const logout = useCallback(async () => {
     authGenerationRef.current += 1;
     setSessionExpiresAt(null);
@@ -147,7 +164,7 @@ export function ShiftGuideAuthProvider({ children }: { children: ReactNode }) {
     await logoutShiftGuide();
   }, []);
 
-  const value = useMemo(() => ({ status, unlock, logout }), [status, unlock, logout]);
+  const value = useMemo(() => ({ status, unlock, startDemo, logout }), [status, unlock, startDemo, logout]);
 
   return (
     <ShiftGuideAuthContext.Provider value={value}>
