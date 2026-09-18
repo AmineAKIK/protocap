@@ -27,7 +27,8 @@
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
     "test:e2e:expiry": "playwright test e2e/expiry-time.spec.ts --project=chromium --project=chromium-mobile --project=webkit",
-    "test:e2e:logistics": "playwright test e2e/logistics-reliability.spec.ts --project=chromium --project=chromium-mobile --project=webkit"
+    "test:e2e:logistics": "playwright test e2e/logistics-reliability.spec.ts --project=chromium --project=chromium-mobile --project=webkit",
+    "test:e2e:concurrency": "playwright test e2e/local-concurrency.spec.ts --project=chromium"
   },
   "dependencies": {
     "@js-temporal/polyfill": "0.5.1",
