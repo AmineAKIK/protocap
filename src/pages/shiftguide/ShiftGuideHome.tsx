@@ -170,7 +170,7 @@ function StatusPill({ summary, idle = 'Prêt' }: { summary: ModuleSummary; idle?
   }
 
   return (
-    <span className="whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-black uppercase text-zinc-500">
+    <span className="whitespace-nowrap rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-black uppercase text-zinc-700">
       {idle}
     </span>
   );
@@ -288,7 +288,7 @@ function ModuleTable({ modules, summaries }: { modules: SGModule[]; summaries: R
               <p className="text-xs font-black tabular-nums text-zinc-950 sm:text-sm">
                 {summary.treatedCount}/{summary.totalActions}
               </p>
-              <p className="hidden text-[11px] font-bold uppercase text-zinc-400 sm:block">actions</p>
+              <p className="hidden text-[11px] font-bold uppercase text-zinc-600 sm:block">actions</p>
             </div>
           </Link>
         );
@@ -331,7 +331,7 @@ function ContextRail({
             >
               <Icon size={16} />
               <span className="flex-1">{ctx.label}</span>
-              <span className={`text-[10px] font-black uppercase ${active ? 'text-zinc-800' : 'text-zinc-500'}`}>
+              <span className={`text-[10px] font-black uppercase ${active ? 'text-zinc-800' : 'text-zinc-400'}`}>
                 {ctx.short}
               </span>
             </button>
@@ -380,10 +380,10 @@ function SectionHeader({ label, title, detail }: { label: string; title: string;
   return (
     <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-600">{label}</p>
         <h2 className="text-xl font-black tracking-tight text-zinc-950">{title}</h2>
       </div>
-      {detail && <p className="text-sm font-semibold text-zinc-500">{detail}</p>}
+      {detail && <p className="text-sm font-semibold text-zinc-600">{detail}</p>}
     </div>
   );
 }
@@ -510,7 +510,7 @@ export function ShiftGuideHome() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-black text-zinc-950">ShiftGuide</p>
-              <p className="hidden text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400 sm:block">
+              <p className="hidden text-[11px] font-black uppercase tracking-[0.18em] text-zinc-600 sm:block">
                 Command surface
               </p>
             </div>
@@ -598,7 +598,7 @@ export function ShiftGuideHome() {
 
         <aside className="hidden space-y-4 lg:block">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-600">
               Accès rapide
             </p>
             <div className="mt-3 grid gap-2">
