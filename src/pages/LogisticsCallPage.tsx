@@ -152,14 +152,17 @@ export function LogisticsCallPage() {
   function writeErrorMessage(reason: string) {
     if (reason === 'quota') return 'Sauvegarde locale impossible : quota du navigateur atteint. L’appel n’est pas confirmé et le formulaire est conservé.';
     if (reason === 'future-version' || reason === 'readonly') return 'Cette version ne peut pas modifier les données Logistics locales. Le formulaire est conservé.';
+    if (reason === 'concurrency-unavailable') return 'Protection multi-onglets indisponible : Logistics passe en lecture seule et le formulaire est conservé.';
+    if (reason === 'conflict') return 'Les données Logistics ont changé dans un autre onglet. Elles ont été préservées ; réessayez sur l’état actualisé.';
     if (reason === 'verify') return 'Sauvegarde locale non vérifiable. L’appel n’est pas confirmé et le formulaire est conservé.';
     if (reason === 'invalid-transition') return 'Transition Logistics interdite. Aucun changement n’a été enregistré.';
     return 'Sauvegarde locale impossible. Aucun succès n’est confirmé et les données saisies restent disponibles.';
   }
 
-  function createRequest(event: FormEvent<HTMLFormElement>) {
+  async function createRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const fingerprint = JSON.stringify(Array.from(data.entries()));
     const pending = pendingCreateRef.current?.fingerprint === fingerprint
       ? pendingCreateRef.current
@@ -177,7 +180,7 @@ export function LogisticsCallPage() {
       createdAt: pending.createdAt,
       status: 'waiting'
     };
-    const persisted = persistCreate(request);
+    const persisted = await persistCreate(request);
     if (persisted.status === 'degraded') {
       setConfirmation('');
       setPersistenceError(writeErrorMessage(persisted.reason));
@@ -191,12 +194,12 @@ export function LogisticsCallPage() {
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
     setConfirmation(`Appel ${id} enregistré localement — ${request.palletCount} palette${request.palletCount > 1 ? 's' : ''} · ${request.line}`);
     confirmTimerRef.current = setTimeout(() => setConfirmation(''), 5000);
-    event.currentTarget.reset();
+    form.reset();
     setMobileTab('logistics');
   }
 
-  function updateStatus(id: string, status: LogisticsStatus) {
-    const result = persistStatusUpdate(id, status, new Date().toISOString());
+  async function updateStatus(id: string, status: LogisticsStatus) {
+    const result = await persistStatusUpdate(id, status, new Date().toISOString());
     if (result.status === 'degraded') {
       setPersistenceError(writeErrorMessage(result.reason));
       return false;
@@ -205,9 +208,9 @@ export function LogisticsCallPage() {
     return true;
   }
 
-  function confirmCancellation() {
+  async function confirmCancellation() {
     if (!cancelRequestId) return;
-    const result = persistStatusUpdate(cancelRequestId, 'cancelled', new Date().toISOString());
+    const result = await persistStatusUpdate(cancelRequestId, 'cancelled', new Date().toISOString());
     if (result.status === 'degraded') {
       setCancelError(writeErrorMessage(result.reason));
       return;
@@ -449,7 +452,7 @@ export function LogisticsCallPage() {
             {cancelError ? <p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{cancelError}</p> : null}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button variant="ghost" onClick={() => { setCancelError(''); setCancelRequestId(null); }}>Retour</Button>
-              <Button variant="danger" onClick={confirmCancellation}>Confirmer l’annulation</Button>
+              <Button variant="danger" onClick={() => void confirmCancellation()}>Confirmer l’annulation</Button>
             </div>
           </div>
         </Modal>
