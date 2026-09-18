@@ -204,7 +204,7 @@ export function PackingCalculatorPage() {
     form.referenceCadence.trim() ||
     selectedPolicy,
   );
-  const persistenceDegraded = formPersistenceStatus === 'degraded' || persistenceStatus === 'degraded';
+  const persistenceDegraded = formPersistenceStatus === 'degraded' || formPersistenceStatus === 'readonly' || persistenceStatus === 'degraded';
   const draftRecovered = formPersistenceStatus === 'recovered';
 
   function updateField(field: keyof PackingPlanningFormState, value: string) {
@@ -347,7 +347,7 @@ export function PackingCalculatorPage() {
       }
 
       const draftWrite = setForm(restored);
-      if (draftWrite === 'degraded') {
+      if (draftWrite.status === 'degraded') {
         setShowDegradedModifyConfirm(true);
         return;
       }

@@ -24,6 +24,8 @@ export default defineConfig({
         'src/hooks/useShiftGuideAuth.ts',
         'src/hooks/useShiftGuideShell.ts',
         'src/hooks/useNow.ts',
+        'src/hooks/useLocalStorage.ts',
+        'src/persistence/publicLocalStorage.ts',
         'src/pages/shiftguide/ShiftGuideLock.tsx',
         'src/utils/expiry.ts',
         'src/features/expiry/time.ts',
