@@ -22,24 +22,29 @@ export function useExpiryWorkspace() {
   useEffect(() => {
     if (snapshot.status !== 'migration-pending') return;
     const result = persistExpiryTransition(snapshot.persistedRaw, snapshot.aggregate, snapshot.aggregate);
-    if (result.status === 'persisted') {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      if (result.status === 'persisted') {
+        setSnapshot((current) => current.status === 'migration-pending'
+          ? { ...current, status: 'ready', persistedRaw: result.raw, issues: [] }
+          : current);
+        return;
+      }
+      const nextStatus: ExpiryWorkspaceStatus = result.reason === 'future-version'
+        ? 'readonly'
+        : result.reason === 'conflict'
+          ? 'recovery-required'
+          : 'degraded';
       setSnapshot((current) => current.status === 'migration-pending'
-        ? { ...current, status: 'ready', persistedRaw: result.raw, issues: [] }
+        ? {
+            ...current,
+            status: nextStatus,
+            issues: result.reason === 'conflict' ? ['storage-conflict'] : ['migration-write-failed'],
+          }
         : current);
-      return;
-    }
-    const nextStatus: ExpiryWorkspaceStatus = result.reason === 'future-version'
-      ? 'readonly'
-      : result.reason === 'conflict'
-        ? 'recovery-required'
-        : 'degraded';
-    setSnapshot((current) => current.status === 'migration-pending'
-      ? {
-          ...current,
-          status: nextStatus,
-          issues: result.reason === 'conflict' ? ['storage-conflict'] : ['migration-write-failed'],
-        }
-      : current);
+    });
+    return () => { active = false; };
   }, [snapshot]);
 
   const commitDeclaration = useCallback((
