@@ -102,3 +102,9 @@ jobs:
         env:
           DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
           SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
+
+      - name: Run isolated public demo journeys
+        run: npm run test:e2e:public-demo
+        env:
+          DEEPSEEK_API_KEY: ''
+          SG_SYSTEM_PROMPT: public-demo-host-config-must-not-be-used
