@@ -1,4 +1,4 @@
-import { useCallback, useReducer, useRef, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
 import {
   inspectPublicStorageCompatibility,
   readPublicStorageValue,
@@ -52,37 +52,40 @@ export function useLocalStorage<T>(
   initialValue: T,
   normalize?: (value: T) => T,
 ) {
-  const [, rerender] = useReducer((value: number) => value + 1, 0);
-  const snapshotRef = useRef<LocalStorageSnapshot<T> | null>(null);
+  const [snapshot, setSnapshot] = useState<LocalStorageSnapshot<T>>(() =>
+    loadSnapshot(key, initialValue, normalize),
+  );
+  const valueRef = useRef(snapshot.value);
+  const keyRef = useRef(key);
 
-  if (!snapshotRef.current || snapshotRef.current.logicalKey !== key) {
-    snapshotRef.current = loadSnapshot(key, initialValue, normalize);
-  }
+  useEffect(() => {
+    if (keyRef.current === key) return;
+    const next = loadSnapshot(key, initialValue, normalize);
+    keyRef.current = key;
+    valueRef.current = next.value;
+    setSnapshot(next);
+  }, [initialValue, key, normalize]);
 
   const setValue = useCallback((action: SetStateAction<T>): PublicStorageWriteResult => {
-    const current = snapshotRef.current;
-    if (!current || current.logicalKey !== key) {
-      throw new Error('Local storage hook key changed before the write could be prepared.');
-    }
+    const currentValue = valueRef.current;
     const nextValue = typeof action === 'function'
-      ? (action as (previous: T) => T)(current.value)
+      ? (action as (previous: T) => T)(currentValue)
       : action;
     const result = writePublicStorageValue(key, nextValue);
 
-    snapshotRef.current = {
+    valueRef.current = nextValue;
+    setSnapshot({
       logicalKey: key,
-      versionedKey: current.versionedKey,
+      versionedKey: versionedPublicStorageKey(key),
       value: nextValue,
       persistenceStatus: result.status === 'persisted'
         ? 'persisted'
         : result.reason === 'future-version'
           ? 'readonly'
           : 'degraded',
-    };
-    rerender();
+    });
     return result;
   }, [key]);
 
-  const snapshot = snapshotRef.current;
   return [snapshot.value, setValue, snapshot.persistenceStatus] as const;
 }

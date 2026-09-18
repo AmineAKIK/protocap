@@ -1,5 +1,5 @@
 import { StrictMode, type ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useLocalStorage } from './useLocalStorage';
 
@@ -81,7 +81,7 @@ describe('useLocalStorage non-destructive hydration', () => {
     expect(localStorage.getItem(packingFormKey)).toBeNull();
   });
 
-  it('T17: changing the logical key reloads without a parasitic write', () => {
+  it('T17: changing the logical key reloads without a parasitic write', async () => {
     localStorage.setItem('lineops.expiry.lines.v8', '[]');
     localStorage.setItem('lineops.expiry.history.v8', '[]');
     const writes = vi.spyOn(Storage.prototype, 'setItem');
@@ -93,7 +93,7 @@ describe('useLocalStorage non-destructive hydration', () => {
     expect(result.current[2]).toBe('persisted');
 
     rerender({ logicalKey: 'lineops.expiry.history' });
-    expect(result.current[2]).toBe('persisted');
+    await waitFor(() => expect(result.current[2]).toBe('persisted'));
     expect(writes).not.toHaveBeenCalled();
   });
 
