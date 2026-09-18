@@ -95,7 +95,7 @@ npm run preview   # static Vite preview only; not the application server
 
 `dev:full` binds the frontend and API to loopback by default. Copy `.env.example` to `.env.local` only when server-backed local development is required; no command assumes that a `.env` file is loaded implicitly.
 
-The `demo` command injects repository-owned fictitious ShiftGuide fixtures and a scripted Céline provider. It rejects an inherited `DEEPSEEK_API_KEY`, never falls back to DeepSeek, and is not evidence of real provider quality or operational data. The later public-demo PR is responsible for exposing a guided anonymous entry point in the UI.
+The `demo` command injects repository-owned fictitious ShiftGuide fixtures and a scripted Céline provider. It rejects an inherited `DEEPSEEK_API_KEY`, never falls back to DeepSeek, and is not evidence of real provider quality or operational data. On the demo origin, ShiftGuide offers an anonymous synthetic session without a maintainer secret and keeps a permanent simulation notice visible. A hosted public-demo link is surfaced only when `PUBLIC_DEMO_URL` points to a verified isolated service; no placeholder or dead URL is published.
 
 Server-backed ShiftGuide/Céline development uses the variables documented in `.env.example`. Secrets must remain server-side. Do not use `VITE_*` names for secrets: Vite-prefixed variables belong to the client-facing build namespace.
 
