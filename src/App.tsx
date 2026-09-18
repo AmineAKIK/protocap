@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
-import { usePublicDemoAvailability } from './features/shiftguide/publicDemo';
+import { buildProtoCapPublicUrl, readDemoRuntimeConfig } from './features/shiftguide/demoRuntime';
 
 const EssayPage = lazy(() =>
   import('./pages/EssayPage').then((module) => ({ default: module.EssayPage }))
@@ -94,19 +94,36 @@ function ShiftGuideRoute() {
   );
 }
 
+function DemoDeparture() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const target = buildProtoCapPublicUrl(pathname);
+    if (target) window.location.replace(target);
+  }, [pathname]);
+
+  return <RouteFallback label="Retour à ProtoCap…" />;
+}
+
 export function App() {
-  const publicDemo = usePublicDemoAvailability();
+  const demoRuntime = readDemoRuntimeConfig();
 
-  if (!publicDemo.resolved) {
-    return <RouteFallback label="Chargement de ProtoCap…" />;
-  }
+  useEffect(() => {
+    if (!demoRuntime.isDemo) return;
+    void navigator.serviceWorker?.getRegistrations?.().then((registrations) => {
+      for (const registration of registrations) void registration.unregister();
+    });
+    if ('caches' in window) {
+      void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+    }
+  }, [demoRuntime.isDemo]);
 
-  if (publicDemo.selfServe) {
+  if (demoRuntime.isDemo) {
     return (
       <Routes>
         <Route path="/demo" element={<Navigate to="/shiftguide" replace />} />
         <Route path="/shiftguide/*" element={<ShiftGuideRoute />} />
-        <Route path="*" element={<Navigate to="/shiftguide" replace />} />
+        <Route path="*" element={<DemoDeparture />} />
       </Routes>
     );
   }
