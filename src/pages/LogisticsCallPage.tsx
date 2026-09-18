@@ -146,7 +146,7 @@ export function LogisticsCallPage() {
 
   useEffect(() => {
     if (!persistenceError) return;
-    requestAnimationFrame(() => errorRef.current?.focus());
+    errorRef.current?.focus();
   }, [persistenceError]);
 
   function writeErrorMessage(reason: string) {
