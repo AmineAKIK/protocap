@@ -7,6 +7,7 @@ import {
 import { useShiftGuideAuth } from '../context/ShiftGuideAuthContext';
 import { useShiftGuideStorageHealth } from '../features/shiftguide/useShiftGuideStorageHealth';
 import { useShiftGuideShell } from '../hooks/useShiftGuideShell';
+import { getShiftGuideSessionProfile } from '../hooks/useShiftGuideAuth';
 import {
   RESPONSIVE_SHELL_CSS_VARS,
   SHIFTGUIDE_DESKTOP_NAV_WIDTH_PX,
@@ -22,6 +23,7 @@ export function ShiftGuideLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
+  const demoSession = getShiftGuideSessionProfile() === 'demo';
   const {
     isCelineRoute,
     isMobileViewport,
@@ -60,6 +62,15 @@ export function ShiftGuideLayout() {
   return (
     <div className={shellClass} style={shellGeometry} data-shiftguide-shell>
       <ShiftGuideDesktopNavigation loggingOut={loggingOut} onLogout={handleLogout} />
+
+      {demoSession && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-3 z-[80] w-[min(94vw,46rem)] -translate-x-1/2 rounded-xl border border-teal-300 bg-teal-50 px-4 py-2.5 text-center text-xs font-black text-teal-950 shadow-lg"
+        >
+          Démo publique · données fictives · réponses scénarisées — aucun appel IA externe
+        </div>
+      )}
 
       {degradedMessage && (
         <div
