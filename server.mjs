@@ -28,6 +28,24 @@ function readBoundedInteger(name, raw, fallback, min, max) {
   return value;
 }
 
+function readPublicDemoOrigin(raw) {
+  if (raw == null || raw.trim() === '') return null;
+  let parsed;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    throw new Error('PUBLIC_DEMO_URL must be a valid absolute URL.');
+  }
+  const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+  if (parsed.protocol !== 'https:' && !(loopback && parsed.protocol === 'http:')) {
+    throw new Error('PUBLIC_DEMO_URL must use HTTPS outside loopback test environments.');
+  }
+  parsed.pathname = '/';
+  parsed.search = '';
+  parsed.hash = '';
+  return parsed.toString();
+}
+
 const port = process.env.PORT || 3000;
 const host = process.env.HOST?.trim() || undefined;
 const shiftGuideCode = process.env.SHIFTGUIDE_CODE ?? '';
@@ -69,7 +87,7 @@ const celineRoutingSpec = parseJsonEnvValue(
 
 const runtimeState = createServerRuntimeState();
 const demoMode = process.env.PROTOCAP_RUNTIME_PROFILE === 'demo' && process.env.PROTOCAP_DEMO_PROVIDER === '1';
-const publicDemoUrl = process.env.PUBLIC_DEMO_URL?.trim() || null;
+const publicDemoUrl = readPublicDemoOrigin(process.env.PUBLIC_DEMO_URL);
 if (demoMode && isConfiguredSecret(deepSeekApiKey)) {
   throw new Error('Demo runtime refuses a configured DeepSeek API key.');
 }

@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 export interface PublicDemoAvailability {
   available: boolean;
   selfServe: boolean;
-  url: string | null;
+  entryUrl: string | null;
 }
 
 const unavailable: PublicDemoAvailability = {
   available: false,
   selfServe: false,
-  url: null,
+  entryUrl: null,
 };
 
 export async function fetchPublicDemoAvailability(): Promise<PublicDemoAvailability> {
@@ -21,11 +21,13 @@ export async function fetchPublicDemoAvailability(): Promise<PublicDemoAvailabil
     const record = payload as Record<string, unknown>;
     const available = record.available === true;
     const selfServe = record.selfServe === true;
-    const url = typeof record.url === 'string' && record.url.length > 0 ? record.url : null;
+    const entryUrl = typeof record.entryUrl === 'string' && record.entryUrl.length > 0
+      ? record.entryUrl
+      : null;
     return {
       available,
       selfServe,
-      url: available ? url : null,
+      entryUrl: available ? entryUrl : null,
     };
   } catch {
     return unavailable;
@@ -34,14 +36,17 @@ export async function fetchPublicDemoAvailability(): Promise<PublicDemoAvailabil
 
 export function usePublicDemoAvailability() {
   const [state, setState] = useState<PublicDemoAvailability>(unavailable);
+  const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     let active = true;
     void fetchPublicDemoAvailability().then((result) => {
-      if (active) setState(result);
+      if (!active) return;
+      setState(result);
+      setResolved(true);
     });
     return () => { active = false; };
   }, []);
 
-  return state;
+  return { ...state, resolved };
 }

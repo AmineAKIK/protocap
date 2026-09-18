@@ -6,15 +6,12 @@ import type { ShiftGuideAuthResult } from '../../hooks/useShiftGuideAuth';
 
 export function ShiftGuideLock({
   onUnlock,
-  onStartDemo,
 }: {
   onUnlock: (code: string) => Promise<ShiftGuideAuthResult>;
-  onStartDemo: () => Promise<ShiftGuideAuthResult>;
 }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const demo = usePublicDemoAvailability();
   const inputRef = useRef<HTMLInputElement>(null);
   const errorTimerRef = useRef<number | null>(null);
@@ -24,17 +21,6 @@ export function ShiftGuideLock({
       if (errorTimerRef.current !== null) window.clearTimeout(errorTimerRef.current);
     };
   }, []);
-
-  const startDemo = async () => {
-    if (demoLoading) return;
-    setDemoLoading(true);
-    setError(null);
-    const result = await onStartDemo();
-    if (!result.ok) {
-      setError(result.error ?? 'Démo indisponible.');
-      setDemoLoading(false);
-    }
-  };
 
   const attempt = async () => {
     const trimmed = code.trim();
@@ -123,29 +109,18 @@ export function ShiftGuideLock({
             {loading ? 'Vérification…' : 'Déverrouiller'}
           </button>
 
-          {demo.available && (
+          {demo.available && demo.entryUrl && (
             <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-4">
               <p className="text-xs font-black uppercase tracking-wide text-teal-800">Démo publique</p>
               <p className="mt-1 text-xs leading-5 text-teal-900">
                 Données fictives · réponses scénarisées — aucun appel IA externe.
               </p>
-              {demo.selfServe ? (
-                <button
-                  type="button"
-                  onClick={() => void startDemo()}
-                  disabled={demoLoading}
-                  className="mt-3 w-full rounded-xl bg-teal-700 py-3 text-sm font-black text-white transition hover:bg-teal-800 disabled:opacity-50"
-                >
-                  {demoLoading ? 'Ouverture de la démo…' : 'Démarrer la démo sans code'}
-                </button>
-              ) : demo.url ? (
-                <a
-                  href={demo.url}
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-teal-700 py-3 text-sm font-black text-white transition hover:bg-teal-800"
-                >
-                  Ouvrir la démo publique
-                </a>
-              ) : null}
+              <a
+                href={demo.entryUrl}
+                className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-teal-700 py-3 text-sm font-black text-white transition hover:bg-teal-800"
+              >
+                Essayer ShiftGuide en démo
+              </a>
             </div>
           )}
 

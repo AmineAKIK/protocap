@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list']] : [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4175',
+    baseURL: 'http://127.0.0.1:4176',
     trace: 'on-first-retry',
   },
   projects: [
@@ -15,15 +15,28 @@ export default defineConfig({
     { name: 'chromium-mobile', use: { ...devices['Pixel 7'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  webServer: {
-    command: 'node scripts/public-demo-e2e-harness.mjs',
-    url: 'http://127.0.0.1:4175/api/health',
-    reuseExistingServer: false,
-    timeout: 30_000,
-    env: {
-      PROTOCAP_PUBLIC_DEMO_E2E: '1',
-      DEEPSEEK_API_KEY: '',
+  webServer: [
+    {
+      command: 'node scripts/public-demo-protected-e2e-harness.mjs',
+      url: 'http://127.0.0.1:4176/api/health',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        PROTOCAP_PUBLIC_DEMO_PROTECTED_E2E: '1',
+        DEEPSEEK_API_KEY: '',
+      },
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
     },
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
-  },
+    {
+      command: 'node scripts/public-demo-e2e-harness.mjs',
+      url: 'http://127.0.0.1:4175/api/health',
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: {
+        PROTOCAP_PUBLIC_DEMO_E2E: '1',
+        DEEPSEEK_API_KEY: '',
+      },
+      gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
+    },
+  ],
 });

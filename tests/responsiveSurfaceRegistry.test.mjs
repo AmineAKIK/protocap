@@ -20,7 +20,7 @@ function literalRoutePaths(source) {
 }
 
 function appPrincipalRoutes(app) {
-  return literalRoutePaths(app).filter((route) => route !== '*' && route !== '/shiftguide/*');
+  return literalRoutePaths(app).filter((route) => !['*', '/shiftguide/*', '/demo'].includes(route));
 }
 
 function shiftGuidePrincipalRoutes(app) {

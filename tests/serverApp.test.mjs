@@ -380,7 +380,7 @@ test('T29/T45: public demo session is self-serve only on demo origin and cannot 
     assert.deepEqual(await availability.json(), {
       available: true,
       selfServe: true,
-      url: '/shiftguide',
+      entryUrl: '/demo',
     });
 
     const protectedUnlock = await fetch(`${demoBaseUrl}/api/shiftguide/unlock`, {
@@ -404,12 +404,24 @@ test('T29/T45: public demo session is self-serve only on demo origin and cannot 
     assert.deepEqual(await availability.json(), {
       available: false,
       selfServe: false,
-      url: null,
+      entryUrl: null,
     });
 
     const reused = await fetch(`${protectedBaseUrl}/api/shiftguide/session`, {
       headers: { Authorization: `Bearer ${demoToken}` },
     });
     assert.equal(reused.status, 401);
+  });
+
+  await withServer({
+    publicDemo: { selfServe: false, url: 'https://demo.example.test/' },
+  }, async (protectedBaseUrl) => {
+    const availability = await fetch(`${protectedBaseUrl}/api/public-demo`);
+    assert.equal(availability.status, 200);
+    assert.deepEqual(await availability.json(), {
+      available: true,
+      selfServe: false,
+      entryUrl: 'https://demo.example.test/demo',
+    });
   });
 });
