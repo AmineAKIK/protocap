@@ -81,32 +81,23 @@ The automated suite covers server/runtime security helpers, ShiftGuide validatio
 
 ## Local development
 
-Node.js 24 LTS is the repository reference version (`.nvmrc`).
+Node.js 24 LTS is the repository reference version (`.nvmrc`). Runtime modes are intentionally separate:
 
 ```bash
 npm ci
-npm run dev
-```
-
-Production build:
-
-```bash
+npm run dev       # public Vite UI only
+npm run dev:full  # Vite + configured local API; loads .env.local explicitly when present
+npm run demo      # synthetic full-stack demo, no private key and no external AI provider
 npm run build
-npm run preview
+npm start         # production Express runtime serving dist/
+npm run preview   # static Vite preview only; not the application server
 ```
 
-Server-backed ShiftGuide/Céline development uses the variables documented in `.env.example`:
+`dev:full` binds the frontend and API to loopback by default. Copy `.env.example` to `.env.local` only when server-backed local development is required; no command assumes that a `.env` file is loaded implicitly.
 
-```text
-SHIFTGUIDE_CODE
-DEEPSEEK_API_KEY
-SG_MODULES
-SG_LEXIQUE
-SG_SYSTEM_PROMPT
-SG_URGENCES
-```
+The `demo` command injects repository-owned fictitious ShiftGuide fixtures and a scripted Céline provider. It rejects an inherited `DEEPSEEK_API_KEY`, never falls back to DeepSeek, and is not evidence of real provider quality or operational data. The later public-demo PR is responsible for exposing a guided anonymous entry point in the UI.
 
-Secrets must remain server-side. Do not use `VITE_*` names for secrets: Vite-prefixed variables belong to the client-facing build namespace.
+Server-backed ShiftGuide/Céline development uses the variables documented in `.env.example`. Secrets must remain server-side. Do not use `VITE_*` names for secrets: Vite-prefixed variables belong to the client-facing build namespace.
 
 ## Deployment
 
