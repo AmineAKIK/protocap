@@ -1,61 +1,50 @@
-import { useCallback, useRef, useState, type SetStateAction } from 'react';
-import { isValidPublicStorageValue } from '../utils/publicStorageValidation';
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
+import {
+  inspectPublicStorageCompatibility,
+  readPublicStorageValue,
+  versionedPublicStorageKey,
+  writePublicStorageValue,
+  type PublicStorageWriteResult,
+} from '../persistence/publicLocalStorage';
 
-const DATA_VERSION = 'v8';
+export type LocalStoragePersistenceStatus = 'memory' | 'persisted' | 'normalized' | 'recovered' | 'degraded' | 'readonly';
 
-export type LocalStoragePersistenceStatus = 'persisted' | 'degraded' | 'recovered';
-
-function versionedKey(key: string) {
-  return `${key}.${DATA_VERSION}`;
-}
-
-interface InitialLocalStorageState<T> {
+interface LocalStorageSnapshot<T> {
+  logicalKey: string;
+  versionedKey: string;
   value: T;
   persistenceStatus: LocalStoragePersistenceStatus;
 }
 
-function persistValue<T>(vkey: string, value: T): Exclude<LocalStoragePersistenceStatus, 'recovered'> {
-  try {
-    window.localStorage.setItem(vkey, JSON.stringify(value));
-    return 'persisted';
-  } catch {
-    return 'degraded';
-  }
-}
-
-function loadInitialValue<T>(
-  key: string,
-  vkey: string,
+function loadSnapshot<T>(
+  logicalKey: string,
   initialValue: T,
   normalize?: (value: T) => T,
-): InitialLocalStorageState<T> {
-  let stored: string | null;
-  try {
-    stored = window.localStorage.getItem(vkey);
-  } catch {
-    return { value: initialValue, persistenceStatus: 'degraded' };
-  }
-
+): LocalStorageSnapshot<T> {
+  const compatibility = inspectPublicStorageCompatibility(logicalKey);
+  const read = readPublicStorageValue(logicalKey, normalize);
   let value = initialValue;
-  let recovered = false;
-  if (stored !== null) {
-    try {
-      const parsed: unknown = JSON.parse(stored);
-      if (isValidPublicStorageValue(key, parsed)) {
-        const validated = parsed as T;
-        value = normalize ? normalize(validated) : validated;
-      } else {
-        recovered = true;
-      }
-    } catch {
-      recovered = true;
-      value = initialValue;
-    }
+  let persistenceStatus: LocalStoragePersistenceStatus = 'memory';
+
+  if (read.status === 'loaded') {
+    value = read.value;
+    persistenceStatus = read.normalized ? 'normalized' : 'persisted';
+  } else if (read.status === 'invalid') {
+    // Safe fallback in memory only. The original bytes remain untouched for migration/recovery.
+    persistenceStatus = 'recovered';
+  } else if (read.status === 'degraded') {
+    persistenceStatus = 'degraded';
   }
 
-  const writeStatus = persistValue(vkey, value);
-  if (writeStatus === 'degraded') return { value, persistenceStatus: 'degraded' };
-  return { value, persistenceStatus: recovered ? 'recovered' : 'persisted' };
+  if (compatibility.status === 'degraded') persistenceStatus = 'degraded';
+  if (compatibility.status === 'future-version') persistenceStatus = 'readonly';
+
+  return {
+    logicalKey,
+    versionedKey: versionedPublicStorageKey(logicalKey),
+    value,
+    persistenceStatus,
+  };
 }
 
 export function useLocalStorage<T>(
@@ -63,28 +52,49 @@ export function useLocalStorage<T>(
   initialValue: T,
   normalize?: (value: T) => T,
 ) {
-  const vkey = versionedKey(key);
-  const [initialState] = useState<InitialLocalStorageState<T>>(() =>
-    loadInitialValue(key, vkey, initialValue, normalize),
+  const [snapshot, setSnapshot] = useState<LocalStorageSnapshot<T>>(() =>
+    loadSnapshot(key, initialValue, normalize),
   );
-  const [value, setValueState] = useState<T>(initialState.value);
-  const [persistenceStatus, setPersistenceStatus] = useState<LocalStoragePersistenceStatus>(
-    initialState.persistenceStatus,
-  );
-  const valueRef = useRef(value);
+  const valueRef = useRef(snapshot.value);
+  const keyRef = useRef(key);
 
-  const setValue = useCallback((action: SetStateAction<T>): Exclude<LocalStoragePersistenceStatus, 'recovered'> => {
-    const currentValue = valueRef.current;
+  useEffect(() => {
+    if (keyRef.current === key) return;
+    const next = loadSnapshot(key, initialValue, normalize);
+    keyRef.current = key;
+    valueRef.current = next.value;
+    setSnapshot(next);
+  }, [initialValue, key, normalize]);
+
+  const setValue = useCallback((action: SetStateAction<T>): PublicStorageWriteResult => {
+    // A consumer can call its setter before the key-change effect has committed.
+    // Rebase on the requested key first so an old-key value can never be written under a new key.
+    let currentValue = valueRef.current;
+    if (keyRef.current !== key) {
+      const currentKeySnapshot = loadSnapshot(key, initialValue, normalize);
+      keyRef.current = key;
+      valueRef.current = currentKeySnapshot.value;
+      currentValue = currentKeySnapshot.value;
+      setSnapshot(currentKeySnapshot);
+    }
     const nextValue = typeof action === 'function'
       ? (action as (previous: T) => T)(currentValue)
       : action;
+    const result = writePublicStorageValue(key, nextValue);
 
     valueRef.current = nextValue;
-    setValueState(nextValue);
-    const status = persistValue(vkey, nextValue);
-    setPersistenceStatus(status);
-    return status;
-  }, [vkey]);
+    setSnapshot({
+      logicalKey: key,
+      versionedKey: versionedPublicStorageKey(key),
+      value: nextValue,
+      persistenceStatus: result.status === 'persisted'
+        ? 'persisted'
+        : result.reason === 'future-version'
+          ? 'readonly'
+          : 'degraded',
+    });
+    return result;
+  }, [initialValue, key, normalize]);
 
-  return [value, setValue, persistenceStatus] as const;
+  return [snapshot.value, setValue, snapshot.persistenceStatus] as const;
 }

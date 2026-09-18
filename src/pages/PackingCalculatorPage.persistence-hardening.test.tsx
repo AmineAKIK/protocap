@@ -122,17 +122,12 @@ describe('Packing preparation persistence hardening', () => {
     });
   });
 
-  it('signals when a corrupt local preparation was discarded and repaired', () => {
-    localStorage.setItem(formStorageKey, '{not-json');
+  it('signals when a corrupt local preparation is ignored without overwriting its source bytes', () => {
+    const raw = '{not-json';
+    localStorage.setItem(formStorageKey, raw);
     render(<PackingCalculatorPage />);
 
     expect(screen.getByRole('status').textContent).toMatch(/préparation locale invalide a été ignorée/i);
-    expect(JSON.parse(localStorage.getItem(formStorageKey) ?? 'null')).toEqual({
-      quantity: '',
-      unitsPerCarton: '',
-      cartonsPerPalette: '',
-      productionStartTime: '',
-      referenceCadence: '',
-    });
+    expect(localStorage.getItem(formStorageKey)).toBe(raw);
   });
 });
