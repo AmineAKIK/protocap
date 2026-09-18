@@ -187,12 +187,13 @@ export function LogisticsCallPage() {
       return;
     }
 
+    const persistedId = persisted.requestId ?? id;
     setPersistenceError('');
-    setNewIds((prev) => new Set(prev).add(id));
-    setTimeout(() => setNewIds((prev) => { const next = new Set(prev); next.delete(id); return next; }), 1500);
+    setNewIds((prev) => new Set(prev).add(persistedId));
+    setTimeout(() => setNewIds((prev) => { const next = new Set(prev); next.delete(persistedId); return next; }), 1500);
 
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-    setConfirmation(`Appel ${id} enregistré localement — ${request.palletCount} palette${request.palletCount > 1 ? 's' : ''} · ${request.line}`);
+    setConfirmation(`Appel ${persistedId} enregistré localement — ${request.palletCount} palette${request.palletCount > 1 ? 's' : ''} · ${request.line}`);
     confirmTimerRef.current = setTimeout(() => setConfirmation(''), 5000);
     form.reset();
     setMobileTab('logistics');

@@ -53,3 +53,21 @@ The Railway production service configures `/api/ready` as its deployment healthc
 The repository root `Dockerfile` is the build/runtime source of truth. Railway automatically detects it and builds that image before applying the service-level healthcheck. `/api/health` remains available as the process-liveness endpoint.
 
 This distinction does not turn Protocap into a distributed or highly available system. Sessions and rate-limit/provider context remain process-local as documented in the architecture.
+
+
+## Reproducible local runtime profiles
+
+The repository exposes four distinct launch modes so reviewers do not have to reconstruct the maintainer's environment:
+
+- `npm run dev`: public Vite UI only.
+- `npm run dev:full`: configured local API plus Vite. The launcher explicitly reads `.env.local` when present and binds both processes to loopback.
+- `npm run demo`: synthetic full-stack runtime using fictitious repository fixtures and a scripted Céline provider. It does not call DeepSeek and refuses to inherit a non-empty `DEEPSEEK_API_KEY`.
+- `npm start`: production Express runtime serving the built `dist/` assets. Hosted environments continue to receive configuration from injected process variables.
+
+`npm run preview` remains a static Vite preview and must not be used as a substitute for the application server.
+
+The synthetic demo has its own runtime profile and provider marker. Its readiness means only that the synthetic ShiftGuide configuration and scripted provider were constructed successfully. It must not be interpreted as a live DeepSeek readiness check.
+
+For local full-stack development, the API proxy exists only when `VITE_API_PROXY_TARGET` is explicitly supplied by the launcher. The default Vite-only command has no API proxy. Local launchers bind to `127.0.0.1` unless their documented host controls are deliberately changed.
+
+A port collision is surfaced by the child process and terminates the launcher with a non-zero result. SIGINT/SIGTERM are forwarded to both local children so Ctrl+C does not intentionally leave one half of the stack running.

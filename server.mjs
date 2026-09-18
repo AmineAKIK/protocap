@@ -8,6 +8,7 @@ import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
 import { installGracefulShutdown } from './server/lifecycle.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
+import { createScenarioProvider } from './server/providers/demoScenarioProvider.mjs';
 import { cleanupExpiredState, parseJsonEnvValue } from './server/runtimeUtils.mjs';
 import { isConfiguredSecret } from './server/security.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from './server/shiftGuideDefaults.mjs';
@@ -28,6 +29,7 @@ function readBoundedInteger(name, raw, fallback, min, max) {
 }
 
 const port = process.env.PORT || 3000;
+const host = process.env.HOST?.trim() || undefined;
 const shiftGuideCode = process.env.SHIFTGUIDE_CODE ?? '';
 const deepSeekApiKey = process.env.DEEPSEEK_API_KEY ?? '';
 const celineModel = process.env.CELINE_MODEL?.trim() || 'deepseek-v4-flash';
@@ -66,7 +68,11 @@ const celineRoutingSpec = parseJsonEnvValue(
 );
 
 const runtimeState = createServerRuntimeState();
-const celineProvider = createDeepSeekProvider({
+const demoMode = process.env.PROTOCAP_RUNTIME_PROFILE === 'demo' && process.env.PROTOCAP_DEMO_PROVIDER === '1';
+if (demoMode && isConfiguredSecret(deepSeekApiKey)) {
+  throw new Error('Demo runtime refuses a configured DeepSeek API key.');
+}
+const celineProvider = demoMode ? createScenarioProvider() : createDeepSeekProvider({
   apiKey: deepSeekApiKey,
   model: celineModel,
   maxTokens: celineMaxTokens,
@@ -89,11 +95,13 @@ const cleanupTimer = setInterval(
 cleanupTimer.unref();
 
 const log = createStructuredLogger(console);
-const server = app.listen(port, () => {
+const server = app.listen(port, host, () => {
   log.info('server_started', {
     port: Number(port),
+    host: host ?? 'default',
     shiftGuideConfigured: isConfiguredSecret(shiftGuideCode),
     deepSeekConfigured: isConfiguredSecret(deepSeekApiKey),
+    runtimeProfile: demoMode ? 'demo' : (process.env.PROTOCAP_RUNTIME_PROFILE || 'production'),
     celineModel,
     celineMaxTokens,
     celineProviderCallsPerMinute: celineCostLimits.providerCallsPerMinute,

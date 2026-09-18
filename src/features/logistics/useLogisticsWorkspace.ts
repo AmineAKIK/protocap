@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { hasRequiredWebLocks, runWithRequiredWebLock } from '../../persistence/requiredWebLock';
 import type { LogisticsRequest, LogisticsStatus } from '../../types/logistics';
+import { nextLogisticsId } from '../../utils/logistics';
 import { transitionLogisticsRequest } from './logisticsModel';
 import {
   LOGISTICS_WORKSPACE_KEY,
@@ -31,7 +32,7 @@ export type LogisticsMutationFailureReason =
   | 'concurrency-unavailable';
 
 export type LogisticsMutationResult =
-  | { status: 'persisted'; idempotent: boolean }
+  | { status: 'persisted'; idempotent: boolean; requestId?: string }
   | { status: 'degraded'; reason: LogisticsMutationFailureReason; errorName?: string; futureVersion?: number };
 
 function mapStatus(loaded: LoadedLogisticsWorkspace): LogisticsWorkspaceStatus {
@@ -91,12 +92,13 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
     return () => { active = false; };
   }, [initial, loaded.status]);
 
+  type NextMutation = { status: 'next'; requests: LogisticsRequest[]; requestId?: string };
   type LockedMutation =
     | { kind: 'result'; result: LogisticsMutationResult }
-    | { kind: 'committed'; workspace: LogisticsWorkspaceV9 };
+    | { kind: 'committed'; workspace: LogisticsWorkspaceV9; requestId?: string };
 
   const runMutation = useCallback(async (
-    mutate: (latest: LogisticsRequest[]) => LogisticsMutationResult | { status: 'next'; requests: LogisticsRequest[] },
+    mutate: (latest: LogisticsRequest[]) => LogisticsMutationResult | NextMutation,
   ): Promise<LogisticsMutationResult> => {
     if (!hasRequiredWebLocks()) {
       setLoaded(concurrencyReadonly(initial));
@@ -124,7 +126,7 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
       if (outcome.status !== 'next') return { kind: 'result', result: outcome };
       const persisted = persistLogisticsWorkspace(latest.workspace.revision, outcome.requests);
       if (persisted.status === 'degraded') return { kind: 'result', result: failure(persisted) };
-      return { kind: 'committed', workspace: persisted.workspace };
+      return { kind: 'committed', workspace: persisted.workspace, requestId: outcome.requestId };
     });
 
     if (locked.status === 'unavailable') {
@@ -134,7 +136,11 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
 
     if (locked.value.kind === 'committed') {
       setLoaded({ workspace: locked.value.workspace, status: 'ready' });
-      return { status: 'persisted', idempotent: false };
+      return {
+        status: 'persisted',
+        idempotent: false,
+        ...(locked.value.requestId ? { requestId: locked.value.requestId } : {}),
+      };
     }
 
     const result = locked.value.result;
@@ -157,12 +163,19 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
   const createRequest = useCallback(async (request: LogisticsRequest): Promise<LogisticsMutationResult> =>
     runMutation((latest) => {
       const existing = latest.find((current) => current.id === request.id);
-      if (existing) {
-        return JSON.stringify(existing) === JSON.stringify(request)
-          ? { status: 'persisted', idempotent: true }
-          : { status: 'degraded', reason: 'identity-conflict' };
+      if (existing && JSON.stringify(existing) === JSON.stringify(request)) {
+        return { status: 'persisted', idempotent: true, requestId: request.id };
       }
-      return { status: 'next', requests: [request, ...latest] };
+
+      const assigned = existing
+        ? { ...request, id: nextLogisticsId(latest) }
+        : request;
+
+      return {
+        status: 'next',
+        requests: [assigned, ...latest],
+        requestId: assigned.id,
+      };
     }), [runMutation]);
 
   const updateStatus = useCallback(async (

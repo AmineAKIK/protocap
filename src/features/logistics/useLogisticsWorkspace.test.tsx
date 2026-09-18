@@ -37,12 +37,13 @@ describe('useLogisticsWorkspace concurrency', () => {
     await waitFor(() => expect(second.result.current.status).toBe('persisted'));
 
     const a = { ...initial[0], id: 'LOG-202', zone: 'Onglet A' };
-    const b = { ...initial[0], id: 'LOG-203', zone: 'Onglet B' };
+    const b = { ...initial[0], id: 'LOG-202', zone: 'Onglet B' };
     await act(async () => { expect((await first.result.current.createRequest(a)).status).toBe('persisted'); });
     await act(async () => { expect((await second.result.current.createRequest(b)).status).toBe('persisted'); });
 
     const stored = JSON.parse(localStorage.getItem(LOGISTICS_WORKSPACE_KEY)!);
     expect(stored.requests.map((entry: LogisticsRequest) => entry.id)).toEqual(expect.arrayContaining(['LOG-202', 'LOG-203', 'LOG-201']));
+    expect(stored.requests.find((entry: LogisticsRequest) => entry.zone === 'Onglet B')?.id).toBe('LOG-203');
   });
 
   it('T12/T21: retrying one stable identity remains idempotent', async () => {

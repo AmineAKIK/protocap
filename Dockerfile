@@ -24,4 +24,4 @@ COPY shared ./shared
 USER node
 
 EXPOSE 3000
-CMD ["node", "server.mjs"]
+CMD ["npm", "start"]
