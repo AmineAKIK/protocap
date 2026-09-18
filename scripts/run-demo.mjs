@@ -14,6 +14,7 @@ const vitePort = process.env.DEMO_PORT || '4173';
 const demoEnv = createDemoServerEnvironment({
   ...process.env,
   PORT: apiPort,
+  HOST: '127.0.0.1',
   PROTOCAP_DEMO_PROVIDER: '1',
 });
 
