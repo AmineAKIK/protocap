@@ -200,3 +200,27 @@ test('T42: keyboard reaches every declaration control and scrolls the dialog wit
   await expect(trigger).toBeFocused();
   expect(await snapshot(page)).toEqual(before);
 });
+
+
+test.describe('PR-04 live Expiry refresh', () => {
+  test.use({ timezoneId: 'Europe/Paris' });
+
+  test('T07: visibility and focus refresh all time-derived indicators without rewriting storage', async ({ page }) => {
+    await seedAt(page, '2026-09-15T12:00:00.000Z', '2026-09-19T13:00:30.000Z');
+    await openExpiry(page, '2026-09-17T12:00:30.000Z');
+    const before = await snapshot(page);
+    await expect(page.getByText(/Démarrage de la ligne autorisé/)).toBeVisible();
+
+    await page.clock.setFixedTime(new Date('2026-09-17T13:00:30.000Z'));
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.getByText(/Vigilance — bloc de remplissage/)).toBeVisible();
+    await expect(page.getByText('Bientôt expiré').first()).toBeVisible();
+
+    await page.clock.setFixedTime(new Date('2026-09-19T13:00:30.000Z'));
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.getByText(/démarrage non conforme/i)).toBeVisible();
+    await expect(page.getByText('Expiré').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ajouter une recharge de cuve' })).toBeDisabled();
+    expect(await snapshot(page)).toEqual(before);
+  });
+});

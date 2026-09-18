@@ -23,6 +23,7 @@ export default defineConfig({
         'src/hooks/useModuleProgress.ts',
         'src/hooks/useShiftGuideAuth.ts',
         'src/hooks/useShiftGuideShell.ts',
+        'src/hooks/useNow.ts',
         'src/pages/shiftguide/ShiftGuideLock.tsx',
         'src/utils/expiry.ts',
         'src/features/expiry/time.ts',
