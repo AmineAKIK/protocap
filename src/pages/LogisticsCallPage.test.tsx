@@ -12,7 +12,7 @@ const historicClosed: LogisticsRequest = {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] });
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
   vi.setSystemTime(new Date('2026-09-18T09:00:00.000Z'));
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
