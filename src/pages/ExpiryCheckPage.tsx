@@ -10,16 +10,16 @@ import {
   Route,
   ShieldCheck
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
-import { initialChangeHistory, initialConditioningLines } from '../data/expiryData';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useNow } from '../hooks/useNow';
 import type { ChangeHistoryEntry, ConditioningLine } from '../types/expiry';
 import { hoursUntil } from '../utils/date';
 import { DeclarationForm } from '../features/expiry/DeclarationForm';
+import { useExpiryWorkspace } from '../features/expiry/useExpiryWorkspace';
+import type { ExpiryWorkspaceStatus, ExpiryWriteFailureReason } from '../features/expiry/persistence';
 import { prepareDeclaration, type DeclarationDraft, type DeclarationError, type DeclarationKind } from '../features/expiry/declaration';
 import { formatStoredTime as formatDateTime, instantMilliseconds } from '../features/expiry/time';
 import { getBlockStatus as getTemporalBlockStatus, getLineStatus, statusLabel, earliestExpiry, latestChange, remainingValidityPercent } from '../utils/expiry';
@@ -81,6 +81,48 @@ function isVatHistoryEntry(entry: ChangeHistoryEntry) {
   return entry.elementLabel.toLowerCase().includes('cuve');
 }
 
+function ExpiryPersistenceBanner({ status }: { status: ExpiryWorkspaceStatus }) {
+  if (status === 'ready') return null;
+  if (status === 'memory') {
+    return <div role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      Données locales non encore sauvegardées. La première déclaration vérifiée créera l’agrégat Expiry dans ce navigateur.
+    </div>;
+  }
+  if (status === 'migration-pending') {
+    return <div role="status" className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      Migration locale Expiry en cours. Les deux sources v8 restent conservées sans modification.
+    </div>;
+  }
+  const message = status === 'readonly'
+    ? 'Version Expiry plus récente détectée. Lecture seule : aucune donnée locale existante ne sera réécrite.'
+    : status === 'recovery-required'
+      ? 'Récupération locale requise. Les traces lisibles restent visibles, mais toute nouvelle déclaration est bloquée pour ne pas écraser les sources.'
+      : 'Sauvegarde locale non confirmée. Les données affichées restent en mémoire et aucune durabilité n’est revendiquée.';
+  return <div role={status === 'degraded' ? 'status' : 'alert'} className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{message}</div>;
+}
+
+function RecoveryTracePanel({ title, entries }: { title: string; entries: ChangeHistoryEntry[] }) {
+  if (entries.length === 0) return null;
+  return <section className="mb-4 min-w-0 rounded-xl border border-amber-300 bg-amber-50 p-3">
+    <h2 className="break-normal font-bold">{title}</h2>
+    <p className="break-normal text-sm">Ces traces restent visibles sans correction globale d’heure ni attribution inventée.</p>
+    {entries.map((entry, index) => <div key={entry.id + '-' + index} className="mt-2 min-w-0 text-sm">
+      <p className="break-normal">{entry.lineName} · {entry.elementLabel} · {entry.operator}</p>
+      <div className="max-w-full overflow-x-auto"><code>{entry.changedAt}</code></div>
+      {entry.comment && <p className="break-normal">{entry.comment}</p>}
+    </div>)}
+  </section>;
+}
+
+function persistenceFailureMessage(reason: ExpiryWriteFailureReason): string {
+  if (reason === 'quota') return 'Sauvegarde locale impossible : quota du navigateur atteint. Brouillon conservé, aucune mutation confirmée.';
+  if (reason === 'future-version') return 'Écriture bloquée : une version Expiry plus récente existe dans ce navigateur.';
+  if (reason === 'conflict' || reason === 'identity-conflict') return 'Les données locales ont changé ou l’identité existe déjà. Aucune mutation n’a été confirmée ; rechargez avant de réessayer.';
+  if (reason === 'recovery-required') return 'Récupération locale requise avant toute nouvelle déclaration. Brouillon conservé.';
+  if (reason === 'verify') return 'Sauvegarde locale non confirmée après écriture. Brouillon conservé ; réessayez pour vérifier la même opération sans la dupliquer.';
+  return 'Sauvegarde locale impossible. Brouillon conservé, aucune mutation confirmée.';
+}
+
 function BlockValidityBar({ line, now }: { line: ConditioningLine; now: Date }) {
   const validityDays = line.elements[0]?.validityDays ?? 5;
   const changedAt = latestChange(line);
@@ -118,9 +160,10 @@ function BlockValidityBar({ line, now }: { line: ConditioningLine; now: Date }) 
   );
 }
 
-function BlockedModal({ line, now, onClose, onDeclare }: {
+function BlockedModal({ line, now, declarationDisabled, onClose, onDeclare }: {
   line: ConditioningLine;
   now: Date;
+  declarationDisabled: boolean;
   onClose: () => void;
   onDeclare: () => void;
 }) {
@@ -148,7 +191,7 @@ function BlockedModal({ line, now, onClose, onDeclare }: {
 
         <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
           <Button className="w-full sm:w-auto" variant="ghost" onClick={onClose}>Voir quand même</Button>
-          <Button className="w-full sm:w-auto" variant="danger" icon={<Plus size={15} />} onClick={onDeclare}>
+          <Button className="w-full sm:w-auto" variant="danger" disabled={declarationDisabled} icon={<Plus size={15} />} onClick={onDeclare}>
             Déclarer le remplacement
           </Button>
         </div>
@@ -158,9 +201,9 @@ function BlockedModal({ line, now, onClose, onDeclare }: {
 }
 
 export function ExpiryCheckPage() {
-  const [lines, setLines] = useLocalStorage<ConditioningLine[]>('lineops.expiry.lines', initialConditioningLines);
-  const [history, setHistory] = useLocalStorage<ChangeHistoryEntry[]>('lineops.expiry.history', initialChangeHistory);
+  const { lines, history, status: expiryStorageStatus, commitDeclaration: commitExpiryDeclaration } = useExpiryWorkspace();
   const now = useNow();
+  const pendingDeclarationRef = useRef<{ fingerprint: string; id: string } | null>(null);
   const [selectedLineId, setSelectedLineId] = useState(lines[0]?.id ?? '');
   const [declareModalOpen, setDeclareModalOpen] = useState(false);
   const [blockedModalOpen, setBlockedModalOpen] = useState(() =>
@@ -174,6 +217,7 @@ export function ExpiryCheckPage() {
   const lineStatus = getLineStatus(selectedLine, now);
   const isBlocked = lineStatus === 'nonConform';
   const isUnknown = lineStatus === 'unknown';
+  const mutationsBlocked = expiryStorageStatus === 'readonly' || expiryStorageStatus === 'recovery-required';
 
   function handleLineSelect(line: ConditioningLine) {
     setSelectedLineId(line.id);
@@ -191,29 +235,47 @@ export function ExpiryCheckPage() {
   }, [lines, now]);
 
   function handleDeclaration(kind: DeclarationKind, draft: DeclarationDraft): DeclarationError | null {
-    // All validation and date calculations finish before either legacy storage setter.
-    // Atomic persistence and failed-write recovery remain PR-05/06, not a claim of this preflight.
     if (!selectedLine) return { field: 'form', message: 'La ligne sélectionnée n’existe plus.' };
-    let id: string;
-    try { id = crypto.randomUUID(); }
-    catch { return { field: 'form', message: 'Identifiant indisponible. Aucune donnée n’a été modifiée.' }; }
+    if (mutationsBlocked) return { field: 'form', message: persistenceFailureMessage(
+      expiryStorageStatus === 'readonly' ? 'future-version' : 'recovery-required',
+    ) };
+
+    const fingerprint = JSON.stringify([selectedLine.id, kind, draft]);
+    let id = pendingDeclarationRef.current?.fingerprint === fingerprint
+      ? pendingDeclarationRef.current.id
+      : '';
+    if (!id) {
+      try { id = crypto.randomUUID(); }
+      catch { return { field: 'form', message: 'Identifiant indisponible. Aucune donnée n’a été modifiée.' }; }
+      pendingDeclarationRef.current = { fingerprint, id };
+    }
+
     const result = prepareDeclaration(lines, selectedLine.id, kind, draft, new Date(), id);
     if (!result.ok) return result.error;
-    setLines(result.lines);
-    setHistory((current) => [result.entry, ...current]);
+    const persisted = commitExpiryDeclaration(result.lines, result.entry);
+    if (persisted.status === 'degraded') {
+      return { field: 'form', message: persistenceFailureMessage(persisted.reason) };
+    }
+    pendingDeclarationRef.current = null;
     if (kind === 'replacement') setDeclareModalOpen(false);
     else setVatModalOpen(false);
     return null;
   }
 
   function openDeclareFromBlockedModal() {
+    if (mutationsBlocked) return;
     setBlockedModalOpen(false);
     setDeclareModalOpen(true);
   }
 
+  const knownLineIds = new Set(lines.map((line) => line.id));
+  const orphanEntries = history.filter((entry) => !knownLineIds.has(entry.lineId));
+
   if (!selectedLine) return (
     <div className="mx-auto min-w-0 max-w-7xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
       <h1 className="break-normal text-xl font-bold">Expiry Check</h1>
+      <ExpiryPersistenceBanner status={expiryStorageStatus} />
+      <RecoveryTracePanel title="Traces orphelines — ligne absente" entries={orphanEntries} />
       <p className="mt-4 break-normal">Aucune ligne exploitable. Les données existantes restent conservées ; aucune conformité ne peut être établie.</p>
     </div>
   );
@@ -271,6 +333,9 @@ export function ExpiryCheckPage() {
           Échéances visibles. Remplacements priorisés. Trace exploitable en cas d'investigation.
         </p>
       </div>
+
+      <ExpiryPersistenceBanner status={expiryStorageStatus} />
+      <RecoveryTracePanel title="Traces orphelines — ligne absente" entries={orphanEntries} />
 
       {unclassifiedEntries.length > 0 && <section className="mb-4 min-w-0 rounded-xl border border-amber-300 bg-amber-50 p-3">
         <h2 className="break-normal font-bold">Traces non rattachables — à vérifier</h2>
@@ -335,10 +400,10 @@ export function ExpiryCheckPage() {
                         : 'border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-400'
                       : status === 'watch'
                         ? isSelected
-                          ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
+                          ? 'border-amber-700 bg-amber-700 text-white shadow-sm'
                           : 'border-amber-200 bg-amber-50 text-amber-900 hover:border-amber-400'
                         : isSelected
-                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                          ? 'border-emerald-700 bg-emerald-700 text-white shadow-sm'
                           : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400';
                   return (
                     <button
@@ -348,7 +413,7 @@ export function ExpiryCheckPage() {
                       className={`min-h-11 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${selectorTone}`}
                     >
                       {line.name.replace('Ligne de conditionnement ', 'Ligne ')}
-                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected && status !== 'unknown' ? 'text-white/90' : ''}`}>{statusLabel(status)}</span>
+                      <span className={`ml-2 hidden font-normal sm:inline ${isSelected && status !== 'unknown' ? 'text-white' : ''}`}>{statusLabel(status)}</span>
                     </button>
                   );
                 })}
@@ -440,7 +505,7 @@ export function ExpiryCheckPage() {
                   <Button
                     className="mt-3 w-full py-3 text-base shadow-sm sm:mt-5"
                     variant={isBlocked ? 'danger' : 'primary'}
-                    disabled={isUnknown}
+                    disabled={isUnknown || mutationsBlocked}
                     onClick={() => setDeclareModalOpen(true)}
                   >
                     {isBlocked ? 'Remplacer le bloc de remplissage' : 'Déclarer un remplacement'}
@@ -471,7 +536,7 @@ export function ExpiryCheckPage() {
                       </div>
                     )}
                   </div>
-                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" disabled={isUnknown || isBlocked} icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
+                  <Button className="mt-5 w-full py-3 text-base shadow-sm" variant="secondary" disabled={isUnknown || isBlocked || mutationsBlocked} icon={<RefreshCcw size={15} />} onClick={() => setVatModalOpen(true)}>
                     Ajouter une recharge de cuve
                   </Button>
                 </div>
@@ -609,6 +674,7 @@ export function ExpiryCheckPage() {
         <BlockedModal
           line={selectedLine}
           now={now}
+          declarationDisabled={mutationsBlocked}
           onClose={() => setBlockedModalOpen(false)}
           onDeclare={openDeclareFromBlockedModal}
         />

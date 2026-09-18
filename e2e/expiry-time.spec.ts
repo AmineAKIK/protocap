@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const LINES_KEY = 'lineops.expiry.lines.v8';
 const HISTORY_KEY = 'lineops.expiry.history.v8';
+const AGGREGATE_KEY = 'lineops.expiry.aggregate.v1';
 const NOW = '2026-09-17T12:00:30.000Z';
 async function openExpiry(page: Page, now = NOW) {
   await page.clock.setFixedTime(new Date(now));
@@ -10,6 +11,16 @@ async function openExpiry(page: Page, now = NOW) {
   await expect(page.getByRole('heading', { name: 'Expiry Check', exact: true })).toBeVisible();
 }
 async function snapshot(page: Page) {
+  return page.evaluate(([linesKey, historyKey, aggregateKey]) => {
+    const aggregateRaw = localStorage.getItem(aggregateKey);
+    if (aggregateRaw) {
+      const aggregate = JSON.parse(aggregateRaw) as { lines: unknown; history: unknown };
+      return [JSON.stringify(aggregate.lines), JSON.stringify(aggregate.history), aggregateRaw];
+    }
+    return [localStorage.getItem(linesKey), localStorage.getItem(historyKey), null];
+  }, [LINES_KEY, HISTORY_KEY, AGGREGATE_KEY]);
+}
+async function sourceSnapshot(page: Page) {
   return page.evaluate(([linesKey, historyKey]) => [localStorage.getItem(linesKey), localStorage.getItem(historyKey)], [LINES_KEY, HISTORY_KEY]);
 }
 async function seedAt(page: Page, changedAt: string, expiresAt: string) {
@@ -222,5 +233,87 @@ test.describe('PR-04 live Expiry refresh', () => {
     await expect(page.getByText('Expiré').first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ajouter une recharge de cuve' })).toBeDisabled();
     expect(await snapshot(page)).toEqual(before);
+  });
+});
+
+test.describe('PR-06 Expiry aggregate migration and atomic write', () => {
+  test.use({ timezoneId: 'Europe/Paris' });
+
+  test('T14: v8 migration is idempotent and preserves both source keys', async ({ page }) => {
+    await seedAt(page, '2026-09-15T12:00:00.000Z', '2026-09-20T12:00:00.000Z');
+    await openExpiry(page);
+    await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY)).not.toBeNull();
+    const sources = await sourceSnapshot(page);
+    const aggregate = await page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY);
+    const parsed = JSON.parse(aggregate!) as { schemaVersion: number; lines: unknown; history: unknown };
+    expect(parsed.schemaVersion).toBe(1);
+    expect(JSON.stringify(parsed.lines)).toBe(sources[0]);
+    expect(JSON.stringify(parsed.history)).toBe(sources[1]);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Expiry Check', exact: true })).toBeVisible();
+    expect(await page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY)).toBe(aggregate);
+    expect(await sourceSnapshot(page)).toEqual(sources);
+  });
+
+  test('T13/T21/T42: failed declaration writes neither state nor trace; retry commits the same operation once', async ({ page }) => {
+    await seedAt(page, '2026-09-15T12:00:00.000Z', '2026-09-20T12:00:00.000Z');
+    await openExpiry(page);
+    await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY)).not.toBeNull();
+    const before = await snapshot(page);
+    const sources = await sourceSnapshot(page);
+
+    await page.getByRole('button', { name: 'Déclarer un remplacement', exact: true }).click();
+    await page.getByLabel('Opérateur', { exact: true }).fill('Fixture retry');
+    await page.getByLabel('Commentaire', { exact: true }).fill('Brouillon atomique');
+    await page.evaluate((aggregateKey) => {
+      const original = Storage.prototype.setItem;
+      let fail = true;
+      Storage.prototype.setItem = function (key, value) {
+        if (key === aggregateKey && fail) {
+          fail = false;
+          throw new DOMException('Full', 'QuotaExceededError');
+        }
+        return original.call(this, key, value);
+      };
+    }, AGGREGATE_KEY);
+
+    await page.getByRole('button', { name: 'Valider le remplacement' }).click();
+    await expect(page.getByRole('alert')).toContainText(/quota/i);
+    await expect(page.getByLabel('Commentaire', { exact: true })).toHaveValue('Brouillon atomique');
+    expect(await snapshot(page)).toEqual(before);
+    expect(await sourceSnapshot(page)).toEqual(sources);
+
+    await page.getByRole('button', { name: 'Valider le remplacement' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const after = await snapshot(page);
+    const lines = JSON.parse(after[0]!) as { elements: { operator: string }[] }[];
+    const history = JSON.parse(after[1]!) as { operator: string; id: string }[];
+    expect(lines[0].elements[0].operator).toBe('Fixture retry');
+    expect(history.filter((entry) => entry.operator === 'Fixture retry')).toHaveLength(1);
+    expect(await sourceSnapshot(page)).toEqual(sources);
+  });
+
+  test('T15/T16/T42: future versions are read-only and orphan evidence remains raw and accessible', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('lineops.expiry.lines.v8', JSON.stringify([{
+        id: 'a', name: 'Ligne A', vat: 'Cuve 1', product: 'Fixture',
+        conditioningStartedAt: '2026-09-15T12:00:00.000Z',
+        elements: [{ type: 'fillingBlock', label: 'Bloc', lastChangedAt: '2026-09-15T12:00:00.000Z',
+          expiresAt: '2026-09-20T12:00:00.000Z', validityDays: 5, operator: 'Fixture' }],
+      }]));
+      localStorage.setItem('lineops.expiry.history.v8', JSON.stringify([{
+        id: 'orphan', lineId: 'missing-line', lineName: 'Ligne disparue', elementLabel: 'Bloc de remplissage',
+        changedAt: 'date-inconnue', newExpiresAt: 'date-inconnue', operator: 'Archive',
+      }]));
+      localStorage.setItem('lineops.expiry.aggregate.v2', JSON.stringify({ schemaVersion: 2, future: true }));
+    });
+    await openExpiry(page);
+    await expect(page.getByRole('alert')).toContainText(/lecture seule/i);
+    await expect(page.getByText(/Traces orphelines/)).toBeVisible();
+    await expect(page.getByText('date-inconnue')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => localStorage.getItem('lineops.expiry.aggregate.v1'))).toBeNull();
   });
 });
