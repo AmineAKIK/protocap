@@ -1,0 +1,9 @@
+# PR-03 — dialog accessibility regression notes
+
+The new Expiry rejection journeys exercise the native dialog and run axe against `dialog[open]`, not an absent literal role attribute. They exposed a scroll region without reliable keyboard access. The shared dialog body now has an explicit name, a keyboard stop and a visible focus indicator. The existing focus restoration and initial-focus contracts remain tested.
+
+The initial browser keyboard test incorrectly required one particular intermediate Tab stop. Browser engines differ in native datetime input segments and container tabbing. The revised test instead requires that real Tab keys reach every field and both action buttons, keep focus inside the dialog, scroll its body, close with Escape and return focus without changing stored data. It does not focus elements or scroll programmatically from test code. This follows the ACT rule allowing the scroller itself OR a descendant in sequential navigation: https://www.w3.org/WAI/standards-guidelines/act/rules/0ssw9k/proposed/ .
+
+On candidate `6454d1bd15b9ae8c8942cb03ae68220af4692dd5`, all form fields were reached, but PageUp while Cancel was focused did not move the body in mobile Chromium or WebKit (scrollTop stayed 257). Quality Gate run 35284361664 records these two failures; the other 34 Expiry executions and the 51 existing browser executions passed. That run is not described as green.
+
+The correction handles unmodified PageUp/PageDown only for the dialog region and its native buttons/links. It respects child event cancellation, editable controls, custom widgets and independently scrollable descendants. The scroll position is clamped, and focus is not changed. Unit tests cover these ownership boundaries. The browser assertions for actual scrolling, every reachable control, Escape and focus return are retained. Final results and the reviewed SHA are recorded separately in PR #176.

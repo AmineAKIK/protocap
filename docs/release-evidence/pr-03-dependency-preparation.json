@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "initialCandidate": "375abcd08889ea485a41fd10b5ffdb8fd86e035d",
+  "preparedAt": "2026-09-17T22:13:01.406Z",
+  "node": "v24.20.0",
+  "npm": "11.19.0",
+  "runUrl": "https://github.com/AmineAKIK/protocap/actions/runs/35280841104",
+  "generation": "npm install --package-lock-only --ignore-scripts --save-exact @js-temporal/polyfill@0.5.1",
+  "addedPackages": [
+    {
+      "path": "node_modules/@js-temporal/polyfill",
+      "version": "0.5.1",
+      "integrity": "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="
+    },
+    {
+      "path": "node_modules/jsbi",
+      "version": "4.3.2",
+      "integrity": "sha512-9fqMSQbhJykSeii05nxKl4m6Eqn2P6rOlYiS+C5Dr/HPIU/7yZxu5qzbs40tgaFORiw2Amd0mirjxatXYMkIew=="
+    }
+  ],
+  "existingGraphUnchanged": true,
+  "cleanInstallPreservedLock": true,
+  "lockSha256": "68c90ae4c150f5584737eb77ec1cb9aa99a163e9708c4f85a6b518418276d29a",
+  "fullAudit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {},
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 80,
+        "dev": 616,
+        "optional": 53,
+        "peer": 10,
+        "peerOptional": 0,
+        "total": 695
+      }
+    }
+  },
+  "productionAudit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {},
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 80,
+        "dev": 616,
+        "optional": 53,
+        "peer": 10,
+        "peerOptional": 0,
+        "total": 695
+      }
+    }
+  },
+  "scope": "Dependency generation and audits; full final-SHA validation is tracked separately on PR #176."
+}

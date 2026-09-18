@@ -25,9 +25,11 @@
     "audit:full": "npm audit --include=dev --audit-level=low",
     "audit:prod": "npm audit --omit=dev --audit-level=low",
     "preview": "vite preview",
-    "lint": "eslint . --max-warnings=0"
+    "lint": "eslint . --max-warnings=0",
+    "test:e2e:expiry": "playwright test e2e/expiry-time.spec.ts --project=chromium --project=chromium-mobile --project=webkit"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "express": "^5.2.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

@@ -57,52 +57,31 @@ function isLogisticsRequestList(value: unknown): value is LogisticsRequest[] {
   return Array.isArray(value) && value.every(isLogisticsRequest);
 }
 
+// Expiry parsing preserves structurally readable evidence. Semantic validity belongs to
+// getLineStatus / prepareDeclaration; rejecting a timestamp here would replace it with demo data.
 function isContactElement(value: unknown): value is ContactElement {
   if (!isRecord(value)) return false;
-  return (
-    value.type === 'fillingBlock' &&
-    isString(value.label) &&
-    isDateString(value.lastChangedAt) &&
-    isDateString(value.expiresAt) &&
-    isPositiveSafeInteger(value.validityDays) &&
-    isString(value.operator) &&
-    isOptionalString(value.comment)
-  );
+  return value.type === 'fillingBlock' && isString(value.label)
+    && isString(value.lastChangedAt) && isString(value.expiresAt)
+    && typeof value.validityDays === 'number' && Number.isFinite(value.validityDays)
+    && isString(value.operator) && isOptionalString(value.comment)
+    && isOptionalString(value.timeZone) && isOptionalString(value.validityRule);
 }
-
 function isConditioningLine(value: unknown): value is ConditioningLine {
   if (!isRecord(value)) return false;
-  return (
-    isString(value.id) &&
-    isString(value.name) &&
-    isString(value.vat) &&
-    isString(value.product) &&
-    isDateString(value.conditioningStartedAt) &&
-    Array.isArray(value.elements) &&
-    value.elements.length > 0 &&
-    value.elements.every(isContactElement)
-  );
+  return isString(value.id) && isString(value.name) && isString(value.vat) && isString(value.product)
+    && isString(value.conditioningStartedAt) && Array.isArray(value.elements) && value.elements.every(isContactElement);
 }
-
 function isConditioningLineList(value: unknown): value is ConditioningLine[] {
-  return Array.isArray(value) && value.length > 0 && value.every(isConditioningLine);
+  return Array.isArray(value) && value.every(isConditioningLine);
 }
-
 function isChangeHistoryEntry(value: unknown): value is ChangeHistoryEntry {
   if (!isRecord(value)) return false;
-  return (
-    isString(value.id) &&
-    isString(value.lineId) &&
-    isString(value.lineName) &&
-    isString(value.elementLabel) &&
-    isDateString(value.changedAt) &&
-    isString(value.operator) &&
-    isOptionalString(value.comment) &&
-    (value.previousExpiresAt === undefined || isDateString(value.previousExpiresAt)) &&
-    isDateString(value.newExpiresAt)
-  );
+  return isString(value.id) && isString(value.lineId) && isString(value.lineName) && isString(value.elementLabel)
+    && isString(value.changedAt) && isString(value.operator) && isOptionalString(value.comment)
+    && isOptionalString(value.previousExpiresAt) && isString(value.newExpiresAt)
+    && isOptionalString(value.timeZone) && isOptionalString(value.validityRule);
 }
-
 function isChangeHistoryList(value: unknown): value is ChangeHistoryEntry[] {
   return Array.isArray(value) && value.every(isChangeHistoryEntry);
 }

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import {
+  type KeyboardEvent,
   type ReactNode,
   type RefObject,
   useEffect,
@@ -20,6 +21,31 @@ interface AccessibleDialogProps {
   hideCloseButton?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
   shouldRestoreFocus?: () => boolean;
+}
+
+function handleContentPageKey(event: KeyboardEvent<HTMLDivElement>) {
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+    || (event.key !== 'PageUp' && event.key !== 'PageDown')) return;
+
+  const region = event.currentTarget;
+  const target = event.target;
+  // Some engines do not page-scroll a container while one of its buttons is focused.
+  // Leave text editing, select navigation and custom widgets to their native owners.
+  if (!(target instanceof HTMLElement)
+    || (target !== region && !target.closest('button, a[href]'))) return;
+  if (target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+
+  // A nested scrolling surface owns its own keys, even when it contains a button.
+  for (let element: HTMLElement | null = target; element && element !== region; element = element.parentElement) {
+    if (element.scrollHeight > element.clientHeight && /^(auto|scroll)$/.test(getComputedStyle(element).overflowY)) return;
+  }
+  const height = region.clientHeight;
+  const maximum = region.scrollHeight - height;
+  if (height <= 0 || maximum <= 0) return;
+
+  event.preventDefault();
+  const direction = event.key === 'PageDown' ? 1 : -1;
+  region.scrollTop = Math.max(0, Math.min(maximum, region.scrollTop + direction * height));
 }
 
 export function AccessibleDialog({
@@ -112,7 +138,13 @@ export function AccessibleDialog({
             </button>
           ) : null}
         </div>
-        <div className={`min-h-0 overflow-y-auto overscroll-contain ${contentClassName}`}>
+        <div
+          role="region"
+          aria-labelledby={titleId}
+          tabIndex={0}
+          onKeyDown={handleContentPageKey}
+          className={`min-h-0 overflow-y-auto overscroll-contain focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal-700 ${contentClassName}`}
+        >
           {children}
         </div>
       </div>
