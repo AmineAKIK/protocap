@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { hasRequiredWebLocks } from '../../persistence/requiredWebLock';
 import type { PackingRun } from './domain/packingRun';
 import {
   createNewPackingRun,
@@ -31,6 +32,7 @@ export interface PackingRunStartAttempt {
 const PACKING_PERSISTENCE_PROBE_KEY = 'lineops.packing.persistence-probe.v1';
 
 function getBrowserPackingStorage(): PackingStorageLike | null {
+  if (!hasRequiredWebLocks()) return null;
   try {
     return window.localStorage;
   } catch {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   SHIFTGUIDE_CONCURRENCY_DEGRADED_EVENT,
+  ShiftGuideConcurrencyUnavailableError,
   ShiftGuideMutationCoordinator,
 } from './shiftGuideConcurrency';
 
@@ -70,30 +71,21 @@ describe('ShiftGuideMutationCoordinator', () => {
     expect(coordinator.isDegraded()).toBe(false);
   });
 
-  it('falls back to a local queue and signals degradation when browser locks are unavailable', async () => {
+  it('T23: blocks durable mutations and signals degradation when browser locks are unavailable', async () => {
     const coordinator = new ShiftGuideMutationCoordinator(() => null);
     const listener = vi.fn();
+    const mutation = vi.fn();
     window.addEventListener(SHIFTGUIDE_CONCURRENCY_DEGRADED_EVENT, listener);
-    const order: string[] = [];
 
-    const first = coordinator.runExclusive('progress', async () => {
-      order.push('first:start');
-      await Promise.resolve();
-      order.push('first:end');
-    });
-    const second = coordinator.runExclusive('progress', () => {
-      order.push('second');
-    });
-
-    await Promise.all([first, second]);
+    await expect(coordinator.runExclusive('progress', mutation)).rejects.toBeInstanceOf(ShiftGuideConcurrencyUnavailableError);
     window.removeEventListener(SHIFTGUIDE_CONCURRENCY_DEGRADED_EVENT, listener);
 
-    expect(order).toEqual(['first:start', 'first:end', 'second']);
+    expect(mutation).not.toHaveBeenCalled();
     expect(coordinator.isDegraded()).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back only when lock acquisition fails before the mutation starts', async () => {
+  it('T23: lock acquisition failure before entry blocks the mutation instead of replaying it', async () => {
     const coordinator = new ShiftGuideMutationCoordinator(() => ({
       request: async () => {
         throw new Error('locks unavailable');
@@ -101,8 +93,8 @@ describe('ShiftGuideMutationCoordinator', () => {
     }));
     const mutation = vi.fn(() => 'done');
 
-    await expect(coordinator.runExclusive('progress', mutation)).resolves.toBe('done');
-    expect(mutation).toHaveBeenCalledTimes(1);
+    await expect(coordinator.runExclusive('progress', mutation)).rejects.toBeInstanceOf(ShiftGuideConcurrencyUnavailableError);
+    expect(mutation).not.toHaveBeenCalled();
     expect(coordinator.isDegraded()).toBe(true);
   });
 });

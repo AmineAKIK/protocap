@@ -26,6 +26,8 @@ export default defineConfig({
         'src/hooks/useNow.ts',
         'src/hooks/useLocalStorage.ts',
         'src/persistence/publicLocalStorage.ts',
+        'src/persistence/requiredWebLock.ts',
+        'src/features/logistics/logisticsPersistence.ts',
         'src/pages/shiftguide/ShiftGuideLock.tsx',
         'src/utils/expiry.ts',
         'src/features/expiry/time.ts',

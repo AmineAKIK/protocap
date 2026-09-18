@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExpiryCheckPage } from './ExpiryCheckPage';
 
@@ -23,6 +23,12 @@ beforeEach(() => {
       expiresAt: '2026-09-20T12:00:00.000Z', validityDays: 5, operator: 'Fixture' }],
   }]));
   localStorage.setItem(historyKey, '[]');
+  localStorage.setItem('lineops.expiry.aggregate.v2', JSON.stringify({
+    schemaVersion: 2,
+    revision: 1,
+    lines: JSON.parse(localStorage.getItem(linesKey)!),
+    history: [],
+  }));
 });
 afterEach(() => { vi.useRealTimers(); });
 
@@ -33,7 +39,7 @@ describe('portable parent-to-candidate temporal regressions', () => {
     expect((screen.getByLabelText('Date / heure du remplacement') as HTMLInputElement).value).toBe(localMinute(now));
   });
   for (const kind of ['replacement', 'refill'] as const) {
-    it(`T04: future ${kind} does not mutate either store`, () => {
+    it(`T04: future ${kind} does not mutate either store`, async () => {
       render(<ExpiryCheckPage />);
       fireEvent.click(screen.getByRole('button', {
         name: kind === 'replacement' ? 'Déclarer un remplacement' : 'Ajouter une recharge de cuve',
@@ -49,6 +55,7 @@ describe('portable parent-to-candidate temporal regressions', () => {
       fireEvent.click(screen.getByRole('button', {
         name: kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge',
       }));
+      await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('future'));
       expect(writes).not.toHaveBeenCalled();
       expect(snapshot()).toEqual(before);
       expect(screen.getByRole('alert').textContent).toContain('future');

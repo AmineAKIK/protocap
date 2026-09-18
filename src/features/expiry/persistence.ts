@@ -1,13 +1,21 @@
 import type { ChangeHistoryEntry, ConditioningLine } from '../../types/expiry';
 import { isValidPublicStorageValue } from '../../utils/publicStorageValidation';
 
-export const EXPIRY_AGGREGATE_VERSION = 1;
-export const EXPIRY_AGGREGATE_KEY = 'lineops.expiry.aggregate.v1';
+export const EXPIRY_AGGREGATE_VERSION = 2;
+export const EXPIRY_AGGREGATE_KEY = 'lineops.expiry.aggregate.v2';
+export const EXPIRY_PREVIOUS_AGGREGATE_KEY = 'lineops.expiry.aggregate.v1';
 export const EXPIRY_AGGREGATE_PREFIX = 'lineops.expiry.aggregate.v';
 export const EXPIRY_LEGACY_LINES_KEY = 'lineops.expiry.lines.v8';
 export const EXPIRY_LEGACY_HISTORY_KEY = 'lineops.expiry.history.v8';
 
-export interface ExpiryAggregateV1 {
+export interface ExpiryAggregateV2 {
+  schemaVersion: 2;
+  revision: number;
+  lines: ConditioningLine[];
+  history: ChangeHistoryEntry[];
+}
+
+interface ExpiryAggregateV1 {
   schemaVersion: 1;
   lines: ConditioningLine[];
   history: ChangeHistoryEntry[];
@@ -30,12 +38,12 @@ export type ExpiryStorageIssue =
   | 'legacy-history-invalid'
   | 'future-version'
   | 'migration-write-failed'
-  | 'storage-conflict';
+  | 'storage-conflict'
+  | 'concurrency-unavailable';
 
 export interface LoadedExpiryWorkspace {
-  aggregate: ExpiryAggregateV1;
+  aggregate: ExpiryAggregateV2;
   status: ExpiryWorkspaceStatus;
-  persistedRaw: string | null;
   issues: ExpiryStorageIssue[];
 }
 
@@ -49,10 +57,11 @@ export type ExpiryWriteFailureReason =
   | 'future-version'
   | 'conflict'
   | 'identity-conflict'
-  | 'recovery-required';
+  | 'recovery-required'
+  | 'concurrency-unavailable';
 
 export type ExpiryWriteResult =
-  | { status: 'persisted'; key: string; raw: string; idempotent: boolean }
+  | { status: 'persisted'; key: string; aggregate: ExpiryAggregateV2; idempotent: boolean }
   | { status: 'degraded'; key: string; reason: ExpiryWriteFailureReason; errorName?: string; futureVersion?: number };
 
 type LegacyReadResult<T> =
@@ -83,14 +92,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function isExpiryAggregate(value: unknown): value is ExpiryAggregateV1 {
-  return isRecord(value)
-    && value.schemaVersion === EXPIRY_AGGREGATE_VERSION
-    && isValidPublicStorageValue('lineops.expiry.lines', value.lines)
+function validPayload(value: Record<string, unknown>): boolean {
+  return isValidPublicStorageValue('lineops.expiry.lines', value.lines)
     && isValidPublicStorageValue('lineops.expiry.history', value.history);
 }
 
-export function serializeExpiryAggregate(value: ExpiryAggregateV1): string {
+export function isExpiryAggregate(value: unknown): value is ExpiryAggregateV2 {
+  return isRecord(value)
+    && value.schemaVersion === EXPIRY_AGGREGATE_VERSION
+    && Number.isSafeInteger(value.revision)
+    && (value.revision as number) >= 0
+    && validPayload(value);
+}
+
+function isPreviousExpiryAggregate(value: unknown): value is ExpiryAggregateV1 {
+  return isRecord(value) && value.schemaVersion === 1 && validPayload(value);
+}
+
+export function serializeExpiryAggregate(value: ExpiryAggregateV2): string {
   return JSON.stringify(value);
 }
 
@@ -102,7 +121,6 @@ function readLegacyValue<T>(key: string, logicalKey: string): LegacyReadResult<T
     return { status: 'degraded', errorName: errorName(error) };
   }
   if (raw === null) return { status: 'missing' };
-
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!isValidPublicStorageValue(logicalKey, parsed)) return { status: 'invalid' };
@@ -135,6 +153,10 @@ function inspectFutureAggregateVersion():
   }
 }
 
+function asV2(lines: ConditioningLine[], history: ChangeHistoryEntry[], revision = 0): ExpiryAggregateV2 {
+  return { schemaVersion: 2, revision, lines, history };
+}
+
 function legacyFallback(
   initialLines: ConditioningLine[],
   initialHistory: ChangeHistoryEntry[],
@@ -145,48 +167,25 @@ function legacyFallback(
 
   if (lines.status === 'degraded' || history.status === 'degraded') {
     return {
-      aggregate: {
-        schemaVersion: 1,
-        lines: lines.status === 'loaded' ? lines.value : [],
-        history: history.status === 'loaded' ? history.value : [],
-      },
+      aggregate: asV2(lines.status === 'loaded' ? lines.value : [], history.status === 'loaded' ? history.value : []),
       status: 'degraded',
-      persistedRaw: null,
       issues: ['storage-unavailable'],
     };
   }
-
   if (lines.status === 'missing' && history.status === 'missing' && allowInitialWhenEmpty) {
-    return {
-      aggregate: { schemaVersion: 1, lines: initialLines, history: initialHistory },
-      status: 'memory',
-      persistedRaw: null,
-      issues: [],
-    };
+    return { aggregate: asV2(initialLines, initialHistory), status: 'memory', issues: [] };
   }
-
   if (lines.status === 'loaded' && history.status === 'loaded') {
-    return {
-      aggregate: { schemaVersion: 1, lines: lines.value, history: history.value },
-      status: 'migration-pending',
-      persistedRaw: null,
-      issues: [],
-    };
+    return { aggregate: asV2(lines.value, history.value), status: 'migration-pending', issues: [] };
   }
-
   const issues: ExpiryStorageIssue[] = [];
   if (lines.status === 'missing') issues.push('legacy-lines-missing');
   if (history.status === 'missing') issues.push('legacy-history-missing');
   if (lines.status === 'invalid') issues.push('legacy-lines-invalid');
   if (history.status === 'invalid') issues.push('legacy-history-invalid');
   return {
-    aggregate: {
-      schemaVersion: 1,
-      lines: lines.status === 'loaded' ? lines.value : [],
-      history: history.status === 'loaded' ? history.value : [],
-    },
+    aggregate: asV2(lines.status === 'loaded' ? lines.value : [], history.status === 'loaded' ? history.value : []),
     status: 'recovery-required',
-    persistedRaw: null,
     issues,
   };
 }
@@ -197,26 +196,17 @@ export function loadExpiryWorkspace(
 ): LoadedExpiryWorkspace {
   const compatibility = inspectFutureAggregateVersion();
   if (compatibility.status === 'degraded') {
-    return {
-      aggregate: { schemaVersion: 1, lines: [], history: [] },
-      status: 'degraded',
-      persistedRaw: null,
-      issues: ['storage-unavailable'],
-    };
+    return { aggregate: asV2([], []), status: 'degraded', issues: ['storage-unavailable'] };
   }
 
-  let raw: string | null;
+  let storage: Storage;
   try {
-    raw = getStorage().getItem(EXPIRY_AGGREGATE_KEY);
+    storage = getStorage();
   } catch {
-    return {
-      aggregate: { schemaVersion: 1, lines: [], history: [] },
-      status: 'degraded',
-      persistedRaw: null,
-      issues: ['storage-unavailable'],
-    };
+    return { aggregate: asV2([], []), status: 'degraded', issues: ['storage-unavailable'] };
   }
 
+  const raw = storage.getItem(EXPIRY_AGGREGATE_KEY);
   if (raw !== null) {
     try {
       const parsed: unknown = JSON.parse(raw);
@@ -224,61 +214,57 @@ export function loadExpiryWorkspace(
         return {
           aggregate: parsed,
           status: compatibility.status === 'future-version' ? 'readonly' : 'ready',
-          persistedRaw: raw,
           issues: compatibility.status === 'future-version' ? ['future-version'] : [],
         };
       }
     } catch {
-      // Preserve the invalid aggregate and fall back to readable legacy evidence below.
+      // Preserve invalid bytes and fall through to older readable evidence.
     }
     const fallback = legacyFallback(initialLines, initialHistory, false);
     return {
       ...fallback,
       status: compatibility.status === 'future-version' ? 'readonly' : 'recovery-required',
-      persistedRaw: raw,
-      issues: [
-        'aggregate-invalid',
-        ...(compatibility.status === 'future-version' ? ['future-version' as const] : []),
-        ...fallback.issues,
-      ],
+      issues: ['aggregate-invalid', ...(compatibility.status === 'future-version' ? ['future-version' as const] : []), ...fallback.issues],
+    };
+  }
+
+  const previousRaw = storage.getItem(EXPIRY_PREVIOUS_AGGREGATE_KEY);
+  if (previousRaw !== null) {
+    try {
+      const parsed: unknown = JSON.parse(previousRaw);
+      if (isPreviousExpiryAggregate(parsed)) {
+        return {
+          aggregate: asV2(parsed.lines, parsed.history),
+          status: compatibility.status === 'future-version' ? 'readonly' : 'migration-pending',
+          issues: compatibility.status === 'future-version' ? ['future-version'] : [],
+        };
+      }
+    } catch {
+      // Preserve invalid v1 and require recovery.
+    }
+    return {
+      aggregate: asV2([], []),
+      status: compatibility.status === 'future-version' ? 'readonly' : 'recovery-required',
+      issues: ['aggregate-invalid', ...(compatibility.status === 'future-version' ? ['future-version' as const] : [])],
     };
   }
 
   const fallback = legacyFallback(initialLines, initialHistory, true);
-  if (compatibility.status === 'future-version') {
-    return { ...fallback, status: 'readonly', issues: ['future-version', ...fallback.issues] };
-  }
-  return fallback;
+  return compatibility.status === 'future-version'
+    ? { ...fallback, status: 'readonly', issues: ['future-version', ...fallback.issues] }
+    : fallback;
 }
 
 export function persistExpiryTransition(
-  expectedRaw: string | null,
-  base: ExpiryAggregateV1,
-  next: ExpiryAggregateV1,
+  expectedRevision: number,
+  next: Omit<ExpiryAggregateV2, 'revision'> & { revision?: number },
 ): ExpiryWriteResult {
   const compatibility = inspectFutureAggregateVersion();
   if (compatibility.status === 'degraded') {
     return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'access', errorName: compatibility.errorName };
   }
   if (compatibility.status === 'future-version') {
-    return {
-      status: 'degraded',
-      key: EXPIRY_AGGREGATE_KEY,
-      reason: 'future-version',
-      futureVersion: compatibility.version,
-    };
-  }
-  if (!isExpiryAggregate(next)) {
-    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'schema' };
-  }
-
-  let serialized: string;
-  let baseSerialized: string;
-  try {
-    serialized = serializeExpiryAggregate(next);
-    baseSerialized = serializeExpiryAggregate(base);
-  } catch (error) {
-    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'serialize', errorName: errorName(error) };
+    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'future-version', futureVersion: compatibility.version };
   }
 
   let storage: Storage;
@@ -290,24 +276,43 @@ export function persistExpiryTransition(
     return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'access', errorName: errorName(error) };
   }
 
-  if (currentRaw === serialized) {
-    return { status: 'persisted', key: EXPIRY_AGGREGATE_KEY, raw: serialized, idempotent: true };
+  let current: ExpiryAggregateV2 | null = null;
+  if (currentRaw !== null) {
+    try {
+      const parsed: unknown = JSON.parse(currentRaw);
+      if (!isExpiryAggregate(parsed)) return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'recovery-required' };
+      current = parsed;
+    } catch {
+      return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'recovery-required' };
+    }
   }
-  if (currentRaw !== expectedRaw && currentRaw !== baseSerialized) {
+  const currentRevision = current?.revision ?? 0;
+  if (currentRevision !== expectedRevision) {
     return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'conflict' };
+  }
+
+  const persisted: ExpiryAggregateV2 = {
+    schemaVersion: 2,
+    revision: currentRevision + 1,
+    lines: next.lines,
+    history: next.history,
+  };
+  if (!isExpiryAggregate(persisted)) {
+    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'schema' };
+  }
+
+  let serialized: string;
+  try {
+    serialized = serializeExpiryAggregate(persisted);
+  } catch (error) {
+    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'serialize', errorName: errorName(error) };
   }
 
   try {
     storage.setItem(EXPIRY_AGGREGATE_KEY, serialized);
   } catch (error) {
-    return {
-      status: 'degraded',
-      key: EXPIRY_AGGREGATE_KEY,
-      reason: classifyWriteError(error),
-      errorName: errorName(error),
-    };
+    return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: classifyWriteError(error), errorName: errorName(error) };
   }
-
   try {
     if (storage.getItem(EXPIRY_AGGREGATE_KEY) !== serialized) {
       return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'verify' };
@@ -315,5 +320,5 @@ export function persistExpiryTransition(
   } catch (error) {
     return { status: 'degraded', key: EXPIRY_AGGREGATE_KEY, reason: 'verify', errorName: errorName(error) };
   }
-  return { status: 'persisted', key: EXPIRY_AGGREGATE_KEY, raw: serialized, idempotent: false };
+  return { status: 'persisted', key: EXPIRY_AGGREGATE_KEY, aggregate: persisted, idempotent: false };
 }

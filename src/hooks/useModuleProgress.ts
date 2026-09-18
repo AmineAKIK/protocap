@@ -19,7 +19,7 @@ import {
 import type { SharedProgressSummary, SharedWorkflowRun } from '../../shared/shiftGuideProgress.js';
 import { getSgModules } from '../data/shiftguideModules';
 import type { SGChoiceModule, SGSubModule } from '../data/shiftguideModules';
-import { runShiftGuideProgressTransaction } from '../features/shiftguide/shiftGuideConcurrency';
+import { runShiftGuideProgressTransaction, ShiftGuideConcurrencyUnavailableError } from '../features/shiftguide/shiftGuideConcurrency';
 import { getShiftGuidePersistentStorage } from '../features/shiftguide/shiftGuideStorage';
 
 export type ActionStatus = 'pending' | 'validated' | 'na';
@@ -67,6 +67,9 @@ function mutateState(
     const next = mutation(current);
     writeState(next);
     return next;
+  }).catch((error) => {
+    if (error instanceof ShiftGuideConcurrencyUnavailableError) return readState();
+    throw error;
   });
 }
 

@@ -20,7 +20,7 @@ import { hoursUntil } from '../utils/date';
 import { DeclarationForm } from '../features/expiry/DeclarationForm';
 import { useExpiryWorkspace } from '../features/expiry/useExpiryWorkspace';
 import type { ExpiryWorkspaceStatus, ExpiryWriteFailureReason } from '../features/expiry/persistence';
-import { prepareDeclaration, type DeclarationDraft, type DeclarationError, type DeclarationKind } from '../features/expiry/declaration';
+import { type DeclarationDraft, type DeclarationError, type DeclarationKind } from '../features/expiry/declaration';
 import { formatStoredTime as formatDateTime, instantMilliseconds } from '../features/expiry/time';
 import { getBlockStatus as getTemporalBlockStatus, getLineStatus, statusLabel, earliestExpiry, latestChange, remainingValidityPercent } from '../utils/expiry';
 
@@ -117,6 +117,7 @@ function RecoveryTracePanel({ title, entries }: { title: string; entries: Change
 function persistenceFailureMessage(reason: ExpiryWriteFailureReason): string {
   if (reason === 'quota') return 'Sauvegarde locale impossible : quota du navigateur atteint. Brouillon conservé, aucune mutation confirmée.';
   if (reason === 'future-version') return 'Écriture bloquée : une version Expiry plus récente existe dans ce navigateur.';
+  if (reason === 'concurrency-unavailable') return 'Protection multi-onglets indisponible : Expiry passe en lecture seule et le brouillon est conservé.';
   if (reason === 'conflict' || reason === 'identity-conflict') return 'Les données locales ont changé ou l’identité existe déjà. Aucune mutation n’a été confirmée ; rechargez avant de réessayer.';
   if (reason === 'recovery-required') return 'Récupération locale requise avant toute nouvelle déclaration. Brouillon conservé.';
   if (reason === 'verify') return 'Sauvegarde locale non confirmée après écriture. Brouillon conservé ; réessayez pour vérifier la même opération sans la dupliquer.';
@@ -234,7 +235,7 @@ export function ExpiryCheckPage() {
     };
   }, [lines, now]);
 
-  function handleDeclaration(kind: DeclarationKind, draft: DeclarationDraft): DeclarationError | null {
+  async function handleDeclaration(kind: DeclarationKind, draft: DeclarationDraft): Promise<DeclarationError | null> {
     if (!selectedLine) return { field: 'form', message: 'La ligne sélectionnée n’existe plus.' };
     if (mutationsBlocked) return { field: 'form', message: persistenceFailureMessage(
       expiryStorageStatus === 'readonly' ? 'future-version' : 'recovery-required',
@@ -250,9 +251,8 @@ export function ExpiryCheckPage() {
       pendingDeclarationRef.current = { fingerprint, id };
     }
 
-    const result = prepareDeclaration(lines, selectedLine.id, kind, draft, new Date(), id);
-    if (!result.ok) return result.error;
-    const persisted = commitExpiryDeclaration(result.lines, result.entry);
+    const persisted = await commitExpiryDeclaration(selectedLine.id, kind, draft, id);
+    if (persisted.status === 'invalid') return persisted.error;
     if (persisted.status === 'degraded') {
       return { field: 'form', message: persistenceFailureMessage(persisted.reason) };
     }
