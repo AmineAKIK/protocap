@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
+import { usePublicDemoAvailability } from './features/shiftguide/publicDemo';
 
 const EssayPage = lazy(() =>
   import('./pages/EssayPage').then((module) => ({ default: module.EssayPage }))
@@ -85,18 +86,34 @@ function MainLayout() {
   );
 }
 
+function ShiftGuideRoute() {
+  return (
+    <Suspense fallback={<RouteFallback label="Chargement de ShiftGuide…" />}>
+      <ShiftGuideApp />
+    </Suspense>
+  );
+}
+
 export function App() {
+  const publicDemo = usePublicDemoAvailability();
+
+  if (!publicDemo.resolved) {
+    return <RouteFallback label="Chargement de ProtoCap…" />;
+  }
+
+  if (publicDemo.selfServe) {
+    return (
+      <Routes>
+        <Route path="/demo" element={<Navigate to="/shiftguide" replace />} />
+        <Route path="/shiftguide/*" element={<ShiftGuideRoute />} />
+        <Route path="*" element={<Navigate to="/shiftguide" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
-      <Route path="/demo" element={<Navigate to="/shiftguide" replace />} />
-      <Route
-        path="/shiftguide/*"
-        element={(
-          <Suspense fallback={<RouteFallback label="Chargement de ShiftGuide…" />}>
-            <ShiftGuideApp />
-          </Suspense>
-        )}
-      />
+      <Route path="/shiftguide/*" element={<ShiftGuideRoute />} />
 
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
