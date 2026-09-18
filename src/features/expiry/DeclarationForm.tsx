@@ -8,7 +8,7 @@ interface Props {
   line: ConditioningLine;
   kind: DeclarationKind;
   onCancel: () => void;
-  onDeclare: (draft: DeclarationDraft) => DeclarationError | null;
+  onDeclare: (draft: DeclarationDraft) => Promise<DeclarationError | null> | DeclarationError | null;
 }
 
 export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
@@ -21,6 +21,7 @@ export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
     return { changedAt: formatLocalMinute(new Date(), timeZone), timeZone, occurrence: '', operator: '', vat: line.vat, comment: '' };
   });
   const [error, setError] = useState<DeclarationError | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const inspection = parseLocalMinute(draft.changedAt, draft.timeZone);
   const candidates = !inspection.ok && inspection.code === 'overlap' ? inspection.candidates : [];
   const helpId = `${id}-time-help`;
@@ -38,12 +39,17 @@ export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
     // Errors are announced only after a submission, never on a clock tick or each keystroke.
     setError(null);
   }
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submittedRef.current) return;
-    const result = onDeclare(draft);
-    if (result === null) submittedRef.current = true;
-    setError(result);
+    if (submittedRef.current || submitting) return;
+    setSubmitting(true);
+    try {
+      const result = await onDeclare(draft);
+      if (result === null) submittedRef.current = true;
+      setError(result);
+    } finally {
+      setSubmitting(false);
+    }
   }
   const invalid = (field: DeclarationError['field']) => error?.field === field ? true : undefined;
   const describedBy = (field: DeclarationError['field']) => [field === 'changedAt' ? helpId : '', error?.field === field ? errorId : ''].filter(Boolean).join(' ') || undefined;
@@ -86,7 +92,7 @@ export function DeclarationForm({ line, kind, onCancel, onDeclare }: Props) {
       </div>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={onCancel}>Annuler</Button>
-        <Button className="w-full sm:w-auto" type="submit">{kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge'}</Button>
+        <Button className="w-full sm:w-auto" type="submit" disabled={submitting}>{submitting ? 'Enregistrement…' : kind === 'replacement' ? 'Valider le remplacement' : 'Tracer la recharge'}</Button>
       </div>
     </form>
   );
