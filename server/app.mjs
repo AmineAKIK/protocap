@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import express from 'express';
+import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { parseCelineDecision } from '../shared/celineContract.js';
 import { parseShiftGuideConfig } from '../shared/shiftGuideContract.js';
@@ -152,6 +153,7 @@ export function createServerApp({
   issueToken = defaultIssueToken,
   ingressTrust = DIRECT_INGRESS_TRUST,
   publicDemo = { selfServe: false, url: null },
+  demoPublicOrigin = null,
 } = {}) {
   const log = createStructuredLogger(logger);
   const shiftGuideConfigured = isConfiguredSecret(shiftGuideCode);
@@ -545,6 +547,85 @@ export function createServerApp({
   });
 
   if (distDir) {
+    const demoIndexHtml = publicDemo.selfServe
+      ? (() => {
+          if (!demoPublicOrigin) {
+            throw new Error('Demo runtime requires a public ProtoCap origin.');
+          }
+          const raw = readFileSync(join(distDir, 'index.html'), 'utf8');
+          const escapeHtml = (value) => value.replace(/[&"<>]/g, (char) => ({
+            '&': '&amp;',
+            '"': '&quot;',
+            '<': '&lt;',
+            '>': '&gt;',
+          })[char]);
+          const meta = [
+            '<meta name="protocap-runtime-profile" content="demo">',
+            `<meta name="protocap-public-origin" content="${escapeHtml(demoPublicOrigin)}">`,
+          ].join('');
+          return raw.includes('</head>') ? raw.replace('</head>', `${meta}</head>`) : `${meta}${raw}`;
+        })()
+      : null;
+
+    if (publicDemo.selfServe) {
+      app.use((req, res, next) => {
+        if (!['GET', 'HEAD'].includes(req.method)) return next();
+        const path = req.path;
+        const isShiftGuideRoute = path === '/demo' || path === '/shiftguide' || path.startsWith('/shiftguide/');
+        if (path === '/sw.js') {
+          const worker = [
+            "self.addEventListener('install', () => self.skipWaiting());",
+            "self.addEventListener('activate', (event) => {",
+            "  event.waitUntil(Promise.all([",
+            "    self.clients.claim(),",
+            "    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))",
+            "  ]));",
+            "});",
+          ].join('\n');
+          return res.set('Cache-Control', 'no-store').type('application/javascript').send(worker);
+        }
+
+        if (path === '/manifest.webmanifest') {
+          const manifest = {
+            id: '/shiftguide',
+            name: 'ShiftGuide démo',
+            short_name: 'ShiftGuide démo',
+            description: 'Démo publique ShiftGuide avec données fictives et réponses scénarisées.',
+            lang: 'fr',
+            theme_color: '#0f766e',
+            background_color: '#f8fafc',
+            display: 'standalone',
+            start_url: '/demo',
+            scope: '/',
+            icons: [{ src: '/pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+          };
+          return res
+            .set('Cache-Control', 'no-store')
+            .type('application/manifest+json')
+            .send(JSON.stringify(manifest));
+        }
+
+        const isStaticAsset =
+          path.startsWith('/assets/') ||
+          ['/registerSW.js', '/pwa-icon.svg', '/favicon.ico'].includes(path) ||
+          /^\/workbox-[a-zA-Z0-9_-]+\.js$/.test(path);
+
+        if (isShiftGuideRoute && !extname(path)) {
+          return res.set('Cache-Control', 'no-cache').type('html').send(demoIndexHtml);
+        }
+        if (isStaticAsset) return next();
+        if (extname(path)) {
+          return res.status(404).type('text/plain').send('Asset introuvable.');
+        }
+
+        const target = new URL(demoPublicOrigin);
+        target.pathname = path;
+        target.search = '';
+        target.hash = '';
+        return res.set('Cache-Control', 'no-store').redirect(302, target.toString());
+      });
+    }
+
     app.use(express.static(distDir));
     app.get('/{*path}', (req, res) => {
       if (extname(req.path)) {

@@ -28,17 +28,20 @@ function readBoundedInteger(name, raw, fallback, min, max) {
   return value;
 }
 
-function readPublicDemoOrigin(raw) {
+function readPublicOrigin(name, raw) {
   if (raw == null || raw.trim() === '') return null;
   let parsed;
   try {
     parsed = new URL(raw.trim());
   } catch {
-    throw new Error('PUBLIC_DEMO_URL must be a valid absolute URL.');
+    throw new Error(`${name} must be a valid absolute URL.`);
   }
   const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
   if (parsed.protocol !== 'https:' && !(loopback && parsed.protocol === 'http:')) {
-    throw new Error('PUBLIC_DEMO_URL must use HTTPS outside loopback test environments.');
+    throw new Error(`${name} must use HTTPS outside loopback test environments.`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(`${name} must not contain credentials.`);
   }
   parsed.pathname = '/';
   parsed.search = '';
@@ -87,7 +90,11 @@ const celineRoutingSpec = parseJsonEnvValue(
 
 const runtimeState = createServerRuntimeState();
 const demoMode = process.env.PROTOCAP_RUNTIME_PROFILE === 'demo' && process.env.PROTOCAP_DEMO_PROVIDER === '1';
-const publicDemoUrl = readPublicDemoOrigin(process.env.PUBLIC_DEMO_URL);
+const publicDemoUrl = readPublicOrigin('PUBLIC_DEMO_URL', process.env.PUBLIC_DEMO_URL);
+const protoCapPublicUrl = readPublicOrigin('PROTOCAP_PUBLIC_URL', process.env.PROTOCAP_PUBLIC_URL);
+if (demoMode && !protoCapPublicUrl) {
+  throw new Error('PROTOCAP_PUBLIC_URL is required in demo runtime.');
+}
 if (demoMode && isConfiguredSecret(deepSeekApiKey)) {
   throw new Error('Demo runtime refuses a configured DeepSeek API key.');
 }
@@ -106,6 +113,7 @@ const { app } = createServerApp({
   distDir,
   ingressTrust: RAILWAY_INGRESS_TRUST,
   publicDemo: { selfServe: demoMode, url: publicDemoUrl },
+  demoPublicOrigin: demoMode ? protoCapPublicUrl : null,
 });
 
 const cleanupTimer = setInterval(

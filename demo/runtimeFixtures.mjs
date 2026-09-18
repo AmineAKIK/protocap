@@ -64,6 +64,7 @@ export function createDemoServerEnvironment(base = {}) {
     NODE_ENV: 'development',
     PROTOCAP_RUNTIME_PROFILE: 'demo',
     PROTOCAP_DEMO_GUARD: 'synthetic-v1',
+    PROTOCAP_PUBLIC_URL: base.PROTOCAP_PUBLIC_URL || 'http://127.0.0.1:4173',
     SHIFTGUIDE_CODE: DEMO_SHIFTGUIDE_CODE,
     DEEPSEEK_API_KEY: '',
     SG_MODULES: JSON.stringify(DEMO_MODULES),

@@ -6,6 +6,7 @@ import {
 } from './shiftguide/ShiftGuideNavigation';
 import { useShiftGuideAuth } from '../context/ShiftGuideAuthContext';
 import { useShiftGuideStorageHealth } from '../features/shiftguide/useShiftGuideStorageHealth';
+import { buildProtoCapPublicUrl, readDemoRuntimeConfig } from '../features/shiftguide/demoRuntime';
 import { useShiftGuideShell } from '../hooks/useShiftGuideShell';
 import { getShiftGuideSessionProfile } from '../hooks/useShiftGuideAuth';
 import {
@@ -33,7 +34,19 @@ export function ShiftGuideLayout() {
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
+    const demoRuntime = readDemoRuntimeConfig();
     await logout();
+
+    if (demoRuntime.isDemo) {
+      const target = buildProtoCapPublicUrl('/');
+      if (target) {
+        window.location.replace(target);
+        return;
+      }
+      setLoggingOut(false);
+      return;
+    }
+
     void navigate('/', { replace: true });
   };
 
