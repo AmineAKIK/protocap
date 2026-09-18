@@ -90,3 +90,9 @@ jobs:
         env:
           DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
           SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used
+
+      - name: Run Logistics reliability journeys across browsers
+        run: npm run test:e2e:logistics
+        env:
+          DEEPSEEK_API_KEY: e2e-sentinel-must-not-be-used
+          SG_SYSTEM_PROMPT: e2e-host-config-must-not-be-used

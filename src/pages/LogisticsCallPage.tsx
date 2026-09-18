@@ -13,11 +13,13 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { initialLogisticsRequests } from '../data/logisticsData';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useLogisticsWorkspace } from '../features/logistics/useLogisticsWorkspace';
 import { useNow } from '../hooks/useNow';
 import type { LogisticsRequest, LogisticsStatus, Priority } from '../types/logistics';
 import { formatDateTime } from '../utils/date';
 import { logisticsStatusLabels, nextLogisticsId } from '../utils/logistics';
+import { canTransitionLogisticsStatus } from '../features/logistics/logisticsModel';
+import { Modal } from '../components/Modal';
 
 const statusTone: Record<LogisticsStatus, 'amber' | 'blue' | 'teal' | 'green' | 'slate'> = {
   waiting: 'amber',
@@ -43,16 +45,18 @@ function elapsedLabel(createdAt: string, endAt: Date): string {
 interface RequestCardProps {
   request: LogisticsRequest;
   onUpdate: (id: string, status: LogisticsStatus) => void;
+  onCancel: (id: string) => void;
+  disabled: boolean;
   isNew: boolean;
   now: Date;
 }
 
-function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
+function RequestCard({ request, onUpdate, onCancel, disabled, isNew, now }: RequestCardProps) {
   const isHigh = request.priority === 'high';
   const isWaiting = request.status === 'waiting';
   const isDone = doneStatuses.includes(request.status);
   const isUrgent = isHigh || (isWaiting && (now.getTime() - new Date(request.createdAt).getTime()) / 60000 > 15);
-  const elapsedEndAt = isDone ? new Date(request.completedAt ?? request.createdAt) : now;
+  const elapsedEndAt = isDone ? (request.completedAt ? new Date(request.completedAt) : null) : now;
 
   return (
     <article
@@ -84,26 +88,31 @@ function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
         <Clock3 size={13} className={`shrink-0 ${isUrgent && isWaiting ? 'text-rose-500' : 'text-slate-400'}`} />
         <span className="text-slate-500">{formatDateTime(request.createdAt)}</span>
         <span className={`ml-auto font-semibold tabular-nums ${isUrgent && isWaiting ? 'text-rose-600' : 'text-slate-600'}`}>
-          {elapsedLabel(request.createdAt, elapsedEndAt)}
+          {elapsedEndAt ? elapsedLabel(request.createdAt, elapsedEndAt) : 'Durée inconnue'}
         </span>
       </div>
+      {isDone ? (
+        <p className="mt-2 break-normal text-xs font-medium text-slate-600">
+          Clôture : {request.completedAt ? formatDateTime(request.completedAt) : 'heure inconnue'}
+        </p>
+      ) : null}
 
       <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-        {isWaiting ? (
-          <Button className="w-full" variant="ghost" icon={<Eye size={14} />} onClick={() => onUpdate(request.id, 'seen')}>Vu</Button>
+        {canTransitionLogisticsStatus(request.status, 'seen') ? (
+          <Button disabled={disabled} className="w-full" variant="ghost" icon={<Eye size={14} />} onClick={() => onUpdate(request.id, 'seen')}>Vu</Button>
         ) : null}
-        {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-          <Button className="w-full" variant="secondary" icon={<Truck size={14} />} onClick={() => onUpdate(request.id, 'inProgress')}>
+        {canTransitionLogisticsStatus(request.status, 'inProgress') ? (
+          <Button disabled={disabled} className="w-full" variant="secondary" icon={<Truck size={14} />} onClick={() => onUpdate(request.id, 'inProgress')}>
             En route
           </Button>
         ) : null}
-        {request.status !== 'pickedUp' && request.status !== 'cancelled' ? (
-          <Button className="w-full" icon={<PackageCheck size={14} />} onClick={() => onUpdate(request.id, 'pickedUp')}>
+        {canTransitionLogisticsStatus(request.status, 'pickedUp') ? (
+          <Button disabled={disabled} className="w-full" icon={<PackageCheck size={14} />} onClick={() => onUpdate(request.id, 'pickedUp')}>
             Récupéré
           </Button>
         ) : null}
-        {request.status !== 'cancelled' && request.status !== 'pickedUp' ? (
-          <Button className="w-full" variant="danger" icon={<XCircle size={14} />} onClick={() => onUpdate(request.id, 'cancelled')}>
+        {canTransitionLogisticsStatus(request.status, 'cancelled') ? (
+          <Button disabled={disabled} className="w-full" variant="danger" icon={<XCircle size={14} />} onClick={() => onCancel(request.id)}>
             Annuler
           </Button>
         ) : null}
@@ -113,12 +122,18 @@ function RequestCard({ request, onUpdate, isNew, now }: RequestCardProps) {
 }
 
 export function LogisticsCallPage() {
-  const [requests, setRequests] = useLocalStorage<LogisticsRequest[]>('lineops.logistics.requests', initialLogisticsRequests);
+  const { requests, status: persistenceStatus, futureVersion, createRequest: persistCreate, updateStatus: persistStatusUpdate } = useLogisticsWorkspace(initialLogisticsRequests);
   const [mobileTab, setMobileTab] = useState<'line' | 'logistics'>('line');
   const [confirmation, setConfirmation] = useState('');
+  const [persistenceError, setPersistenceError] = useState('');
+  const [cancelRequestId, setCancelRequestId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState('');
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingCreateRef = useRef<{ fingerprint: string; id: string; createdAt: string } | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
   const now = useNow(1000);
+  const mutationsBlocked = persistenceStatus === 'readonly' || persistenceStatus === 'recovery' || persistenceStatus === 'degraded';
 
   const stats = useMemo(() => ({
     waiting: requests.filter((r) => r.status === 'waiting').length,
@@ -130,21 +145,27 @@ export function LogisticsCallPage() {
   const doneRequests = requests.filter((r) => doneStatuses.includes(r.status));
 
   useEffect(() => {
-    setRequests((current) => {
-      let changed = false;
-      const migrated = current.map((request) => {
-        if (!doneStatuses.includes(request.status) || request.completedAt) return request;
-        changed = true;
-        return { ...request, completedAt: new Date().toISOString() };
-      });
-      return changed ? migrated : current;
-    });
-  }, [setRequests]);
+    if (!persistenceError) return;
+    requestAnimationFrame(() => errorRef.current?.focus());
+  }, [persistenceError]);
+
+  function writeErrorMessage(reason: string) {
+    if (reason === 'quota') return 'Sauvegarde locale impossible : quota du navigateur atteint. L’appel n’est pas confirmé et le formulaire est conservé.';
+    if (reason === 'future-version' || reason === 'readonly') return 'Cette version ne peut pas modifier les données Logistics locales. Le formulaire est conservé.';
+    if (reason === 'verify') return 'Sauvegarde locale non vérifiable. L’appel n’est pas confirmé et le formulaire est conservé.';
+    if (reason === 'invalid-transition') return 'Transition Logistics interdite. Aucun changement n’a été enregistré.';
+    return 'Sauvegarde locale impossible. Aucun succès n’est confirmé et les données saisies restent disponibles.';
+  }
 
   function createRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const id = nextLogisticsId(requests);
+    const fingerprint = JSON.stringify(Array.from(data.entries()));
+    const pending = pendingCreateRef.current?.fingerprint === fingerprint
+      ? pendingCreateRef.current
+      : { fingerprint, id: nextLogisticsId(requests), createdAt: new Date().toISOString() };
+    pendingCreateRef.current = pending;
+    const id = pending.id;
     const request: LogisticsRequest = {
       id,
       line: String(data.get('line')),
@@ -153,29 +174,46 @@ export function LogisticsCallPage() {
       priority: String(data.get('priority')) as Priority,
       nature: String(data.get('nature')),
       comment: String(data.get('comment') || ''),
-      createdAt: new Date().toISOString(),
+      createdAt: pending.createdAt,
       status: 'waiting'
     };
-    setRequests((current) => [request, ...current]);
+    const persisted = persistCreate(request);
+    if (persisted.status === 'degraded') {
+      setConfirmation('');
+      setPersistenceError(writeErrorMessage(persisted.reason));
+      return;
+    }
+
+    setPersistenceError('');
     setNewIds((prev) => new Set(prev).add(id));
     setTimeout(() => setNewIds((prev) => { const next = new Set(prev); next.delete(id); return next; }), 1500);
 
     if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-    setConfirmation(`Appel ${id} envoyé — ${request.palletCount} palette${request.palletCount > 1 ? 's' : ''} · ${request.line}`);
+    setConfirmation(`Appel ${id} enregistré localement — ${request.palletCount} palette${request.palletCount > 1 ? 's' : ''} · ${request.line}`);
     confirmTimerRef.current = setTimeout(() => setConfirmation(''), 5000);
     event.currentTarget.reset();
-
     setMobileTab('logistics');
   }
 
   function updateStatus(id: string, status: LogisticsStatus) {
-    setRequests((current) => current.map((r) => {
-      if (r.id !== id) return r;
-      if (doneStatuses.includes(status)) {
-        return { ...r, status, completedAt: r.completedAt ?? new Date().toISOString() };
-      }
-      return { ...r, status, completedAt: undefined };
-    }));
+    const result = persistStatusUpdate(id, status, new Date().toISOString());
+    if (result.status === 'degraded') {
+      setPersistenceError(writeErrorMessage(result.reason));
+      return false;
+    }
+    setPersistenceError('');
+    return true;
+  }
+
+  function confirmCancellation() {
+    if (!cancelRequestId) return;
+    const result = persistStatusUpdate(cancelRequestId, 'cancelled', new Date().toISOString());
+    if (result.status === 'degraded') {
+      setCancelError(writeErrorMessage(result.reason));
+      return;
+    }
+    setCancelError('');
+    setCancelRequestId(null);
   }
 
   return (
@@ -190,6 +228,16 @@ export function LogisticsCallPage() {
           Demandes visibles, suivies et priorisées sans perte d'information.
         </p>
       </div>
+
+      {persistenceStatus !== 'persisted' && persistenceStatus !== 'memory' && persistenceStatus !== 'write-failed' ? (
+        <div role={persistenceStatus === 'recovery' || persistenceStatus === 'readonly' ? 'alert' : 'status'} className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          {persistenceStatus === 'readonly'
+            ? `Version Logistics plus récente détectée${futureVersion ? ` (v${futureVersion})` : ''}. Lecture seule pour préserver les données.`
+            : persistenceStatus === 'recovery'
+              ? 'Données Logistics locales invalides : aucune réécriture automatique. Récupération requise.'
+              : 'Stockage Logistics local indisponible. Aucune durabilité n’est revendiquée.'}
+        </div>
+      ) : null}
 
       <div
         className="sticky top-[var(--app-header-height)] z-30 -mx-3 mb-4 border-y border-slate-200 bg-slate-50/95 p-2 backdrop-blur xl:hidden"
@@ -240,13 +288,18 @@ export function LogisticsCallPage() {
             </div>
 
             {confirmation ? (
-              <div className="mb-5 flex min-w-0 items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
+              <div role="status" aria-live="polite" className="mb-5 flex min-w-0 items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 animate-slide-in">
                 <Check size={18} className="shrink-0 text-emerald-600" />
                 <span className="min-w-0 break-normal">{confirmation}</span>
               </div>
             ) : null}
+            {persistenceError ? (
+              <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900">
+                {persistenceError}
+              </div>
+            ) : null}
 
-            <form className="grid min-w-0 gap-4" onSubmit={createRequest}>
+            <form className="grid min-w-0 gap-4" onSubmit={createRequest} onInput={() => { pendingCreateRef.current = null; setPersistenceError(''); }}>
               <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                 <label className="min-w-0">
                   <span className="label">Ligne de conditionnement</span>
@@ -286,8 +339,8 @@ export function LogisticsCallPage() {
                 <span className="label">Commentaire</span>
                 <textarea className="field mt-1 min-h-20" name="comment" placeholder="Ex : zone tampon presque pleine" />
               </label>
-              <Button className="w-full py-3 text-base" type="submit" icon={<Zap size={18} />}>
-                Envoyer l'appel logistique
+              <Button disabled={mutationsBlocked} className="w-full py-3 text-base" type="submit" icon={<Zap size={18} />}>
+                Enregistrer l'appel logistique
               </Button>
             </form>
 
@@ -356,6 +409,8 @@ export function LogisticsCallPage() {
                     key={request.id}
                     request={request}
                     onUpdate={updateStatus}
+                    onCancel={(id) => { setCancelError(''); setCancelRequestId(id); }}
+                    disabled={mutationsBlocked}
                     isNew={newIds.has(request.id)}
                     now={now}
                   />
@@ -376,7 +431,7 @@ export function LogisticsCallPage() {
                 </summary>
                 <div className="mt-3 space-y-3">
                   {doneRequests.map((request) => (
-                    <RequestCard key={request.id} request={request} onUpdate={updateStatus} isNew={false} now={now} />
+                    <RequestCard key={request.id} request={request} onUpdate={updateStatus} onCancel={(id) => { setCancelError(''); setCancelRequestId(id); }} disabled={mutationsBlocked} isNew={false} now={now} />
                   ))}
                 </div>
               </details>
@@ -384,6 +439,21 @@ export function LogisticsCallPage() {
           </div>
         </section>
       </div>
+
+      {cancelRequestId ? (
+        <Modal title="Confirmer l’annulation" onClose={() => { setCancelError(''); setCancelRequestId(null); }}>
+          <div className="space-y-4">
+            <p className="break-normal text-sm text-slate-700">
+              Annuler {cancelRequestId} ? Cette transition est terminale et l’heure de clôture sera celle de cette confirmation.
+            </p>
+            {cancelError ? <p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{cancelError}</p> : null}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="ghost" onClick={() => { setCancelError(''); setCancelRequestId(null); }}>Retour</Button>
+              <Button variant="danger" onClick={confirmCancellation}>Confirmer l’annulation</Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }
