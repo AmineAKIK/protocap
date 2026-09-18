@@ -25,6 +25,20 @@ afterEach(() => {
 });
 
 describe('usePackingActiveRun storage acquisition', () => {
+  it('T18/T23: without Web Locks durable Packing mutations stay degraded and do not write', async () => {
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000099');
+    const writes = vi.spyOn(Storage.prototype, 'setItem');
+    const { result } = renderHook(() => usePackingActiveRun());
+
+    expect(result.current.persistenceStatus).toBe('degraded');
+    let attempt;
+    await act(async () => { attempt = await result.current.tryStartRun(runInput()); });
+    expect(attempt).toMatchObject({ status: 'degraded' });
+    expect(result.current.activeRun).toBeNull();
+    expect(writes.mock.calls.some(([key]) => key === 'lineops.packing.active-run.v1')).toBe(false);
+  });
+
   it('stays usable in degraded mode when reading window.localStorage itself throws', async () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
     Object.defineProperty(window, 'localStorage', {

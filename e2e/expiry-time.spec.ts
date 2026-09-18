@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const LINES_KEY = 'lineops.expiry.lines.v8';
 const HISTORY_KEY = 'lineops.expiry.history.v8';
-const AGGREGATE_KEY = 'lineops.expiry.aggregate.v1';
+const AGGREGATE_KEY = 'lineops.expiry.aggregate.v2';
 const NOW = '2026-09-17T12:00:30.000Z';
 async function openExpiry(page: Page, now = NOW) {
   await page.clock.setFixedTime(new Date(now));
@@ -245,8 +245,8 @@ test.describe('PR-06 Expiry aggregate migration and atomic write', () => {
     await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY)).not.toBeNull();
     const sources = await sourceSnapshot(page);
     const aggregate = await page.evaluate((key) => localStorage.getItem(key), AGGREGATE_KEY);
-    const parsed = JSON.parse(aggregate!) as { schemaVersion: number; lines: unknown; history: unknown };
-    expect(parsed.schemaVersion).toBe(1);
+    const parsed = JSON.parse(aggregate!) as { schemaVersion: number; revision: number; lines: unknown; history: unknown };
+    expect(parsed.schemaVersion).toBe(2);
     expect(JSON.stringify(parsed.lines)).toBe(sources[0]);
     expect(JSON.stringify(parsed.history)).toBe(sources[1]);
 
@@ -306,7 +306,7 @@ test.describe('PR-06 Expiry aggregate migration and atomic write', () => {
         id: 'orphan', lineId: 'missing-line', lineName: 'Ligne disparue', elementLabel: 'Bloc de remplissage',
         changedAt: 'date-inconnue', newExpiresAt: 'date-inconnue', operator: 'Archive',
       }]));
-      localStorage.setItem('lineops.expiry.aggregate.v2', JSON.stringify({ schemaVersion: 2, future: true }));
+      localStorage.setItem('lineops.expiry.aggregate.v3', JSON.stringify({ schemaVersion: 3, future: true }));
     });
     await openExpiry(page);
     await expect(page.getByRole('alert')).toContainText(/lecture seule/i);
@@ -314,6 +314,6 @@ test.describe('PR-06 Expiry aggregate migration and atomic write', () => {
     await expect(page.getByText('date-inconnue')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    expect(await page.evaluate(() => localStorage.getItem('lineops.expiry.aggregate.v1'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('lineops.expiry.aggregate.v2'))).toBeNull();
   });
 });
