@@ -16,7 +16,15 @@ ProtoCap keeps CI security proportional to its role as a public technical demons
 - Registry failures remain failures. Loopback HTTP 503 tests exercise both audit scripts without depending on a live external outage.
 - `npm ci` must leave `package.json` and `package-lock.json` unchanged.
 - Installed Vitest packages must match the exact lockfile graph and the patched reviewed Vitest 4 floor; a future major requires separate review.
-- Install scripts are explicit. The currently required esbuild postinstall is pinned through `allowScripts` rather than approved by a broad wildcard.
+- Install scripts are explicit. The currently required `esbuild@0.25.12` postinstall is pinned through `allowScripts` rather than approved by a broad wildcard.
+
+## Known install-time warnings
+
+The locked development/build graph currently emits deprecation notices for `source-map@0.8.0-beta.0` and `glob@11.1.0`. Both are transitive dependencies below the PWA build toolchain and are absent from the production-only install. They remain visible as maintenance debt; their presence is not described as a vulnerability finding.
+
+The dated PR-02 audit evidence reported zero vulnerabilities after a fresh install, but that result applies only to its recorded date and graph. Every current PR re-runs both audits.
+
+The production image runs `npm cache clean --force` after installing production dependencies. npm therefore prints its standard force-warning. The flag is limited to cache deletion in the image build and does not waive audit failures or application security controls.
 
 ## Hermetic test environments
 
