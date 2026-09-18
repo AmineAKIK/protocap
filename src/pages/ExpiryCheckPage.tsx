@@ -98,7 +98,7 @@ function ExpiryPersistenceBanner({ status }: { status: ExpiryWorkspaceStatus }) 
     : status === 'recovery-required'
       ? 'Récupération locale requise. Les traces lisibles restent visibles, mais toute nouvelle déclaration est bloquée pour ne pas écraser les sources.'
       : 'Sauvegarde locale non confirmée. Les données affichées restent en mémoire et aucune durabilité n’est revendiquée.';
-  return <div role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{message}</div>;
+  return <div role={status === 'degraded' ? 'status' : 'alert'} className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{message}</div>;
 }
 
 function RecoveryTracePanel({ title, entries }: { title: string; entries: ChangeHistoryEntry[] }) {
