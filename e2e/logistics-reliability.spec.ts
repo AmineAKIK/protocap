@@ -79,6 +79,7 @@ test.describe('PR-07 Logistics reliable persistence', () => {
     await expect(dialog.getByRole('button', { name: 'Confirmer l’annulation' })).toBeVisible();
     expect((await new AxeBuilder({ page }).include('dialog[open]').analyze()).violations).toEqual([]);
     await dialog.getByRole('button', { name: 'Confirmer l’annulation' }).click();
+    await expect(dialog).toBeHidden();
     const stored = JSON.parse((await page.evaluate((key) => localStorage.getItem(key), KEY))!) as { requests: { status: string; completedAt?: string }[] };
     expect(stored.requests[0].status).toBe('cancelled');
     expect(stored.requests[0].completedAt).toBeTruthy();
