@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { DemoBoundaryNotice } from './components/DemoBoundaryNotice';
 
@@ -88,6 +88,7 @@ function MainLayout() {
 export function App() {
   return (
     <Routes>
+      <Route path="/demo" element={<Navigate to="/shiftguide" replace />} />
       <Route
         path="/shiftguide/*"
         element={(
