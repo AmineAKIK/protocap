@@ -80,7 +80,7 @@ test.describe('responsive architecture contract', () => {
 
         await expect(page.getByRole('heading', { name: 'Logistics Call' })).toBeVisible();
         await expectNoDocumentHorizontalOverflow(page);
-        await expectPrimaryActionUsable(page, page.getByRole('button', { name: "Envoyer l'appel logistique" }));
+        await expectPrimaryActionUsable(page, page.getByRole('button', { name: "Enregistrer l'appel logistique" }));
 
         if (viewport.width < 1280) {
           await page.getByRole('button', { name: /Board logistique/ }).click();

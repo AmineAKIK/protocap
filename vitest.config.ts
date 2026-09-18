@@ -34,6 +34,9 @@ export default defineConfig({
         'src/features/expiry/useExpiryWorkspace.ts',
         'src/features/expiry/DeclarationForm.tsx',
         'src/pages/ExpiryCheckPage.tsx',
+        'src/features/logistics/logisticsModel.ts',
+        'src/features/logistics/useLogisticsWorkspace.ts',
+        'src/pages/LogisticsCallPage.tsx',
         'src/utils/packing.ts',
       ],
       thresholds: {
