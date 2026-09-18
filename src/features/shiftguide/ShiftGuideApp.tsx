@@ -75,7 +75,7 @@ function ShiftGuideGuard() {
   const { status, unlock, startDemo } = useShiftGuideAuth();
   const demo = usePublicDemoAvailability();
 
-  if (status === 'checking') {
+  if (status === 'checking' || !demo.resolved) {
     return <RouteFallback label="Vérification de la session ShiftGuide…" />;
   }
 
