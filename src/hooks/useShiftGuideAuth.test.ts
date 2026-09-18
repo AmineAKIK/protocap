@@ -141,6 +141,7 @@ describe('ShiftGuide browser auth boundary', () => {
       expiresAt: Date.now() + 60_000,
       configRevision: CONFIG_REVISION,
       celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      profile: 'protected',
       modules: [],
     })));
 
