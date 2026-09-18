@@ -17,6 +17,7 @@ test('demo environment strips inherited provider credentials and injects synthet
   assert.equal(env.DEEPSEEK_API_KEY, '');
   assert.equal(env.SHIFTGUIDE_CODE, DEMO_SHIFTGUIDE_CODE);
   assert.equal(env.SOME_UNRELATED_VALUE, 'kept');
+  assert.equal(env.PROTOCAP_PUBLIC_URL, 'http://127.0.0.1:4173');
   assert.match(env.SG_MODULES, /Démarrage synthétique/);
   assert.match(env.SG_CELINE_ROUTING, /demo_start/);
 });
