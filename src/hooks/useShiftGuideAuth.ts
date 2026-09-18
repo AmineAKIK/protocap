@@ -13,17 +13,12 @@ import {
 import { isShiftGuideData } from '../types/shiftGuide';
 import type { ShiftGuideData } from '../types/shiftGuide';
 
-interface ShiftGuideUnlockResponse extends ShiftGuideData {
-  token: string;
-  expiresAt: number;
-  configRevision: string;
-  celineAuthorityRevision: string;
-}
-
 export interface ShiftGuideAuthResult {
   ok: boolean;
   error?: string;
 }
+
+export type ShiftGuideSessionProfile = 'protected' | 'demo';
 
 export const SHIFTGUIDE_SESSION_INVALIDATED_EVENT = 'shiftguide:session-invalidated';
 
@@ -32,12 +27,14 @@ const DATA_KEY = 'shiftguide_data';
 const EXPIRY_KEY = 'shiftguide_session_expires_at';
 const REVISION_KEY = 'shiftguide_session_config_revision';
 const CELINE_AUTHORITY_REVISION_KEY = 'shiftguide_session_celine_authority_revision';
+const PROFILE_KEY = 'shiftguide_session_profile';
 const AUTH_STORAGE_KEYS = [
   SESSION_KEY,
   DATA_KEY,
   EXPIRY_KEY,
   REVISION_KEY,
   CELINE_AUTHORITY_REVISION_KEY,
+  PROFILE_KEY,
 ];
 
 function clearStoredShiftGuideAuth() {
@@ -70,6 +67,11 @@ export function getCelineAuthorityRevision(): string | null {
 
 export function getShiftGuideToken(): string | null {
   return readShiftGuideSessionItem(SESSION_KEY);
+}
+
+export function getShiftGuideSessionProfile(): ShiftGuideSessionProfile | null {
+  const profile = readShiftGuideSessionItem(PROFILE_KEY);
+  return profile === 'demo' || profile === 'protected' ? profile : null;
 }
 
 export function getShiftGuideData(): ShiftGuideData | null {
@@ -131,6 +133,9 @@ export async function validateShiftGuideSession(): Promise<boolean> {
         typeof body.configRevision !== 'string' ||
         body.configRevision.length === 0 ||
         body.configRevision !== configRevision ||
+        !('profile' in body) ||
+        (body.profile !== 'demo' && body.profile !== 'protected') ||
+        body.profile !== getShiftGuideSessionProfile() ||
         !('celineAuthorityRevision' in body) ||
         typeof body.celineAuthorityRevision !== 'string' ||
         body.celineAuthorityRevision.length === 0 ||
@@ -156,6 +161,79 @@ export async function validateShiftGuideSession(): Promise<boolean> {
   }
 }
 
+async function establishShiftGuideSession(res: Response): Promise<ShiftGuideAuthResult> {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    return { ok: false, error: body.error ?? 'Session indisponible.' };
+  }
+
+  const response: unknown = await res.json();
+  if (
+    !response ||
+    typeof response !== 'object' ||
+    !('token' in response) ||
+    !('expiresAt' in response) ||
+    !('profile' in response) ||
+    !('configRevision' in response) ||
+    !('celineAuthorityRevision' in response)
+  ) {
+    return { ok: false, error: 'Session invalide.' };
+  }
+
+  const {
+    token,
+    expiresAt,
+    profile,
+    configRevision,
+    celineAuthorityRevision,
+    ...data
+  } = response as Record<string, unknown>;
+  if (
+    typeof token !== 'string' ||
+    token.length === 0 ||
+    typeof expiresAt !== 'number' ||
+    !Number.isFinite(expiresAt) ||
+    expiresAt <= Date.now() ||
+    (profile !== 'demo' && profile !== 'protected') ||
+    typeof configRevision !== 'string' ||
+    configRevision.length === 0 ||
+    typeof celineAuthorityRevision !== 'string' ||
+    celineAuthorityRevision.length === 0 ||
+    !isShiftGuideData(data)
+  ) {
+    return { ok: false, error: 'Données ShiftGuide invalides.' };
+  }
+
+  const persisted = writeShiftGuideSession([
+    [SESSION_KEY, token],
+    [EXPIRY_KEY, String(expiresAt)],
+    [PROFILE_KEY, profile],
+    [REVISION_KEY, configRevision],
+    [CELINE_AUTHORITY_REVISION_KEY, celineAuthorityRevision],
+    [DATA_KEY, JSON.stringify(data)],
+  ]);
+  if (!persisted) {
+    clearStoredShiftGuideAuth();
+    return { ok: false, error: 'Stockage de session indisponible.' };
+  }
+
+  const persistentStorage = getShiftGuidePersistentStorage();
+  clearCelineHistory(bestEffortSessionStorage());
+  clearCelineHistory(persistentStorage);
+  reconcileShiftGuideConfigRevision(persistentStorage, configRevision);
+  reconcileCelineAuthorityRevision(persistentStorage, celineAuthorityRevision);
+  return { ok: true };
+}
+
+export async function startPublicShiftGuideDemo(): Promise<ShiftGuideAuthResult> {
+  try {
+    const res = await fetch('/api/public-demo/session', { method: 'POST' });
+    return establishShiftGuideSession(res);
+  } catch {
+    return { ok: false, error: 'Démo indisponible.' };
+  }
+}
+
 export async function unlockShiftGuide(code: string): Promise<ShiftGuideAuthResult> {
   try {
     const res = await fetch('/api/shiftguide/unlock', {
@@ -164,73 +242,7 @@ export async function unlockShiftGuide(code: string): Promise<ShiftGuideAuthResu
       body: JSON.stringify({ code }),
     });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      return { ok: false, error: body.error ?? 'Code incorrect.' };
-    }
-
-    const response: unknown = await res.json();
-    if (
-      !response ||
-      typeof response !== 'object' ||
-      !('token' in response) ||
-      !('expiresAt' in response) ||
-      !('configRevision' in response) ||
-      !('celineAuthorityRevision' in response)
-    ) {
-      return { ok: false, error: 'Session invalide.' };
-    }
-
-    const {
-      token,
-      expiresAt,
-      configRevision,
-      celineAuthorityRevision,
-      ...data
-    } = response as Record<string, unknown>;
-    if (
-      typeof token !== 'string' ||
-      token.length === 0 ||
-      typeof expiresAt !== 'number' ||
-      !Number.isFinite(expiresAt) ||
-      expiresAt <= Date.now() ||
-      typeof configRevision !== 'string' ||
-      configRevision.length === 0 ||
-      typeof celineAuthorityRevision !== 'string' ||
-      celineAuthorityRevision.length === 0 ||
-      !isShiftGuideData(data)
-    ) {
-      return { ok: false, error: 'Données ShiftGuide invalides.' };
-    }
-
-    const validatedResponse: ShiftGuideUnlockResponse = {
-      token,
-      expiresAt,
-      configRevision,
-      celineAuthorityRevision,
-      ...data,
-    };
-
-    const persisted = writeShiftGuideSession([
-      [SESSION_KEY, validatedResponse.token],
-      [EXPIRY_KEY, String(validatedResponse.expiresAt)],
-      [REVISION_KEY, validatedResponse.configRevision],
-      [CELINE_AUTHORITY_REVISION_KEY, validatedResponse.celineAuthorityRevision],
-      [DATA_KEY, JSON.stringify(data)],
-    ]);
-    if (!persisted) {
-      clearStoredShiftGuideAuth();
-      return { ok: false, error: 'Stockage de session indisponible.' };
-    }
-
-    const persistentStorage = getShiftGuidePersistentStorage();
-    // Every successful unlock starts a fresh conversational memory scope.
-    clearCelineHistory(bestEffortSessionStorage());
-    // Remove legacy persistent conversation data from pre-session-scoped builds.
-    clearCelineHistory(persistentStorage);
-    reconcileShiftGuideConfigRevision(persistentStorage, validatedResponse.configRevision);
-    reconcileCelineAuthorityRevision(persistentStorage, validatedResponse.celineAuthorityRevision);
-    return { ok: true };
+    return establishShiftGuideSession(res);
   } catch {
     return { ok: false, error: 'Erreur réseau.' };
   }

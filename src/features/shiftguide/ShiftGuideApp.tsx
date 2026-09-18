@@ -40,14 +40,14 @@ function RouteFallback({ label = 'Chargement…' }: { label?: string }) {
 }
 
 function ShiftGuideGuard() {
-  const { status, unlock } = useShiftGuideAuth();
+  const { status, unlock, startDemo } = useShiftGuideAuth();
 
   if (status === 'checking') {
     return <RouteFallback label="Vérification de la session ShiftGuide…" />;
   }
 
   if (status === 'locked') {
-    return <ShiftGuideLock onUnlock={unlock} />;
+    return <ShiftGuideLock onUnlock={unlock} onStartDemo={startDemo} />;
   }
 
   return (

@@ -19,6 +19,7 @@ function storeSession(expiresAt: number) {
   sessionStorage.setItem('shiftguide_session_expires_at', String(expiresAt));
   sessionStorage.setItem('shiftguide_session_config_revision', CONFIG_REVISION);
   sessionStorage.setItem('shiftguide_session_celine_authority_revision', CELINE_AUTHORITY_REVISION);
+  sessionStorage.setItem('shiftguide_session_profile', 'protected');
 }
 
 function validSessionBody(expiresAt: number) {
@@ -27,6 +28,7 @@ function validSessionBody(expiresAt: number) {
     expiresAt,
     configRevision: CONFIG_REVISION,
     celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+    profile: 'protected',
   };
 }
 

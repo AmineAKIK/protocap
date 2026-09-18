@@ -23,6 +23,7 @@ describe('ShiftGuide auth storage failure policy', () => {
       expiresAt: Date.now() + 60_000,
       configRevision: 'sha256:test-config',
       celineAuthorityRevision: 'sha256:test-authority',
+      profile: 'protected',
       ...shiftGuideFixture,
     })));
 

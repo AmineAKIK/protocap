@@ -39,6 +39,10 @@ import {
 import { createShiftGuideConfigRevision } from './shiftGuideRevision.mjs';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const DEMO_SESSION_TTL_MS = 30 * 60 * 1000;
+const DEMO_SESSION_WINDOW_MS = 10 * 60 * 1000;
+const DEMO_SESSION_MAX_ATTEMPTS = 12;
+const DEMO_MAX_ACTIVE_SESSIONS = 100;
 const UNLOCK_WINDOW_MS = 10 * 60 * 1000;
 const UNLOCK_MAX_ATTEMPTS = 10;
 const MAX_UNLOCK_CODE_LENGTH = 256;
@@ -147,6 +151,7 @@ export function createServerApp({
   telemetryNow = () => Date.now(),
   issueToken = defaultIssueToken,
   ingressTrust = DIRECT_INGRESS_TRUST,
+  publicDemo = { selfServe: false, url: null },
 } = {}) {
   const log = createStructuredLogger(logger);
   const shiftGuideConfigured = isConfiguredSecret(shiftGuideCode);
@@ -221,9 +226,9 @@ export function createServerApp({
     return next(error);
   });
 
-  function issueSession() {
+  function issueSession(ttlMs = SESSION_TTL_MS) {
     const token = issueToken();
-    const expiresAt = now() + SESSION_TTL_MS;
+    const expiresAt = now() + ttlMs;
     sessions.set(token, expiresAt);
     if (celineDomainEngine) celineOperationalStates.set(token, celineDomainEngine.initialState());
     return { token, expiresAt };
@@ -237,7 +242,60 @@ export function createServerApp({
     return res.status(readiness.ok ? 200 : 503).json(readiness);
   });
 
+  app.get('/api/public-demo', (_req, res) => {
+    const externalUrl = typeof publicDemo.url === 'string' && publicDemo.url.length > 0
+      ? publicDemo.url
+      : null;
+    return res.json({
+      available: Boolean(publicDemo.selfServe || externalUrl),
+      selfServe: Boolean(publicDemo.selfServe),
+      url: publicDemo.selfServe ? '/shiftguide' : externalUrl,
+    });
+  });
+
+  app.post('/api/public-demo/session', (req, res) => {
+    if (!publicDemo.selfServe) {
+      return res.status(404).json({ error: 'Route API introuvable.' });
+    }
+    if (
+      !celineSystemPrompt ||
+      !shiftGuideClientData ||
+      !configRevision ||
+      !celineAuthorityRevision ||
+      !celineProvider
+    ) {
+      return res.status(503).json({ error: 'Démo synthétique non configurée.' });
+    }
+    if (sessions.size >= DEMO_MAX_ACTIVE_SESSIONS) {
+      return res.status(503).json({ error: 'Démo temporairement saturée.' });
+    }
+
+    const clientKey = ingressTrust.clientAddress(req);
+    const limit = takeRateLimit(
+      unlockAttempts,
+      `demo:${clientKey}`,
+      DEMO_SESSION_MAX_ATTEMPTS,
+      DEMO_SESSION_WINDOW_MS,
+      now()
+    );
+    if (!limit.allowed) {
+      res.set('Retry-After', String(limit.retryAfterSeconds));
+      return res.status(429).json({ error: 'Trop de sessions de démonstration. Réessaie plus tard.' });
+    }
+
+    return res.json({
+      ...issueSession(DEMO_SESSION_TTL_MS),
+      profile: 'demo',
+      configRevision,
+      celineAuthorityRevision,
+      ...shiftGuideClientData,
+    });
+  });
+
   app.post('/api/shiftguide/unlock', (req, res) => {
+    if (publicDemo.selfServe) {
+      return res.status(404).json({ error: 'Route API introuvable.' });
+    }
     if (
       !shiftGuideConfigured ||
       !celineSystemPrompt ||
@@ -273,6 +331,7 @@ export function createServerApp({
 
     return res.json({
       ...issueSession(),
+      profile: 'protected',
       configRevision,
       celineAuthorityRevision,
       ...shiftGuideClientData,
@@ -294,6 +353,7 @@ export function createServerApp({
     return res.json({
       ok: true,
       expiresAt: sessions.get(token),
+      profile: publicDemo.selfServe ? 'demo' : 'protected',
       configRevision,
       celineAuthorityRevision,
     });

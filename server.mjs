@@ -69,6 +69,7 @@ const celineRoutingSpec = parseJsonEnvValue(
 
 const runtimeState = createServerRuntimeState();
 const demoMode = process.env.PROTOCAP_RUNTIME_PROFILE === 'demo' && process.env.PROTOCAP_DEMO_PROVIDER === '1';
+const publicDemoUrl = process.env.PUBLIC_DEMO_URL?.trim() || null;
 if (demoMode && isConfiguredSecret(deepSeekApiKey)) {
   throw new Error('Demo runtime refuses a configured DeepSeek API key.');
 }
@@ -86,6 +87,7 @@ const { app } = createServerApp({
   runtimeState,
   distDir,
   ingressTrust: RAILWAY_INGRESS_TRUST,
+  publicDemo: { selfServe: demoMode, url: publicDemoUrl },
 });
 
 const cleanupTimer = setInterval(

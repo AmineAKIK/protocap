@@ -34,6 +34,7 @@ function storeValidSession(
   sessionStorage.setItem('shiftguide_session_expires_at', String(expiresAt));
   sessionStorage.setItem('shiftguide_session_config_revision', configRevision);
   sessionStorage.setItem('shiftguide_session_celine_authority_revision', celineAuthorityRevision);
+  sessionStorage.setItem('shiftguide_session_profile', 'protected');
 }
 
 function unlockPayload(expiresAt = Date.now() + 60_000) {
@@ -42,6 +43,7 @@ function unlockPayload(expiresAt = Date.now() + 60_000) {
     expiresAt,
     configRevision: CONFIG_REVISION,
     celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+    profile: 'protected',
     ...shiftGuideFixture,
   };
 }
@@ -139,6 +141,7 @@ describe('ShiftGuide browser auth boundary', () => {
       expiresAt: Date.now() + 60_000,
       configRevision: CONFIG_REVISION,
       celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      profile: 'protected',
       modules: [],
     })));
 
@@ -172,6 +175,7 @@ describe('ShiftGuide browser auth boundary', () => {
       expiresAt,
       configRevision: CONFIG_REVISION,
       celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+      profile: 'protected',
     })));
 
     await expect(validateShiftGuideSession()).resolves.toBe(true);
@@ -185,12 +189,14 @@ describe('ShiftGuide browser auth boundary', () => {
         expiresAt: Date.now() + 120_000,
         configRevision: 'sha256:new',
         celineAuthorityRevision: CELINE_AUTHORITY_REVISION,
+        profile: 'protected',
       },
       {
         ok: true,
         expiresAt: Date.now() + 120_000,
         configRevision: CONFIG_REVISION,
         celineAuthorityRevision: 'decision-v2',
+        profile: 'protected',
       },
     ]) {
       sessionStorage.clear();
