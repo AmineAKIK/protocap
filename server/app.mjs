@@ -572,9 +572,22 @@ export function createServerApp({
         if (!['GET', 'HEAD'].includes(req.method)) return next();
         const path = req.path;
         const isShiftGuideRoute = path === '/demo' || path === '/shiftguide' || path.startsWith('/shiftguide/');
+        if (path === '/sw.js') {
+          const worker = [
+            "self.addEventListener('install', () => self.skipWaiting());",
+            "self.addEventListener('activate', (event) => {",
+            "  event.waitUntil(Promise.all([",
+            "    self.clients.claim(),",
+            "    caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))",
+            "  ]));",
+            "});",
+          ].join('\n');
+          return res.set('Cache-Control', 'no-store').type('application/javascript').send(worker);
+        }
+
         const isStaticAsset =
           path.startsWith('/assets/') ||
-          ['/sw.js', '/registerSW.js', '/pwa-icon.svg', '/favicon.ico', '/manifest.webmanifest'].includes(path) ||
+          ['/registerSW.js', '/pwa-icon.svg', '/favicon.ico', '/manifest.webmanifest'].includes(path) ||
           /^\/workbox-[a-zA-Z0-9_-]+\.js$/.test(path);
 
         if (isShiftGuideRoute && !extname(path)) {
