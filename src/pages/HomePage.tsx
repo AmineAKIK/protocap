@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { ButtonLink } from '../components/Button';
 import { PageFrame } from '../components/PageFrame';
 import { PresentationMode } from '../components/PresentationMode';
-import { usePublicDemoAvailability } from '../features/shiftguide/publicDemo';
 
 const modules = [
   {
@@ -51,7 +50,6 @@ const modules = [
 
 export function HomePage() {
   const [presenting, setPresenting] = useState(false);
-  const publicDemo = usePublicDemoAvailability();
 
   return (
     <div>
@@ -145,21 +143,7 @@ export function HomePage() {
           </ButtonLink>
         </article>
 
-        {publicDemo.available && publicDemo.entryUrl && (
-          <section className="mb-8 rounded-2xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-widest text-teal-800">ShiftGuide · démo publique</p>
-            <h2 className="mt-2 text-xl font-black text-slate-950">Tester le parcours synthétique sans secret</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
-              Données fictives et réponses scénarisées — aucun appel IA externe. Cette démo illustre le guidage logiciel et ne donne accès à aucune configuration protégée.
-            </p>
-            <a
-              href={publicDemo.entryUrl}
-              className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-bold text-white transition hover:bg-teal-800"
-            >
-              Essayer ShiftGuide en démo <ArrowRight size={16} />
-            </a>
-          </section>
-        )}
+
 
         <p className="mb-6 text-xs font-bold uppercase tracking-widest text-slate-600">Modules</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
