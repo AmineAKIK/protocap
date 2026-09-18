@@ -12,7 +12,7 @@ export interface LogisticsWorkspaceV9 {
   requests: LogisticsRequest[];
 }
 
-export type LogisticsLoadStatus = 'ready' | 'memory' | 'migration-pending' | 'recovery' | 'readonly' | 'degraded';
+export type LogisticsLoadStatus = 'ready' | 'memory' | 'migration-pending' | 'recovery' | 'readonly' | 'degraded' | 'write-failed';
 
 export interface LoadedLogisticsWorkspace {
   workspace: LogisticsWorkspaceV9;

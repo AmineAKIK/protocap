@@ -39,7 +39,7 @@ export class ShiftGuideMutationCoordinator {
       lockManager = this.resolveLockManager();
     } catch {
       this.markDegraded();
-      return this.enqueueLocally(task);
+      throw new ShiftGuideConcurrencyUnavailableError();
     }
 
     if (!lockManager || typeof lockManager.request !== 'function') {

@@ -8,6 +8,7 @@ import {
   persistLogisticsWorkspace,
   type LogisticsPersistenceResult,
   type LoadedLogisticsWorkspace,
+  type LogisticsWorkspaceV9,
 } from './logisticsPersistence';
 
 const LOGISTICS_LOCK_NAME = 'protocap:logistics:workspace';
@@ -90,6 +91,10 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
     return () => { active = false; };
   }, [initial, loaded.status]);
 
+  type LockedMutation =
+    | { kind: 'result'; result: LogisticsMutationResult }
+    | { kind: 'committed'; workspace: LogisticsWorkspaceV9 };
+
   const runMutation = useCallback(async (
     mutate: (latest: LogisticsRequest[]) => LogisticsMutationResult | { status: 'next'; requests: LogisticsRequest[] },
   ): Promise<LogisticsMutationResult> => {
@@ -98,22 +103,28 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
       return { status: 'degraded', reason: 'concurrency-unavailable' };
     }
 
-    const locked = await runWithRequiredWebLock(LOGISTICS_LOCK_NAME, () => {
+    const locked = await runWithRequiredWebLock<LockedMutation>(LOGISTICS_LOCK_NAME, () => {
       let latest = loadLogisticsWorkspace(initial);
-      if (latest.status === 'readonly') return { status: 'degraded', reason: 'future-version', futureVersion: latest.futureVersion } as LogisticsMutationResult;
-      if (latest.status === 'recovery') return { status: 'degraded', reason: 'recovery' } as LogisticsMutationResult;
-      if (latest.status === 'degraded') return { status: 'degraded', reason: 'access' } as LogisticsMutationResult;
+      if (latest.status === 'readonly') {
+        return { kind: 'result', result: { status: 'degraded', reason: 'future-version', futureVersion: latest.futureVersion } };
+      }
+      if (latest.status === 'recovery') {
+        return { kind: 'result', result: { status: 'degraded', reason: 'recovery' } };
+      }
+      if (latest.status === 'degraded') {
+        return { kind: 'result', result: { status: 'degraded', reason: 'access' } };
+      }
       if (latest.status === 'migration-pending' || latest.status === 'memory') {
         const migrated = persistLogisticsWorkspace(latest.workspace.revision, latest.workspace.requests);
-        if (migrated.status === 'degraded') return failure(migrated);
+        if (migrated.status === 'degraded') return { kind: 'result', result: failure(migrated) };
         latest = { workspace: migrated.workspace, status: 'ready' };
       }
 
       const outcome = mutate(latest.workspace.requests);
-      if (outcome.status !== 'next') return outcome;
+      if (outcome.status !== 'next') return { kind: 'result', result: outcome };
       const persisted = persistLogisticsWorkspace(latest.workspace.revision, outcome.requests);
-      if (persisted.status === 'degraded') return failure(persisted);
-      return { status: 'persisted', idempotent: false, workspace: persisted.workspace };
+      if (persisted.status === 'degraded') return { kind: 'result', result: failure(persisted) };
+      return { kind: 'committed', workspace: persisted.workspace };
     });
 
     if (locked.status === 'unavailable') {
@@ -121,11 +132,12 @@ export function useLogisticsWorkspace(initial: LogisticsRequest[]) {
       return { status: 'degraded', reason: 'concurrency-unavailable' };
     }
 
-    const result = locked.value;
-    if (result.status === 'persisted' && 'workspace' in result) {
-      setLoaded({ workspace: result.workspace, status: 'ready' });
-      return { status: 'persisted', idempotent: result.idempotent };
+    if (locked.value.kind === 'committed') {
+      setLoaded({ workspace: locked.value.workspace, status: 'ready' });
+      return { status: 'persisted', idempotent: false };
     }
+
+    const result = locked.value.result;
     if (result.status === 'persisted') {
       setLoaded(loadLogisticsWorkspace(initial));
       return result;
