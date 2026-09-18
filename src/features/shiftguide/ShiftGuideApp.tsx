@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { DemoBoundaryNotice } from '../../components/DemoBoundaryNotice';
 import { ShiftGuideLayout } from '../../components/ShiftGuideLayout';
@@ -7,6 +7,7 @@ import {
   useShiftGuideAuth,
 } from '../../context/ShiftGuideAuthContext';
 import { getSgModules } from '../../data/shiftguideModules';
+import { usePublicDemoAvailability } from './publicDemo';
 import { ShiftGuideLock } from '../../pages/shiftguide/ShiftGuideLock';
 
 const CelinePage = lazy(() =>
@@ -39,15 +40,50 @@ function RouteFallback({ label = 'Chargement…' }: { label?: string }) {
   );
 }
 
+function ShiftGuideDemoBootstrap({
+  startDemo,
+}: {
+  startDemo: () => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const startedRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void startDemo().then((result) => {
+      if (!result.ok) setError(result.error ?? 'Démo indisponible.');
+    });
+  }, [startDemo]);
+
+  if (error) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f3f5f7] px-6">
+        <section className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-xl">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-red-700">Démo indisponible</p>
+          <h1 className="mt-2 text-xl font-black text-zinc-950">Impossible d’ouvrir ShiftGuide</h1>
+          <p className="mt-3 text-sm font-semibold leading-6 text-zinc-600">{error}</p>
+        </section>
+      </main>
+    );
+  }
+
+  return <RouteFallback label="Ouverture de la démo ShiftGuide…" />;
+}
+
 function ShiftGuideGuard() {
   const { status, unlock, startDemo } = useShiftGuideAuth();
+  const demo = usePublicDemoAvailability();
 
   if (status === 'checking') {
     return <RouteFallback label="Vérification de la session ShiftGuide…" />;
   }
 
   if (status === 'locked') {
-    return <ShiftGuideLock onUnlock={unlock} onStartDemo={startDemo} />;
+    if (demo.selfServe) {
+      return <ShiftGuideDemoBootstrap startDemo={startDemo} />;
+    }
+    return <ShiftGuideLock onUnlock={unlock} />;
   }
 
   return (
