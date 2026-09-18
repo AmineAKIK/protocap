@@ -71,3 +71,12 @@ The synthetic demo has its own runtime profile and provider marker. Its readines
 For local full-stack development, the API proxy exists only when `VITE_API_PROXY_TARGET` is explicitly supplied by the launcher. The default Vite-only command has no API proxy. Local launchers bind to `127.0.0.1` unless their documented host controls are deliberately changed.
 
 A port collision is surfaced by the child process and terminates the launcher with a non-zero result. SIGINT/SIGTERM are forwarded to both local children so Ctrl+C does not intentionally leave one half of the stack running.
+
+
+## Public demo publication gate
+
+The demo profile can issue anonymous synthetic sessions only when the server is started with the repository demo profile. Those sessions expire after 30 minutes, session creation is rate-limited, and the demo service caps active in-memory sessions. The protected code-unlock endpoint is unavailable on that origin.
+
+The protected service may advertise an isolated demo only through `PUBLIC_DEMO_URL`. Keep this value empty until the target URL has been checked against the intended commit/configuration. An absent value means “no verified hosted demo is currently advertised”, not a failed readiness state for production.
+
+The public-demo browser suite runs against a dedicated loopback origin and verifies the anonymous entry path, permanent simulation disclosure, absence of the protected unlock route, accessibility and responsive overflow. It does not prove an external deployment; live URL verification remains a release/deployment action.
