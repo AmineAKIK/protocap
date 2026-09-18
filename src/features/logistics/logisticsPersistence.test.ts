@@ -52,7 +52,10 @@ describe('Logistics revisioned persistence', () => {
   it('T10/T31: a write that cannot be read back is not reported as persisted', () => {
     const nativeGetItem = Storage.prototype.getItem;
     let workspaceReads = 0;
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function getItem(key) {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function getItem(
+      this: Storage,
+      key: string,
+    ) {
       if (key === LOGISTICS_WORKSPACE_KEY) {
         workspaceReads += 1;
         if (workspaceReads === 2) return '{"tampered":true}';
