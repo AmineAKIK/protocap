@@ -3,7 +3,7 @@
 **Date :** 19 septembre 2026  
 **Branche :** `docs/portfolio-product-truth`  
 **Base :** `f924e86de87a7dbc6424991836b79dbba7fba8b3` (main après PR-11)  
-**Méthode :** audit statique des surfaces visibles + tests de régression + Quality Gate/CodeQL de la PR.  
+**Méthode prévue :** audit statique des surfaces visibles + tests de régression + Quality Gate/CodeQL de la PR.  
 **Statut de publication :** preuve pré-merge uniquement. La corrélation avec le commit effectivement déployé reste PR-13.
 
 ## Périmètre vérifié
@@ -49,7 +49,7 @@ Cette preuve PR-12 supersède uniquement les affirmations de présentation coura
 
 ### T43 — navigateurs et accessibilité
 
-PR-12 n’introduit pas de nouveau layout ni de composant interactif. Les surfaces textuelles modifiées restent couvertes par la matrice browser/accessibilité existante de la Quality Gate. Le résultat exact du SHA final de PR-12 doit être attaché à la PR avant merge.
+PR-12 n’introduit pas de nouveau layout ni de composant interactif. Les surfaces textuelles modifiées doivent rester couvertes par la matrice browser/accessibilité existante de la Quality Gate. Ce point reste **à exécuter** tant que les workflows du SHA final de PR-12 ne sont pas terminés ; leur résultat exact sera enregistré avant merge.
 
 ## Limite F24
 
