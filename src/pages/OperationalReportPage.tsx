@@ -851,7 +851,7 @@ export function OperationalReportPage() {
                   plus fluide. Lorsqu'elle est dispersée, ambiguë ou portée par la mémoire, elle crée
                   de la charge inutile.
                 </p>
-                <p>ProtoCap présente ces prototypes autour d'une même ambition :</p>
+                <p>ProtoCap présente quatre prototypes publics autour d'une même ambition ; ShiftGuide est présenté séparément :</p>
               </div>
               <div className="mt-6 min-w-0 rounded-2xl border border-teal-500/30 bg-teal-500/10 p-5 sm:p-6">
                 <p className="break-normal text-lg font-black leading-8 text-white sm:text-xl">
