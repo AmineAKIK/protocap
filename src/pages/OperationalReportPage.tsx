@@ -61,7 +61,7 @@ const openingStatements = [
 
 const impactBlocks = [
   {
-    title: `Réduction des erreurs évitables`,
+    title: `Hypothèse d’évaluation : erreurs évitables`,
     icon: CheckCircle2,
     color: 'teal',
     paragraphs: [
@@ -77,7 +77,7 @@ const impactBlocks = [
     ]
   },
   {
-    title: `Réduction des temps morts`,
+    title: `Hypothèse d’évaluation : temps morts`,
     icon: Clock3,
     color: 'blue',
     paragraphs: [
@@ -94,7 +94,7 @@ const impactBlocks = [
     ]
   },
   {
-    title: `Traçabilité utile`,
+    title: `Hypothèse d’évaluation : traçabilité utile`,
     icon: History,
     color: 'violet',
     paragraphs: [
@@ -110,7 +110,7 @@ const impactBlocks = [
     ]
   },
   {
-    title: `Réduction de la charge cognitive`,
+    title: `Hypothèse d’évaluation : charge cognitive`,
     icon: Brain,
     color: 'amber',
     paragraphs: [
@@ -284,10 +284,10 @@ const prototypes = [
     ],
     responseOutro: `Les politiques disponibles rendent le choix explicite : ne pas dépasser, arrondir au carton, arrondir à la palette.`,
     valueParagraphs: [
-      `Le calcul manuel disparaît.`,
+      `Le calcul est automatisé dans le démonstrateur.`,
       `L'écart devient visible.`,
-      `La décision devient plus rapide.`,
-      `Le risque d'erreur diminue.`
+      `Le choix est comparé aux règles affichées.`,
+      `La réduction d'erreurs reste un indicateur à mesurer.`
     ],
     indicators: [
       `temps moyen de calcul`,
