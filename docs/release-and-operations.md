@@ -16,16 +16,28 @@ A custom domain can replace the Railway hostname later if an owned domain is ava
 
 `.github/workflows/live-smoke.yml` runs once per day at `06:17 UTC` and can also be started manually with `workflow_dispatch`.
 
-The probe is intentionally read-only and secret-free. It performs only `GET` requests against:
+The probe is intentionally read-only and secret-free. It performs only `GET` requests against the protected ProtoCap origin and the isolated ShiftGuide demo origin.
+
+Protected-origin checks cover:
 
 - `/` — public HTML shell and security headers;
-- `/api/health` — process liveness contract;
-- `/api/ready` — application readiness contract;
-- `/robots.txt` — public indexing contract.
+- `/api/health` and `/api/ready` — liveness/readiness contracts;
+- `/api/public-demo` — exact advertised isolated demo entry;
+- `/robots.txt` — public indexing contract;
+- `/manifest.webmanifest` and `/sw.js` — current PWA assets;
+- the published essay PDF — must remain an actual PDF rather than an SPA navigation fallback.
 
-It does **not** call `/api/shiftguide/unlock`, `/api/shiftguide/session` or `/api/celine/chat`. Scheduled monitoring therefore consumes no ShiftGuide credential attempts and no AI-provider tokens.
+Demo-origin checks cover:
 
-The smoke also checks HTTPS-only targeting, expected security headers, API `no-store` behavior, API request IDs and the production sitemap declaration.
+- `/api/health`, `/api/ready` and `/api/public-demo`;
+- `/demo` runtime metadata proving the demo profile points back to the real ProtoCap origin;
+- the ShiftGuide-specific manifest and cache-clearing service worker;
+- redirects from non-ShiftGuide browser routes to the real ProtoCap origin;
+- rejection of the essay PDF path on the demo origin rather than serving a hidden full-ProtoCap fallback.
+
+It does **not** call `/api/shiftguide/unlock`, `/api/shiftguide/session`, `/api/public-demo/session` or `/api/celine/chat`. Scheduled monitoring therefore consumes no ShiftGuide credential attempts, creates no demo sessions and consumes no AI-provider tokens.
+
+The smoke checks HTTPS-only distinct origins, expected security headers, API `no-store` behavior, API request IDs, the production sitemap declaration and the protected/demo routing boundary. Its stdout is retained as a 14-day GitHub Actions artifact.
 
 GitHub schedules run from the latest default-branch commit and may be delayed under Actions load. For a public repository, GitHub also disables scheduled workflows after 60 days without repository activity; a manual run or re-enable may therefore be needed after a long dormant period.
 
@@ -38,7 +50,9 @@ npm run smoke:live
 Override the target only when validating an intentional alternate HTTPS deployment:
 
 ```bash
-PROTOCAP_BASE_URL=https://example.invalid npm run smoke:live
+PROTOCAP_BASE_URL=https://example.invalid \
+PROTOCAP_DEMO_BASE_URL=https://demo.example.invalid \
+npm run smoke:live
 ```
 
 ## Runtime observability
