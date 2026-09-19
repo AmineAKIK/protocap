@@ -2,6 +2,17 @@ name: Live smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/live-smoke.mjs'
+      - 'tests/liveSmoke.test.mjs'
+      - '.github/workflows/live-smoke.yml'
+      - 'docs/release-and-operations.md'
+      - 'docs/release-evidence/**'
+      - 'docs/remediation-plan.md'
+      - 'e2e/browser-smoke.spec.ts'
   pull_request:
     paths:
       - 'scripts/live-smoke.mjs'
