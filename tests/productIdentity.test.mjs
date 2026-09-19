@@ -71,4 +71,12 @@ test('T34/T37: portfolio entry distinguishes demonstration, evidence and unmeasu
   assert.match(readme, /not evidence of an industrial deployment or measured business impact/i);
   assert.match(readme, /does \*\*not\*\* infer solo authorship/i);
   assert.match(readme, /Historical evidence is kept as history/i);
+
+  const [report, presentation] = await Promise.all([
+    read('src/pages/OperationalReportPage.tsx'),
+    read('src/components/PresentationMode.tsx'),
+  ]);
+  assert.match(report, /Hypothèse d’évaluation/);
+  assert.match(presentation, /Hypothèse :/);
+  assert.doesNotMatch(report, /`réduction du délai|`réduction des relances|`dépassements évités/);
 });
