@@ -307,7 +307,7 @@ function ContextRail({
   return (
     <aside className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3 text-white shadow-2xl shadow-zinc-950/10">
       <div className="border-b border-white/10 px-2 pb-4 pt-1">
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-teal-300">LineOps</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-teal-300">ProtoCap</p>
         <p className="mt-1 text-xl font-black">ShiftGuide</p>
         <p className="mt-2 text-xs leading-5 text-zinc-400">
           Choisis le moment terrain, le cockpit réordonne le flux.
