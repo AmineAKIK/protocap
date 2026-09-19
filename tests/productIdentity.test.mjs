@@ -56,6 +56,9 @@ test('T36: current UI copy states local persistence and estimated validity witho
   assert.match(expiry, /Validité estimée favorable/);
   assert.doesNotMatch(expiry, /Démarrage de la ligne autorisé|autorisation de démarrage/i);
 
+  const expiryE2e = await read('e2e/expiry-time.spec.ts');
+  assert.doesNotMatch(expiryE2e, /Démarrage de la ligne autorisé/i);
+
   const home = await read('src/pages/HomePage.tsx');
   assert.match(home, /Validité estimée, échéances visibles/);
   assert.doesNotMatch(home, /Démarrage sécurisé/);
