@@ -32,7 +32,7 @@ Co-authored, third-party and operational materials may have rights or provenance
 
 | Surface | Current implementation | Data / runtime boundary |
 | --- | --- | --- |
-| **ShiftGuide** | Protected operator guidance, modules, lexicon, emergencies and shared progress | Protected configuration is served after server-side unlock; progress is browser-persisted |
+| **ShiftGuide** | Protected operator guidance, modules, lexicon, emergencies and progress tracking | Protected configuration is served after server-side unlock; progress is browser-persisted and locally coordinated where supported, not shared between devices |
 | **Céline** | AI-assisted conversational guidance inside ShiftGuide | Server-side prompt/provider boundary; requires a valid ShiftGuide session and network access |
 | **LinePulse** | Multi-role operational-visibility concept | **Demonstration using static mock data**; no live plant feed is connected |
 | **Expiry Check** | Validity tracking and local action history | Browser-local persistence; no shared quality backend |
