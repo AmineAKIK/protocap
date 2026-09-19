@@ -86,10 +86,10 @@ const impactBlocks = [
       `Les prototypes rendent ces pertes visibles.`
     ],
     items: [
-      `réduction du délai de prise en charge logistique`,
-      `réduction des relances`,
-      `réduction du temps de recherche documentaire`,
-      `réduction du temps passé sur les calculs`,
+      `délai de prise en charge logistique`,
+      `nombre de relances`,
+      `temps de recherche documentaire`,
+      `temps passé sur les calculs`,
       `meilleure priorisation des actions`
     ]
   },
@@ -212,7 +212,7 @@ const prototypes = [
       `nombre de demandes en attente`,
       `nombre de demandes annulées`,
       `taux de demandes traitées dans le délai cible`,
-      `réduction des déplacements inutiles`
+      `déplacements associés au flux`
     ]
   },
   {
@@ -293,7 +293,7 @@ const prototypes = [
       `temps moyen de calcul`,
       `nombre d'erreurs de quantité`,
       `écarts de production`,
-      `dépassements évités`,
+      `dépassements constatés`,
       `taux d'utilisation du calculateur`
     ]
   }
