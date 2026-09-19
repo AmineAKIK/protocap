@@ -166,6 +166,17 @@ There are no active audit exceptions. A future exception needs exact advisory/pa
 
 The historical PR-02 evidence remains dated evidence only. Every new PR executes current audits again.
 
+## Portfolio-truth regression checks
+
+`tests/productIdentity.test.mjs` protects the presentation contract introduced by PR-12:
+
+- ProtoCap, ShiftGuide and Céline remain the canonical visible identities while historical `lineops.*` storage keys are deliberately preserved;
+- current Logistics copy describes browser-local persistence rather than delivery to another actor;
+- Expiry presents an estimated validity state rather than a machine or quality authorization;
+- the README distinguishes synthetic demonstration, protected runtime, engineering evidence and unmeasured outcomes.
+
+These assertions are copy/product-boundary regressions, not substitutes for browser accessibility or responsive checks. Modified public and ShiftGuide surfaces remain covered by the existing Chromium/mobile/WebKit suites in the Quality Gate.
+
 ## Type-aware lint and build
 
 Type-aware ESLint analysis rejects floating promises and promises used in unsafe contexts for `src/**/*.{ts,tsx}`. The production build runs TypeScript and Vite after tests and lint. Generated output (`dist`, coverage and Playwright evidence) must remain untracked.

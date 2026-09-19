@@ -425,7 +425,7 @@ export function ExpiryCheckPage() {
             {isUnknown ? (
               <div className="min-w-0 rounded-xl border-2 border-slate-400 bg-slate-50 p-3 sm:p-4">
                 <p className="break-normal font-bold">État à vérifier</p>
-                <p className="break-normal text-sm">Bloc : état temporel incohérent ou incomplet. Aucune autorisation de démarrage ne peut être établie. Les données restent conservées pour vérification.</p>
+                <p className="break-normal text-sm">Bloc : état temporel incohérent ou incomplet. Aucun état de validité favorable ne peut être établi. Les données restent conservées pour vérification.</p>
               </div>
             ) : isBlocked ? (
               <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border-2 border-rose-400 bg-rose-50 p-3 sm:p-4">
@@ -444,7 +444,7 @@ export function ExpiryCheckPage() {
             ) : lineStatus === 'conform' ? (
               <div className="flex min-w-0 items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
                 <ShieldCheck size={20} className="shrink-0 text-emerald-600" />
-                <p className="min-w-0 break-normal text-sm font-semibold text-emerald-900">Démarrage de la ligne autorisé — bloc de remplissage dans sa période de validité.</p>
+                <p className="min-w-0 break-normal text-sm font-semibold text-emerald-900">Validité estimée favorable — bloc de remplissage dans sa période de validité selon les données locales.</p>
               </div>
             ) : (
               <div className="flex min-w-0 items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:p-4">

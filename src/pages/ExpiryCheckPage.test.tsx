@@ -112,7 +112,7 @@ describe('T05/T16: readable suspicious data is never normalized into a green dem
     if (scenario === 'missing') line.elements = [];
     seed([line]); const before = snapshot(); render(<ExpiryCheckPage />);
     expect(screen.getAllByText('État à vérifier').length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Démarrage de la ligne autorisé/)).toBeNull();
+    expect(screen.queryByText(/Validité estimée favorable/)).toBeNull();
     expect(snapshot()).toEqual(before);
     expect((screen.getByRole('button', { name: 'Déclarer un remplacement' }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -146,7 +146,7 @@ describe('PR-04 live clock coherence', () => {
     const before = snapshot();
     render(<ExpiryCheckPage />);
 
-    expect(screen.getByText(/Démarrage de la ligne autorisé/)).toBeTruthy();
+    expect(screen.getByText(/Validité estimée favorable/)).toBeTruthy();
     expect(statValue('OK').getByText('1')).toBeTruthy();
     expect(statValue('Vigilance').getByText('0')).toBeTruthy();
     expect(statValue('Bloqués').getByText('0')).toBeTruthy();

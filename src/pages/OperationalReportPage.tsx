@@ -61,7 +61,7 @@ const openingStatements = [
 
 const impactBlocks = [
   {
-    title: `Réduction des erreurs évitables`,
+    title: `Hypothèse d’évaluation : erreurs évitables`,
     icon: CheckCircle2,
     color: 'teal',
     paragraphs: [
@@ -77,7 +77,7 @@ const impactBlocks = [
     ]
   },
   {
-    title: `Réduction des temps morts`,
+    title: `Hypothèse d’évaluation : temps morts`,
     icon: Clock3,
     color: 'blue',
     paragraphs: [
@@ -86,20 +86,20 @@ const impactBlocks = [
       `Les prototypes rendent ces pertes visibles.`
     ],
     items: [
-      `réduction du délai de prise en charge logistique`,
-      `réduction des relances`,
-      `réduction du temps de recherche documentaire`,
-      `réduction du temps passé sur les calculs`,
+      `délai de prise en charge logistique`,
+      `nombre de relances`,
+      `temps de recherche documentaire`,
+      `temps passé sur les calculs`,
       `meilleure priorisation des actions`
     ]
   },
   {
-    title: `Traçabilité utile`,
+    title: `Hypothèse d’évaluation : traçabilité utile`,
     icon: History,
     color: 'violet',
     paragraphs: [
       `La traçabilité ne doit pas être une charge ajoutée au travail. Elle doit naître naturellement de l'action.`,
-      `Lorsqu'un changement est déclaré, lorsqu'un appel est envoyé, lorsqu'un statut est modifié ou lorsqu'un calcul est effectué, l'historique doit se construire sans effort supplémentaire.`
+      `Lorsqu'un changement est déclaré, lorsqu'un appel est enregistré localement, lorsqu'un statut est modifié ou lorsqu'un calcul est effectué, l'historique local doit se construire sans effort supplémentaire.`
     ],
     items: [
       `meilleure lecture des actions réalisées`,
@@ -110,7 +110,7 @@ const impactBlocks = [
     ]
   },
   {
-    title: `Réduction de la charge cognitive`,
+    title: `Hypothèse d’évaluation : charge cognitive`,
     icon: Brain,
     color: 'amber',
     paragraphs: [
@@ -212,7 +212,7 @@ const prototypes = [
       `nombre de demandes en attente`,
       `nombre de demandes annulées`,
       `taux de demandes traitées dans le délai cible`,
-      `réduction des déplacements inutiles`
+      `déplacements associés au flux`
     ]
   },
   {
@@ -284,16 +284,16 @@ const prototypes = [
     ],
     responseOutro: `Les politiques disponibles rendent le choix explicite : ne pas dépasser, arrondir au carton, arrondir à la palette.`,
     valueParagraphs: [
-      `Le calcul manuel disparaît.`,
+      `Le calcul est automatisé dans le démonstrateur.`,
       `L'écart devient visible.`,
-      `La décision devient plus rapide.`,
-      `Le risque d'erreur diminue.`
+      `Le choix est comparé aux règles affichées.`,
+      `La réduction d'erreurs reste un indicateur à mesurer.`
     ],
     indicators: [
       `temps moyen de calcul`,
       `nombre d'erreurs de quantité`,
       `écarts de production`,
-      `dépassements évités`,
+      `dépassements constatés`,
       `taux d'utilisation du calculateur`
     ]
   }
@@ -851,7 +851,7 @@ export function OperationalReportPage() {
                   plus fluide. Lorsqu'elle est dispersée, ambiguë ou portée par la mémoire, elle crée
                   de la charge inutile.
                 </p>
-                <p>LineOps Toolkit présente quatre prototypes autour d'une même ambition :</p>
+                <p>ProtoCap présente quatre prototypes publics autour d'une même ambition ; ShiftGuide est présenté séparément :</p>
               </div>
               <div className="mt-6 min-w-0 rounded-2xl border border-teal-500/30 bg-teal-500/10 p-5 sm:p-6">
                 <p className="break-normal text-lg font-black leading-8 text-white sm:text-xl">

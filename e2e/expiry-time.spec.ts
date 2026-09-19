@@ -131,7 +131,7 @@ test.describe('Expiry temporal rejection and recovery boundary', () => {
     await seedAt(page, '2026-09-18T12:00:00.000Z', '2026-09-23T12:00:00.000Z');
     await openExpiry(page);
     await expect(page.getByText(/état temporel incohérent ou incomplet/i)).toBeVisible();
-    await expect(page.getByText(/Démarrage de la ligne autorisé/)).toHaveCount(0);
+    await expect(page.getByText(/Validité estimée favorable/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
     const lines = JSON.parse((await snapshot(page))[0]!) as { elements: { lastChangedAt: string }[] }[];
     expect(lines[0].elements[0].lastChangedAt).toBe('2026-09-18T12:00:00.000Z');
@@ -159,7 +159,7 @@ test.describe('Unknown Expiry states stay readable and conservative', () => {
       const before = await snapshot(page);
       await expect(page.getByText('Aucune recharge tracée sur ce bloc.')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Déclarer un remplacement', exact: true })).toBeDisabled();
-      await expect(page.getByText(/Démarrage de la ligne autorisé/)).toHaveCount(0);
+      await expect(page.getByText(/Validité estimée favorable/)).toHaveCount(0);
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)).toBe(false);
       expect(await snapshot(page)).toEqual(before);
@@ -220,7 +220,7 @@ test.describe('PR-04 live Expiry refresh', () => {
     await seedAt(page, '2026-09-15T12:00:00.000Z', '2026-09-19T13:00:30.000Z');
     await openExpiry(page, '2026-09-17T12:00:30.000Z');
     const before = await snapshot(page);
-    await expect(page.getByText(/Démarrage de la ligne autorisé/)).toBeVisible();
+    await expect(page.getByText(/Validité estimée favorable/)).toBeVisible();
 
     await page.clock.setFixedTime(new Date('2026-09-17T13:00:30.000Z'));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
