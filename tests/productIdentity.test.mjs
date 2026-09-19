@@ -22,9 +22,7 @@ test('T35: ProtoCap is canonical on visible product surfaces while historical st
   const surfaces = await Promise.all(visibleIdentitySurfaces.map(async (path) => [path, await read(path)]));
   for (const [surface, content] of surfaces) {
     assert.doesNotMatch(content, /LineOps Toolkit/, `${surface} must not expose the retired product name`);
-    if (surface !== 'src/pages/shiftguide/ShiftGuideLock.tsx') {
-      assert.match(content, /ProtoCap/, `${surface} must expose the canonical ProtoCap identity`);
-    }
+    assert.match(content, /ProtoCap/, `${surface} must expose the canonical ProtoCap identity`);
   }
 
   assert.doesNotMatch(
