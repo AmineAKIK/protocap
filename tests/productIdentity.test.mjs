@@ -55,6 +55,10 @@ test('T36: current UI copy states local persistence and estimated validity witho
 
   assert.match(expiry, /Validité estimée favorable/);
   assert.doesNotMatch(expiry, /Démarrage de la ligne autorisé|autorisation de démarrage/i);
+
+  const home = await read('src/pages/HomePage.tsx');
+  assert.match(home, /Validité estimée, échéances visibles/);
+  assert.doesNotMatch(home, /Démarrage sécurisé/);
 });
 
 test('T34/T37: portfolio entry distinguishes demonstration, evidence and unmeasured outcomes', async () => {
