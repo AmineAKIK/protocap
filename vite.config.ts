@@ -26,7 +26,7 @@ export default defineConfig({
         name: 'ProtoCap',
         short_name: 'ProtoCap',
         description:
-          'Démonstrateur interactif d’ingénierie des opérations industrielles pour les équipes de production.',
+          'Portfolio d’ingénierie et démonstrateur interactif pour les opérations industrielles.',
         lang: 'fr',
         theme_color: '#0f766e',
         background_color: '#f8fafc',
