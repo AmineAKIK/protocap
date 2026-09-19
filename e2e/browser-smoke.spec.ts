@@ -72,6 +72,28 @@ test.describe('browser and responsive smoke', () => {
     expect(response.headers()['content-type']).toContain('application/pdf');
   });
 
+  test('T40: a PWA update check and reload preserve browser-local planning data', async ({ page }) => {
+    await page.goto('/packing-calculator');
+    await page.getByLabel('Quantité demandée').fill('30880');
+    await page.getByLabel('Unités par carton').fill('128');
+    await page.getByLabel('Cartons par palette').fill('40');
+
+    const storageKey = 'lineops.packing.form.inputs.v8';
+    await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), storageKey)).not.toBeNull();
+    const before = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update();
+    });
+    await page.reload();
+
+    await expect(page.getByLabel('Quantité demandée')).toHaveValue('30880');
+    await expect(page.getByLabel('Unités par carton')).toHaveValue('128');
+    await expect(page.getByLabel('Cartons par palette')).toHaveValue('40');
+    expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(before);
+  });
+
   test('Pilot proposal is stable on mobile, tablet, small laptop and desktop widths', async ({ page }) => {
     const viewports = [
       { width: 390, height: 844 },
