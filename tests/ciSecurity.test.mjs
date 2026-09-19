@@ -108,11 +108,13 @@ test('scheduled live smoke remains read-only, secret-free and outside AI/auth ro
   assert.match(workflow, /cron:\s*'17 6 \* \* \*'/);
   assert.match(workflow, /permissions:\n\s+contents:\s+read/);
   assert.match(workflow, /PROTOCAP_BASE_URL:\s+https:\/\/protocap-production\.up\.railway\.app/);
-  assert.match(workflow, /run:\s+npm run smoke:live/);
+  assert.match(workflow, /PROTOCAP_DEMO_BASE_URL:\s+https:\/\/protocap-demo-production\.up\.railway\.app/);
+  assert.match(workflow, /npm run smoke:live \| tee test-results\/live-smoke\/output\.txt/);
+  assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
   assert.doesNotMatch(workflow, /secrets\./);
   assert.doesNotMatch(workflow, /permissions:\s+write-all/);
 
-  for (const safePath of ['/', '/api/health', '/api/ready', '/robots.txt']) {
+  for (const safePath of ['/', '/api/health', '/api/ready', '/api/public-demo', '/robots.txt', '/manifest.webmanifest', '/sw.js']) {
     assert.ok(smoke.includes(`'${safePath}'`), `live smoke must include ${safePath}`);
   }
   assert.doesNotMatch(smoke, /\/api\/shiftguide\/unlock/);
