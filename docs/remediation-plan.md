@@ -55,20 +55,20 @@ La colonne « preuve initiale » distingue un défaut observé d'un risque ou d'
 | F08 | Autres consommateurs du stockage partagé et cycles React | Vérification transverse, pas défaut universel affirmé | PR-05, PR-08 | T17, T18, T19 | Ouvert |
 | F09 | Heure de clôture ancienne fabriquée par Logistics | Code | PR-07 | T20 | Ouvert |
 | F10 | Doubles soumissions, identités et transitions | Risques à formaliser | PR-01, PR-06, PR-07, PR-08 | T21, T22, T23 | Ouvert — inventorié |
-| F11 | Fonctionnalité phare difficile à évaluer sans code | Parcours public à revalider | PR-09, PR-10, PR-12 | T24, T25 | Traité PR-10/PR-12 — démo ShiftGuide isolée liée depuis README et verrou; clôture finale PR-13 |
+| F11 | Fonctionnalité phare difficile à évaluer sans code | Parcours public à revalider | PR-09, PR-10, PR-12 | T24, T25 | Implémenté — PR-10/PR-12 : démo ShiftGuide isolée liée depuis README et verrou; clôture finale PR-13 |
 | F12 | Démarrage local incomplet et absence de script `start` | Absence revérifiée | PR-09 | T26, T27, T28 | Ouvert |
 | F13 | Chargement d'environnement, proxy et séparation preview/serveur | Contrat incomplet | PR-09 | T27, T28, T29 | Ouvert |
 | F14 | Couverture front limitée à une sélection de fichiers | Configuration constatée; pas absence totale de tests | PR-03 à PR-08, PR-11 | T30, T31 | Ouvert |
 | F15 | Avis Vitest GHSA-82fw-gwwq-j7x9 et seuil d'audit | Graphe installé concerné | PR-02, PR-11 | T32, T33 | Ouvert |
-| F16 | Contribution personnelle et preuves peu immédiates | Jugement de présentation | PR-12 | T34 | Traité PR-12 — README centré sur preuves vérifiables; aucune attribution personnelle non étayée |
-| F17 | Ancien nom visible LineOps Toolkit | Premier audit; balayage à faire | PR-12 | T35 | Traité PR-12 — surfaces visibles canoniques ProtoCap/ShiftGuide/Céline; clés historiques préservées |
-| F18 | Promesses d'interface et preuves historiques à aligner | Logistics constaté; audit transverse | PR-04, PR-07, PR-10, PR-12 | T36, T37 | Traité PR-12 — libellés Logistics/Expiry bornés au comportement local; preuves historiques distinguées |
+| F16 | Contribution personnelle et preuves peu immédiates | Jugement de présentation | PR-12 | T34 | Implémenté — PR-12 : README centré sur preuves vérifiables; aucune attribution personnelle non étayée |
+| F17 | Ancien nom visible LineOps Toolkit | Premier audit; balayage à faire | PR-12 | T35 | Implémenté — PR-12 : surfaces visibles canoniques ProtoCap/ShiftGuide/Céline; clés historiques préservées |
+| F18 | Promesses d'interface et preuves historiques à aligner | Logistics constaté; audit transverse | PR-04, PR-07, PR-10, PR-12 | T36, T37 | Implémenté — PR-12 : libellés Logistics/Expiry bornés au comportement local; preuves historiques distinguées |
 | F19 | Nouveaux E2E potentiellement oubliés par les scripts explicites | Risque déduit, pas oubli reproduit | PR-01, PR-11 | T38 | Ouvert — garde préventive ajoutée, à consolider |
 | F20 | E2E héritant de l'environnement et réutilisant un serveur | Configuration constatée | PR-01, PR-09, PR-11 | T29, T39 | Ouvert — mitigation PR-01, revalidation ultérieure |
 | F21 | Concurrence locale, versions et ancien onglet | Durcissement préventif | PR-05, PR-06, PR-08, PR-13 | T23, T40, T41 | Ouvert |
 | F22 | Accessibilité des futures erreurs et modes dégradés | Exigence de non-régression | PR-03, PR-04, PR-06, PR-07, PR-10, PR-11 | T42, T43 | Ouvert |
 | F23 | Commit déployé distinct de la réussite CI | Exigence de clôture | PR-13 | T44, T45 | Ouvert |
-| F24 | Dates historiques non réparables par décalage global fiable | Limite de récupérabilité | PR-03, PR-06, PR-12 | T14, T16, T37 | Limite assumée — aucune correction globale; sources historiques conservées, clôture finale PR-13 |
+| F24 | Dates historiques non réparables par décalage global fiable | Limite de récupérabilité | PR-03, PR-06, PR-12 | T14, T16, T37 | En cours — limite assumée : aucune correction globale; sources historiques conservées, clôture finale PR-13 |
 
 ## Catalogue d'acceptation T01–T45
 
