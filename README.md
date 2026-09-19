@@ -2,19 +2,37 @@
 
 [![Quality gate](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml/badge.svg)](https://github.com/AmineAKIK/protocap/actions/workflows/ci.yml)
 
-**Interactive industrial-operations engineering demonstrator for manufacturing teams — shop-floor guidance, traceability, logistics workflows and AI-assisted decision support.**
+**Engineering portfolio and interactive demonstrator for industrial operations — guided work, local traceability, logistics workflows, packaging calculations and AI-assisted decision support.**
 
-[Live demo](https://protocap-production.up.railway.app/) · [Architecture](docs/architecture.md) · [Runtime readiness](docs/runtime-readiness.md) · [Product boundaries](docs/product-boundaries.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
+[Open ProtoCap](https://protocap-production.up.railway.app/) · [Try ShiftGuide demo](https://protocap-demo-production.up.railway.app/demo) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Quality evidence](docs/quality-gates.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
 
-ProtoCap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines independent prototypes with the protected **ShiftGuide** workspace and its AI-assisted operator guide, **Céline**.
+ProtoCap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines browser-local prototypes with the protected **ShiftGuide** workspace and its server-mediated AI guide, **Céline**.
 
-The repository deliberately distinguishes **implemented behavior**, **local demonstrations**, **mock data** and **future operational integrations**. It should be read as an engineering portfolio and product exploration, not as a claim that every demonstrated workflow is already connected to a production information system.
+The repository deliberately distinguishes **implemented behavior**, **synthetic demonstration**, **browser-local state**, **protected runtime configuration** and **future operational integrations**. It is an engineering portfolio and product exploration, not evidence of an industrial deployment or measured business impact.
+
+## Start here
+
+- **Public ProtoCap:** open the hosted application to inspect the public modules and product boundaries.
+- **ShiftGuide public demo:** open the isolated demo origin above. It uses fictitious fixtures and scripted responses, requires no maintainer secret, and never calls the external AI provider.
+- **Protected ShiftGuide:** the production-origin route remains access-controlled. Its protected configuration and real provider path are not exposed by the public demo.
+
+## What this portfolio demonstrates
+
+The verifiable evidence is the repository itself: implementation commits, pull requests, automated tests, architecture decisions and dated release-evidence records. The public repository does **not** infer solo authorship of every operational idea or document, a completed industrial rollout, time savings, productivity gains or business KPIs from commit counts or prototype behavior.
+
+Three engineering decisions are especially visible:
+
+1. **Trust boundaries are explicit.** Public browser-local prototypes, protected ShiftGuide configuration and the isolated synthetic ShiftGuide demo are separate runtime boundaries.
+2. **Failure states stay visible.** Local persistence failures, future schema versions and unavailable coordination do not become silent success confirmations.
+3. **Céline is not an operational-content authority.** The server owns authentication, routing, canonical procedure wording and provider credentials; the external model selects bounded decisions rather than authoring procedure text.
+
+Co-authored, third-party and operational materials may have rights or provenance distinct from the software implementation; see [LICENSING.md](LICENSING.md). Historical evidence is kept as history rather than rewritten to look current.
 
 ## What is implemented
 
 | Surface | Current implementation | Data / runtime boundary |
 | --- | --- | --- |
-| **ShiftGuide** | Protected operator guidance, modules, lexicon, emergencies and shared progress | Protected configuration is served after server-side unlock; progress is browser-persisted |
+| **ShiftGuide** | Protected operator guidance, modules, lexicon, emergencies and progress tracking | Protected configuration is served after server-side unlock; progress is browser-persisted and locally coordinated where supported, not shared between devices |
 | **Céline** | AI-assisted conversational guidance inside ShiftGuide | Server-side prompt/provider boundary; requires a valid ShiftGuide session and network access |
 | **LinePulse** | Multi-role operational-visibility concept | **Demonstration using static mock data**; no live plant feed is connected |
 | **Expiry Check** | Validity tracking and local action history | Browser-local persistence; no shared quality backend |
@@ -77,7 +95,7 @@ npm run check
 
 It runs server syntax checks, the Node test suite, the frontend Vitest suite with coverage floors, ESLint with zero tolerated warnings, TypeScript and the production Vite build. GitHub Actions additionally verifies generated directories are not tracked, builds the production Docker image, installs Chromium and WebKit, runs the critical desktop Chromium journeys, focused mobile Chromium/WebKit browser smoke tests and axe accessibility regression scans, then audits production dependencies.
 
-The automated suite covers server/runtime security helpers, ShiftGuide validation and progress semantics, session/rate-limit behavior, Céline prompt/provider/domain contracts, browser authentication boundaries, shared UI primitives, production packaging invariants, critical ShiftGuide browser journeys, responsive/PWA smoke behavior and automated accessibility regressions.
+The automated suite covers server/runtime security helpers, ShiftGuide validation and progress semantics, session/rate-limit behavior, Céline prompt/provider/domain contracts, browser authentication boundaries, shared UI primitives, packaging invariants, critical ShiftGuide browser journeys, responsive/PWA smoke behavior and automated accessibility regressions. Coverage and browser evidence are engineering checks, not claims of industrial validation.
 
 ## Local development
 

@@ -1,5 +1,7 @@
 # WS-05 — Persistence and local-data integrity evidence
 
+> **Historical evidence notice (PR-12, 19 September 2026):** this record is preserved as evidence of the WS-05 release described below. Current product wording, active storage contracts and superseding evidence live in the current architecture/product-boundary documents and dated `pr-*.md` records. Historical `lineops.*` key names and statements below are not current branding and are not rewritten retroactively.
+
 **Status: COMPLETE — historical WS-05 evidence, with current Packing V2 supersession noted below**
 
 ## Evidence status

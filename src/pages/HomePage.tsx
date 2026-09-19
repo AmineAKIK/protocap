@@ -20,7 +20,7 @@ const modules = [
     to: '/expiry-check',
     icon: ClipboardCheck,
     tag: 'Traçabilité · Démonstrateur',
-    highlight: 'Démarrage sécurisé, échéances visibles'
+    highlight: 'Validité estimée, échéances visibles'
   },
   {
     title: 'Logistics Call',
@@ -91,7 +91,7 @@ export function HomePage() {
                 <ul className="divide-y divide-slate-100">
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">1</span>
-                    Cinq outils complémentaires, chacun centré sur un flux ou une décision terrain.
+                    Cinq modules de démonstration, chacun centré sur un flux ou une décision terrain.
                   </li>
                   <li className="flex items-start gap-3 px-5 py-3.5 text-sm text-slate-700">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">2</span>

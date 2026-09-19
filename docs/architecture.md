@@ -53,7 +53,7 @@ The root React router owns the public application surface and delegates `/shiftg
 
 Within ShiftGuide, `ShiftGuideLayout` is a shell composer rather than a browser-effects container. Desktop/mobile navigation lives in `src/components/shiftguide/ShiftGuideNavigation.tsx`; scroll restoration, route scroll reset, Céline desktop focus, mobile document locking and `visualViewport` sizing live behind `useShiftGuideShell`.
 
-Progress presentation consumes a feature-level selector rather than rebuilding persistence semantics inside a page. `useShiftGuideProgressOverview` reads the canonical `shiftguide_progress_v3` contract, which is bound to the server-issued ShiftGuide configuration revision, applies the shared standard/choice summary rules and subscribes to progress changes.
+Progress presentation consumes a feature-level selector rather than rebuilding persistence semantics inside a page. `useShiftGuideProgressOverview` reads the canonical `shiftguide_progress_v4` contract, which is bound to the server-issued ShiftGuide configuration revision, applies the shared standard/choice summary rules and subscribes to progress changes.
 
 These boundaries are intentionally pragmatic rather than framework-driven: there is no global state library or artificial component hierarchy.
 
@@ -71,7 +71,7 @@ The configuration revision is a SHA-256 identity derived server-side from the va
 
 The browser stores the active ShiftGuide token, protected payload, expiry and both server revisions in `sessionStorage`. The server returns the same identities during session validation. A revision mismatch fails closed instead of allowing an old browser session to claim compatibility with a different procedure or AI authority protocol.
 
-Revision-bound local data uses a separate persistent copy of the current configuration revision. Progress is stored as format version `3` with its `configRevision`. Existing v1/v2 progress has no trustworthy provenance and is deliberately discarded on the first revision-aware unlock.
+Revision-bound local data uses a separate persistent copy of the current configuration revision. Progress is stored as format version `4` with its `configRevision` and occurrence-aware workflow runs. Legacy v3 data is migrated by the dedicated persistence contract; older v1/v2 progress has no trustworthy provenance and is not silently interpreted as current occurrence-aware state.
 
 Céline conversation history has a different lifetime from procedure progress. It may be persisted locally while the current ShiftGuide session is active so navigation and reloads can resume the conversation, but the authentication boundary owns its lifecycle. Every successful unlock starts with fresh Céline memory, and every certain session termination or invalidation — logout, local expiry, server `401`, or config/authority revision mismatch — clears the conversation. Legacy persistent Céline history from earlier builds is also removed. A transient network failure during validation does not erase memory because it does not prove that the server session ended. Operator progress is not cleared by these conversation-lifecycle events.
 

@@ -8,7 +8,7 @@ The purpose of this document is to make the product surface auditable. A recruit
 | Céline | Authenticated server-mediated AI guidance with a protected prompt/provider key | Autonomous control of equipment, offline AI, or a provider-neutral backend contract |
 | LinePulse | Role-specific operational visualisation and decision-support UX | Live telemetry, real-time plant synchronisation or measured operational impact |
 | Expiry Check | Interactive validity/status workflow and local history | Shared quality database, validated electronic batch record or cross-device synchronisation |
-| Logistics Call | Request lifecycle, prioritisation, elapsed-time UX and status transitions | Multi-user messaging, websocket/event streaming or real-time logistics synchronisation |
+| Logistics Call | Browser-local request lifecycle, prioritisation, elapsed-time UX and status transitions | Delivery to another user/device, multi-user messaging, websocket/event streaming or real-time logistics synchronisation |
 | Knowledge Base | Search/navigation model for operational references | Connection to an enterprise document-management system |
 | Packing Calculator | Deterministic local packaging calculations and manual pallet-dispatch progress | ERP/master-data integration, shared dispatch state or automatic production-order execution |
 | Pilot proposal | A structured controlled-pilot proposal and guard-rail thinking | Approval, deployment, production validation or measured benefits |
@@ -46,4 +46,4 @@ The public-demo profile is deliberately separate from the protected ShiftGuide r
 
 The demo origin does not expose the protected code-unlock route. A demo token is process/origin scoped and is not accepted by the protected service. The profile has bounded session creation and reuses the existing chat rate limits; it does not relax the protected runtime's authentication or provider budgets.
 
-A hosted link is advertised only through `PUBLIC_DEMO_URL` after the isolated service has been deployed and verified. Until then, the repository documents `npm run demo` and does not publish a placeholder URL.
+The current hosted ShiftGuide demo is published at `https://protocap-demo-production.up.railway.app/demo`; the protected service advertises that isolated origin through `PUBLIC_DEMO_URL`. The demo origin serves ShiftGuide only. Non-ShiftGuide browser routes and demo logout return to the real ProtoCap origin configured by `PROTOCAP_PUBLIC_URL`. Historical evidence predating that deployment remains historical rather than being rewritten.

@@ -18,6 +18,12 @@ Please include:
 - the potential impact;
 - any suggested mitigation, if known.
 
+## Demonstration boundary
+
+The public ShiftGuide demo is an isolated synthetic runtime. It must not inherit provider credentials or protected ShiftGuide configuration from the production service. Its scripted responses and fictitious data are demonstration material, not a way to bypass the protected runtime.
+
+The demo origin is scoped to ShiftGuide. Non-ShiftGuide browser routes and demo logout return to the configured public ProtoCap origin. A regression that exposes protected unlock behavior, provider credentials, protected configuration, or the full ProtoCap SPA on the demo origin should be treated as a security/product-boundary issue.
+
 ## Secrets and protected data
 
 Production secrets belong in the deployment environment and must never be committed to Git. The repository intentionally exposes only variable names through `.env.example`.
