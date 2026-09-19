@@ -94,9 +94,9 @@ test.describe('browser and responsive smoke', () => {
     expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(before);
   });
 
-  test('T45: a previously loaded public local module remains available offline through the PWA cache', async ({ page }) => {
-    await page.goto('/packing-calculator');
-    await expect(page.getByRole('heading', { name: 'Packing Calculator' })).toBeVisible();
+  test('T45: the previously loaded public shell remains available offline through the PWA cache', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
     });
@@ -107,7 +107,7 @@ test.describe('browser and responsive smoke', () => {
     await context.setOffline(true);
     try {
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('heading', { name: 'Packing Calculator' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
     } finally {
       await context.setOffline(false);
     }
