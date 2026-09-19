@@ -54,22 +54,22 @@ const openingStatements = [
 
 const impactBlocks = [
   {
-    title: `Réduction des erreurs évitables`,
+    title: `Hypothèse : réduire les erreurs évitables`,
     icon: CheckCircle2,
     items: [`moins d'oublis`, `moins de doubles vérifications`, `moins d'ambiguïté avant action`]
   },
   {
-    title: `Réduction des temps morts`,
+    title: `Hypothèse : réduire les temps morts`,
     icon: Clock3,
     items: [`réduction du délai logistique`, `réduction des relances`, `réduction du temps de recherche`]
   },
   {
-    title: `Traçabilité utile`,
+    title: `Hypothèse : rendre la traçabilité utile`,
     icon: History,
     items: [`meilleure lecture des actions`, `historique exploitable`, `suivi des échéances`]
   },
   {
-    title: `Réduction de la charge cognitive`,
+    title: `Hypothèse : réduire la charge cognitive`,
     icon: Brain,
     items: [`moins de changements de contexte`, `moins de mémoire sollicitée`, `plus de présence opérationnelle`]
   }
@@ -117,7 +117,7 @@ const prototypes = [
     icon: Calculator,
     issueParagraph: `Le conducteur reçoit une quantité totale à produire et doit la convertir en palettes, cartons et unités. Ce calcul simple s'ajoute à la cadence, aux arrêts et aux saisies — une erreur peut créer un dépassement non anticipé.`,
     responseParagraph: `Packing Calculator calcule automatiquement le découpage opérationnel. Le conducteur saisit la quantité et le conditionnement — le système affiche palettes, cartons, unités et l'écart selon la stratégie choisie.`,
-    valueParagraphs: [`Le calcul manuel disparaît.`, `L'écart devient visible.`, `La décision devient plus rapide.`, `Le risque d'erreur diminue.`],
+    valueParagraphs: [`Le calcul est automatisé dans le démonstrateur.`, `L'écart devient visible.`, `La décision peut être comparée aux règles affichées.`, `La réduction d'erreurs reste un indicateur à mesurer.`],
     indicators: [`temps moyen de calcul`, `nombre d'erreurs de quantité`, `dépassements évités`]
   }
 ];
