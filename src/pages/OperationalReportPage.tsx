@@ -99,7 +99,7 @@ const impactBlocks = [
     color: 'violet',
     paragraphs: [
       `La traçabilité ne doit pas être une charge ajoutée au travail. Elle doit naître naturellement de l'action.`,
-      `Lorsqu'un changement est déclaré, lorsqu'un appel est envoyé, lorsqu'un statut est modifié ou lorsqu'un calcul est effectué, l'historique doit se construire sans effort supplémentaire.`
+      `Lorsqu'un changement est déclaré, lorsqu'un appel est enregistré localement, lorsqu'un statut est modifié ou lorsqu'un calcul est effectué, l'historique local doit se construire sans effort supplémentaire.`
     ],
     items: [
       `meilleure lecture des actions réalisées`,
@@ -851,7 +851,7 @@ export function OperationalReportPage() {
                   plus fluide. Lorsqu'elle est dispersée, ambiguë ou portée par la mémoire, elle crée
                   de la charge inutile.
                 </p>
-                <p>LineOps Toolkit présente quatre prototypes autour d'une même ambition :</p>
+                <p>ProtoCap présente ces prototypes autour d'une même ambition :</p>
               </div>
               <div className="mt-6 min-w-0 rounded-2xl border border-teal-500/30 bg-teal-500/10 p-5 sm:p-6">
                 <p className="break-normal text-lg font-black leading-8 text-white sm:text-xl">
