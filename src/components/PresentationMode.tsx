@@ -61,7 +61,7 @@ const impactBlocks = [
   {
     title: `Hypothèse : réduire les temps morts`,
     icon: Clock3,
-    items: [`réduction du délai logistique`, `réduction des relances`, `réduction du temps de recherche`]
+    items: [`délai logistique`, `nombre de relances`, `temps de recherche`]
   },
   {
     title: `Hypothèse : rendre la traçabilité utile`,
@@ -118,7 +118,7 @@ const prototypes = [
     issueParagraph: `Le conducteur reçoit une quantité totale à produire et doit la convertir en palettes, cartons et unités. Ce calcul simple s'ajoute à la cadence, aux arrêts et aux saisies — une erreur peut créer un dépassement non anticipé.`,
     responseParagraph: `Packing Calculator calcule automatiquement le découpage opérationnel. Le conducteur saisit la quantité et le conditionnement — le système affiche palettes, cartons, unités et l'écart selon la stratégie choisie.`,
     valueParagraphs: [`Le calcul est automatisé dans le démonstrateur.`, `L'écart devient visible.`, `La décision peut être comparée aux règles affichées.`, `La réduction d'erreurs reste un indicateur à mesurer.`],
-    indicators: [`temps moyen de calcul`, `nombre d'erreurs de quantité`, `dépassements évités`]
+    indicators: [`temps moyen de calcul`, `nombre d'erreurs de quantité`, `dépassements constatés`]
   }
 ];
 
