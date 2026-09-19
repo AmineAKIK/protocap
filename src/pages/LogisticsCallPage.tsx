@@ -229,7 +229,7 @@ export function LogisticsCallPage() {
           Appels palettes côté ligne, priorités, statuts de traitement et board logistique persisté localement dans ce navigateur.
         </p>
         <p className="mt-1 hidden max-w-3xl break-normal text-sm font-semibold text-teal-800 sm:mt-2 sm:block">
-          Demandes visibles, suivies et priorisées sans perte d'information.
+          Demandes visibles, suivies et priorisées dans l’état local de ce navigateur.
         </p>
       </div>
 
@@ -299,7 +299,7 @@ export function LogisticsCallPage() {
               </div>
               <div className="min-w-0">
                 <h3 className="break-normal text-lg font-bold text-slate-950">Formulaire ligne</h3>
-                <p className="break-normal text-sm text-slate-500">L'appel est horodaté et envoyé au board logistique.</p>
+                <p className="break-normal text-sm text-slate-500">L’appel est horodaté et enregistré dans le board local de ce navigateur.</p>
               </div>
             </div>
 
@@ -369,7 +369,7 @@ export function LogisticsCallPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Écran logistique</p>
             <h2 className="break-normal text-lg font-black sm:mt-1 sm:text-xl">Board de traitement</h2>
             <p className="mt-1 hidden break-normal text-sm font-medium leading-6 text-slate-200 sm:mt-2 sm:block">
-              Les demandes envoyées depuis les lignes apparaissent ici pour être vues, prises en charge, récupérées ou annulées.
+              Les demandes enregistrées dans ce navigateur apparaissent ici pour être vues, prises en charge, récupérées ou annulées.
             </p>
           </div>
           <div className="panel min-w-0 p-4 sm:p-5">
