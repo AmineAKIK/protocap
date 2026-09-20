@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { runLiveSmoke } from '../scripts/live-smoke.mjs';
+import { ESSAY_PDF_PATH, runLiveSmoke } from '../scripts/live-smoke.mjs';
 
 const SECURITY_HEADERS = {
   'content-security-policy': "default-src 'self'; frame-ancestors 'none'",
@@ -13,9 +13,13 @@ const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
 };
 
-function response(body, { headers = {}, json = false } = {}) {
+function response(body, {
+  status = 200,
+  headers = {},
+  json = false,
+} = {}) {
   return new Response(json ? JSON.stringify(body) : body, {
-    status: 200,
+    status,
     headers: {
       ...SECURITY_HEADERS,
       ...headers,
@@ -24,68 +28,176 @@ function response(body, { headers = {}, json = false } = {}) {
   });
 }
 
-test('live smoke checks only public non-mutating production surfaces', async () => {
-  const requested = [];
-  const fetchImpl = async (url, init) => {
-    const { pathname } = new URL(url);
-    requested.push({ pathname, method: init?.method });
+function api(body, requestId) {
+  return response(body, {
+    json: true,
+    headers: { 'cache-control': 'no-store', 'x-request-id': requestId },
+  });
+}
 
-    if (pathname === '/') {
-      return response('<!doctype html><title>ProtoCap — démonstrateur</title>', {
-        headers: { 'content-type': 'text/html; charset=utf-8' },
-      });
+test('T44/T45 live smoke checks protected and demo public surfaces without protected or AI mutations', async () => {
+  const requested = [];
+  const protectedOrigin = 'https://app.example.test';
+  const demoOrigin = 'https://demo.example.test';
+
+  const fetchImpl = async (url, init) => {
+    const parsed = new URL(url);
+    requested.push({
+      origin: parsed.origin,
+      pathname: parsed.pathname,
+      method: init?.method,
+      redirect: init?.redirect,
+    });
+
+    if (parsed.origin === protectedOrigin) {
+      if (parsed.pathname === '/') {
+        return response('<!doctype html><title>ProtoCap — démonstrateur</title>', {
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        });
+      }
+      if (parsed.pathname === '/api/health') return api({ ok: true }, 'protected-health');
+      if (parsed.pathname === '/api/ready') return api({ ok: true, checks: {} }, 'protected-ready');
+      if (parsed.pathname === '/api/public-demo') {
+        return api({
+          available: true,
+          selfServe: false,
+          entryUrl: demoOrigin + '/demo',
+        }, 'protected-demo');
+      }
+      if (parsed.pathname === '/robots.txt') {
+        return response('User-agent: *\nAllow: /\n\nSitemap: ' + protectedOrigin + '/sitemap.xml\n');
+      }
+      if (parsed.pathname === '/manifest.webmanifest') {
+        return response({ name: 'ProtoCap', short_name: 'ProtoCap' }, {
+          json: true,
+          headers: { 'content-type': 'application/manifest+json' },
+        });
+      }
+      if (parsed.pathname === '/sw.js') {
+        return response('self.addEventListener("fetch", () => {});', {
+          headers: { 'content-type': 'application/javascript' },
+        });
+      }
+      if (parsed.pathname === ESSAY_PDF_PATH) {
+        return response(Buffer.from('%PDF-fixture'), {
+          headers: { 'content-type': 'application/pdf' },
+        });
+      }
     }
-    if (pathname === '/api/health') {
-      return response({ ok: true }, {
-        json: true,
-        headers: { 'cache-control': 'no-store', 'x-request-id': 'smoke-health-1' },
-      });
+
+    if (parsed.origin === demoOrigin) {
+      if (parsed.pathname === '/api/health') return api({ ok: true }, 'demo-health');
+      if (parsed.pathname === '/api/ready') return api({ ok: true, checks: {} }, 'demo-ready');
+      if (parsed.pathname === '/api/public-demo') {
+        return api({ available: true, selfServe: true, entryUrl: '/demo' }, 'demo-public');
+      }
+      if (parsed.pathname === '/demo') {
+        return response(
+          '<!doctype html><head>' +
+          '<meta name="protocap-runtime-profile" content="demo">' +
+          '<meta name="protocap-public-origin" content="' + protectedOrigin + '">' +
+          '</head>',
+          { headers: { 'content-type': 'text/html; charset=utf-8' } }
+        );
+      }
+      if (parsed.pathname === '/manifest.webmanifest') {
+        return response({ name: 'ShiftGuide démo', start_url: '/demo' }, {
+          json: true,
+          headers: {
+            'content-type': 'application/manifest+json',
+            'cache-control': 'no-store',
+          },
+        });
+      }
+      if (parsed.pathname === '/sw.js') {
+        return response('self.addEventListener("activate",()=>caches.keys());', {
+          headers: {
+            'content-type': 'application/javascript',
+            'cache-control': 'no-store',
+          },
+        });
+      }
+      if (parsed.pathname === '/' || parsed.pathname === '/rapport') {
+        return response('', {
+          status: 302,
+          headers: {
+            location: protectedOrigin + parsed.pathname,
+            'cache-control': 'no-store',
+          },
+        });
+      }
+      if (parsed.pathname === ESSAY_PDF_PATH) {
+        return response('Asset introuvable.', {
+          status: 404,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
     }
-    if (pathname === '/api/ready') {
-      return response({ ok: true, checks: {} }, {
-        json: true,
-        headers: { 'cache-control': 'no-store', 'x-request-id': 'smoke-ready-1' },
-      });
-    }
-    if (pathname === '/robots.txt') {
-      return response('User-agent: *\nAllow: /\n\nSitemap: https://example.test/sitemap.xml\n');
-    }
-    throw new Error(`Unexpected smoke request: ${pathname}`);
+
+    throw new Error('Unexpected smoke request: ' + parsed.origin + parsed.pathname);
   };
 
   const result = await runLiveSmoke({
-    baseUrl: 'https://example.test',
+    baseUrl: protectedOrigin,
+    demoBaseUrl: demoOrigin,
     fetchImpl,
     log: () => {},
   });
 
-  assert.deepEqual(result.checked, ['/', '/api/health', '/api/ready', '/robots.txt']);
-  assert.deepEqual(
-    requested,
-    [
-      { pathname: '/', method: 'GET' },
-      { pathname: '/api/health', method: 'GET' },
-      { pathname: '/api/ready', method: 'GET' },
-      { pathname: '/robots.txt', method: 'GET' },
-    ]
-  );
+  assert.equal(result.protectedOrigin, protectedOrigin);
+  assert.equal(result.demoOrigin, demoOrigin);
+  assert.deepEqual(result.protectedChecks, [
+    '/',
+    '/api/health',
+    '/api/ready',
+    '/api/public-demo',
+    '/robots.txt',
+    '/manifest.webmanifest',
+    '/sw.js',
+    ESSAY_PDF_PATH,
+  ]);
+  assert.deepEqual(result.demoChecks, [
+    '/api/health',
+    '/api/ready',
+    '/api/public-demo',
+    '/demo',
+    '/manifest.webmanifest',
+    '/sw.js',
+    '/ -> protected',
+    '/rapport -> protected',
+    ESSAY_PDF_PATH + ' -> 404',
+  ]);
+  assert.ok(requested.every(({ method }) => method === 'GET'));
   assert.ok(requested.every(({ pathname }) => !pathname.includes('unlock')));
   assert.ok(requested.every(({ pathname }) => !pathname.includes('celine')));
+  assert.ok(requested.every(({ pathname }) => !pathname.includes('/session')));
 });
 
-test('live smoke refuses a non-HTTPS target before making a request', async () => {
+test('live smoke refuses non-HTTPS or identical targets before making a request', async () => {
   let called = false;
+  const fetchImpl = async () => {
+    called = true;
+    throw new Error('must not be called');
+  };
 
   await assert.rejects(
     runLiveSmoke({
       baseUrl: 'http://example.test',
-      fetchImpl: async () => {
-        called = true;
-        throw new Error('must not be called');
-      },
+      demoBaseUrl: 'https://demo.example.test',
+      fetchImpl,
       log: () => {},
     }),
     /must use HTTPS/
+  );
+
+  await assert.rejects(
+    runLiveSmoke({
+      baseUrl: 'https://same.example.test',
+      demoBaseUrl: 'https://same.example.test',
+      fetchImpl,
+      log: () => {},
+    }),
+    /must be distinct origins/
   );
 
   assert.equal(called, false);

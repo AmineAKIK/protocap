@@ -45,30 +45,30 @@ La colonne « preuve initiale » distingue un défaut observé d'un risque ou d'
 
 | ID | Constat ou risque | Preuve initiale | PR propriétaires | Tests | Statut après PR-01 |
 |---|---|---|---|---|---|
-| F01 | Préremplissage UTC utilisé comme heure locale | Code et reproduction isolée | PR-03 | T01, T02 | Ouvert |
-| F02 | Intervention future ou date invalide acceptée; statut insuffisamment prudent | Code et reproduction partielle | PR-03, PR-06 | T03, T04, T05 | Ouvert |
-| F03 | Statuts et compteurs Expiry dépendants du temps sans horloge commune | Code; navigateur à reproduire | PR-04 | T06, T07, T08 | Ouvert |
-| F04 | Sens des jours de validité et cohérence aux changements d'heure | Décision; 119/121 h reproduits, pas une faute prouvée | PR-01, PR-03, PR-04 | T02, T09 | Ouvert — D01/D02 adoptées |
-| F05 | Succès et remise à zéro Logistics malgré une écriture dégradée | Code; panne navigateur à injecter | PR-05, PR-07 | T10, T11, T12 | Ouvert |
-| F06 | État Expiry et historique écrits séparément | Code; incohérence possible sous panne | PR-05, PR-06 | T13, T14 | Ouvert |
-| F07 | Récupération corrompue pouvant réécrire les valeurs initiales | Code du hook | PR-05, PR-06, PR-08 | T15, T16 | Ouvert |
-| F08 | Autres consommateurs du stockage partagé et cycles React | Vérification transverse, pas défaut universel affirmé | PR-05, PR-08 | T17, T18, T19 | Ouvert |
-| F09 | Heure de clôture ancienne fabriquée par Logistics | Code | PR-07 | T20 | Ouvert |
-| F10 | Doubles soumissions, identités et transitions | Risques à formaliser | PR-01, PR-06, PR-07, PR-08 | T21, T22, T23 | Ouvert — inventorié |
-| F11 | Fonctionnalité phare difficile à évaluer sans code | Parcours public à revalider | PR-09, PR-10, PR-12 | T24, T25 | Implémenté — PR-10/PR-12 : démo ShiftGuide isolée liée depuis README et verrou; clôture finale PR-13 |
-| F12 | Démarrage local incomplet et absence de script `start` | Absence revérifiée | PR-09 | T26, T27, T28 | Ouvert |
-| F13 | Chargement d'environnement, proxy et séparation preview/serveur | Contrat incomplet | PR-09 | T27, T28, T29 | Ouvert |
-| F14 | Couverture front limitée à une sélection de fichiers | Configuration constatée; pas absence totale de tests | PR-03 à PR-08, PR-11 | T30, T31 | Ouvert |
-| F15 | Avis Vitest GHSA-82fw-gwwq-j7x9 et seuil d'audit | Graphe installé concerné | PR-02, PR-11 | T32, T33 | Ouvert |
-| F16 | Contribution personnelle et preuves peu immédiates | Jugement de présentation | PR-12 | T34 | Implémenté — PR-12 : README centré sur preuves vérifiables; aucune attribution personnelle non étayée |
-| F17 | Ancien nom visible LineOps Toolkit | Premier audit; balayage à faire | PR-12 | T35 | Implémenté — PR-12 : surfaces visibles canoniques ProtoCap/ShiftGuide/Céline; clés historiques préservées |
-| F18 | Promesses d'interface et preuves historiques à aligner | Logistics constaté; audit transverse | PR-04, PR-07, PR-10, PR-12 | T36, T37 | Implémenté — PR-12 : libellés Logistics/Expiry bornés au comportement local; preuves historiques distinguées |
-| F19 | Nouveaux E2E potentiellement oubliés par les scripts explicites | Risque déduit, pas oubli reproduit | PR-01, PR-11 | T38 | Ouvert — garde préventive ajoutée, à consolider |
-| F20 | E2E héritant de l'environnement et réutilisant un serveur | Configuration constatée | PR-01, PR-09, PR-11 | T29, T39 | Ouvert — mitigation PR-01, revalidation ultérieure |
-| F21 | Concurrence locale, versions et ancien onglet | Durcissement préventif | PR-05, PR-06, PR-08, PR-13 | T23, T40, T41 | Ouvert |
-| F22 | Accessibilité des futures erreurs et modes dégradés | Exigence de non-régression | PR-03, PR-04, PR-06, PR-07, PR-10, PR-11 | T42, T43 | Ouvert |
-| F23 | Commit déployé distinct de la réussite CI | Exigence de clôture | PR-13 | T44, T45 | Ouvert |
-| F24 | Dates historiques non réparables par décalage global fiable | Limite de récupérabilité | PR-03, PR-06, PR-12 | T14, T16, T37 | En cours — limite assumée : aucune correction globale; sources historiques conservées, clôture finale PR-13 |
+| F01 | Préremplissage UTC utilisé comme heure locale | Code et reproduction isolée | PR-03 | T01, T02 | Vérifié — T01/T02 rejoués dans Quality Gate #818 sur `6c04083b831e97a774f4f2f94a366f45ca07bb93` |
+| F02 | Intervention future ou date invalide acceptée; statut insuffisamment prudent | Code et reproduction partielle | PR-03, PR-06 | T03, T04, T05 | Vérifié — T03/T04/T05 rejoués dans Quality Gate #818 |
+| F03 | Statuts et compteurs Expiry dépendants du temps sans horloge commune | Code; navigateur à reproduire | PR-04 | T06, T07, T08 | Vérifié — T06/T07/T08 rejoués dans Quality Gate #818 |
+| F04 | Sens des jours de validité et cohérence aux changements d'heure | Décision; 119/121 h reproduits, pas une faute prouvée | PR-01, PR-03, PR-04 | T02, T09 | Vérifié — D01/D02 conservées; T02/T09 rejoués dans Quality Gate #818 |
+| F05 | Succès et remise à zéro Logistics malgré une écriture dégradée | Code; panne navigateur à injecter | PR-05, PR-07 | T10, T11, T12 | Vérifié — T10/T11/T12 rejoués dans Quality Gate #818 |
+| F06 | État Expiry et historique écrits séparément | Code; incohérence possible sous panne | PR-05, PR-06 | T13, T14 | Vérifié — T13/T14 rejoués dans Quality Gate #818 |
+| F07 | Récupération corrompue pouvant réécrire les valeurs initiales | Code du hook | PR-05, PR-06, PR-08 | T15, T16 | Vérifié — T15/T16 rejoués dans Quality Gate #818 |
+| F08 | Autres consommateurs du stockage partagé et cycles React | Vérification transverse, pas défaut universel affirmé | PR-05, PR-08 | T17, T18, T19 | Vérifié — T17/T18/T19 rejoués dans Quality Gate #818 |
+| F09 | Heure de clôture ancienne fabriquée par Logistics | Code | PR-07 | T20 | Vérifié — T20 rejoué dans Quality Gate #818 |
+| F10 | Doubles soumissions, identités et transitions | Risques à formaliser | PR-01, PR-06, PR-07, PR-08 | T21, T22, T23 | Vérifié — T21/T22/T23 rejoués dans Quality Gate #818 |
+| F11 | Fonctionnalité phare difficile à évaluer sans code | Parcours public à revalider | PR-09, PR-10, PR-12 | T24, T25 | Vérifié — T24/T25 rejoués; démo ShiftGuide isolée validée dans Quality Gate #818 et Live smoke #31 |
+| F12 | Démarrage local incomplet et absence de script `start` | Absence revérifiée | PR-09 | T26, T27, T28 | Vérifié — T26/T27/T28 revalidés dans Quality Gate #818 |
+| F13 | Chargement d'environnement, proxy et séparation preview/serveur | Contrat incomplet | PR-09 | T27, T28, T29 | Vérifié — T27/T28/T29 revalidés dans Quality Gate #818 |
+| F14 | Couverture front limitée à une sélection de fichiers | Configuration constatée; pas absence totale de tests | PR-03 à PR-08, PR-11 | T30, T31 | Vérifié — T30/T31 revalidés; rapports couverture et mutation smoke dans Quality Gate #818 |
+| F15 | Avis Vitest GHSA-82fw-gwwq-j7x9 et seuil d'audit | Graphe installé concerné | PR-02, PR-11 | T32, T33 | Vérifié — T32/T33 revalidés; audits full/prod verts dans Quality Gate #818 |
+| F16 | Contribution personnelle et preuves peu immédiates | Jugement de présentation | PR-12 | T34 | Vérifié — T34 revalidé dans Quality Gate #818 |
+| F17 | Ancien nom visible LineOps Toolkit | Premier audit; balayage à faire | PR-12 | T35 | Vérifié — T35 revalidé dans Quality Gate #818; clés historiques préservées |
+| F18 | Promesses d'interface et preuves historiques à aligner | Logistics constaté; audit transverse | PR-04, PR-07, PR-10, PR-12 | T36, T37 | Vérifié — T36/T37 revalidés dans Quality Gate #818 |
+| F19 | Nouveaux E2E potentiellement oubliés par les scripts explicites | Risque déduit, pas oubli reproduit | PR-01, PR-11 | T38 | Vérifié — T38 revalidé; manifeste E2E et zéro-test fail-closed dans Quality Gate #818 |
+| F20 | E2E héritant de l'environnement et réutilisant un serveur | Configuration constatée | PR-01, PR-09, PR-11 | T29, T39 | Vérifié — T29/T39 revalidés; harnais E2E hermétique dans Quality Gate #818 |
+| F21 | Concurrence locale, versions et ancien onglet | Durcissement préventif | PR-05, PR-06, PR-08, PR-13 | T23, T40, T41 | Vérifié — T23/T40/T41 rejoués; concurrence, migration/reload et PWA couverts dans Quality Gate #818 |
+| F22 | Accessibilité des futures erreurs et modes dégradés | Exigence de non-régression | PR-03, PR-04, PR-06, PR-07, PR-10, PR-11 | T42, T43 | Vérifié — T42/T43 rejoués sur Chromium/mobile/WebKit et axe dans Quality Gate #818 |
+| F23 | Commit déployé distinct de la réussite CI | Exigence de clôture | PR-13 | T44, T45 | En cours — pré-merge validé par Quality Gate #818, CodeQL #517 et Live smoke #31; corrélation du SHA de merge Railway requise après fusion |
+| F24 | Dates historiques non réparables par décalage global fiable | Limite de récupérabilité | PR-03, PR-06, PR-12 | T14, T16, T37 | Vérifié — T14/T16/T37 confirment la limite: aucune correction globale arbitraire; sources historiques conservées |
 
 ## Catalogue d'acceptation T01–T45
 

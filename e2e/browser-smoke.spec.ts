@@ -72,6 +72,65 @@ test.describe('browser and responsive smoke', () => {
     expect(response.headers()['content-type']).toContain('application/pdf');
   });
 
+  test('T40: a PWA update check and reload preserve browser-local planning data', async ({ page }) => {
+    await page.goto('/packing-calculator');
+    await page.getByLabel('Quantité demandée').fill('30880');
+    await page.getByLabel('Unités par carton').fill('128');
+    await page.getByLabel('Cartons par palette').fill('40');
+
+    const storageKey = 'lineops.packing.form.inputs.v8';
+    await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), storageKey)).not.toBeNull();
+    const before = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.update();
+    });
+    await page.reload();
+
+    await expect(page.getByLabel('Quantité demandée')).toHaveValue('30880');
+    await expect(page.getByLabel('Unités par carton')).toHaveValue('128');
+    await expect(page.getByLabel('Cartons par palette')).toHaveValue('40');
+    expect(await page.evaluate((key) => localStorage.getItem(key), storageKey)).toBe(before);
+  });
+
+  test('T45: the previously loaded public shell remains available offline through the PWA cache', async ({ page, browserName }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+    const cachedShell = await page.evaluate(async () => {
+      for (const cacheName of await caches.keys()) {
+        const cache = await caches.open(cacheName);
+        const requests = await cache.keys();
+        if (requests.some((request) => {
+          const path = new URL(request.url).pathname;
+          return path === '/' || path === '/index.html';
+        })) return true;
+      }
+      return false;
+    });
+    expect(cachedShell).toBe(true);
+
+    // Playwright WebKit currently raises an internal engine error on offline reload.
+    // The WebKit project still verifies SW control + precached shell above; Chromium
+    // performs the real offline navigation assertion.
+    if (browserName === 'webkit') return;
+
+    const context = page.context();
+    await context.setOffline(true);
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('heading', { name: /ProtoCap/ })).toBeVisible();
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
   test('Pilot proposal is stable on mobile, tablet, small laptop and desktop widths', async ({ page }) => {
     const viewports = [
       { width: 390, height: 844 },

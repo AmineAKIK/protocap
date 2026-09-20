@@ -2,6 +2,25 @@ name: Live smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/live-smoke.mjs'
+      - 'tests/liveSmoke.test.mjs'
+      - '.github/workflows/live-smoke.yml'
+      - 'docs/release-and-operations.md'
+      - 'docs/release-evidence/**'
+      - 'docs/remediation-plan.md'
+      - 'e2e/browser-smoke.spec.ts'
+  pull_request:
+    paths:
+      - 'scripts/live-smoke.mjs'
+      - 'tests/liveSmoke.test.mjs'
+      - '.github/workflows/live-smoke.yml'
+      - 'docs/release-and-operations.md'
+      - 'docs/release-evidence/**'
+      - 'docs/remediation-plan.md'
   schedule:
     - cron: '17 6 * * *'
 
@@ -19,6 +38,7 @@ jobs:
     timeout-minutes: 5
     env:
       PROTOCAP_BASE_URL: https://protocap-production.up.railway.app
+      PROTOCAP_DEMO_BASE_URL: https://protocap-demo-production.up.railway.app
 
     steps:
       - name: Checkout
@@ -29,5 +49,16 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Probe public production surfaces
-        run: npm run smoke:live
+      - name: Probe protected and demo public surfaces
+        run: |
+          mkdir -p test-results/live-smoke
+          npm run smoke:live | tee test-results/live-smoke/output.txt
+
+      - name: Upload live smoke evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: live-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/live-smoke/output.txt
+          if-no-files-found: warn
+          retention-days: 14
