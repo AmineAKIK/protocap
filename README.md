@@ -4,7 +4,9 @@
 
 **Engineering portfolio and interactive demonstrator for industrial operations — guided work, local traceability, logistics workflows, packaging calculations and AI-assisted decision support.**
 
-[Open ProtoCap](https://protocap-production.up.railway.app/) · [Try ShiftGuide demo](https://protocap-demo-production.up.railway.app/demo) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Quality evidence](docs/quality-gates.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
+[Open ProtoCap](https://protocap.akiksystems.com/) · [Try ShiftGuide demo](https://protocap-demo-production.up.railway.app/demo) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Quality evidence](docs/quality-gates.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
+
+Also available at <https://protocap.akiksystems.fr>.
 
 ProtoCap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines browser-local prototypes with the protected **ShiftGuide** workspace and its server-mediated AI guide, **Céline**.
 

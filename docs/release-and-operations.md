@@ -6,11 +6,11 @@ ProtoCap is a public technical demonstrator, not an enterprise production platfo
 
 Canonical deployment:
 
-- `https://protocap-production.up.railway.app`
+- `https://protocap.akiksystems.com` (also served on `https://protocap.akiksystems.fr`; the `.com` host is the canonical one)
 - Railway production healthcheck: `/api/ready`
 - GitHub deployment source: `main`
 
-A custom domain can replace the Railway hostname later if an owned domain is available. The live smoke target, `robots.txt`, sitemap and canonical metadata must then be changed together.
+The Railway hostname `protocap-production.up.railway.app` is no longer used as the public address. If the canonical domain changes again, the live smoke target, `robots.txt`, sitemap and canonical metadata must be changed together.
 
 ## External live smoke
 
