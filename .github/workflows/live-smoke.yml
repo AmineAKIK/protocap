@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      PROTOCAP_BASE_URL: https://protocap-production.up.railway.app
+      PROTOCAP_BASE_URL: https://protocap.akiksystems.com
       PROTOCAP_DEMO_BASE_URL: https://protocap-demo-production.up.railway.app
 
     steps:
