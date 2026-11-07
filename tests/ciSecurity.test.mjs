@@ -107,8 +107,8 @@ test('scheduled live smoke remains read-only, secret-free and outside AI/auth ro
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /cron:\s*'17 6 \* \* \*'/);
   assert.match(workflow, /permissions:\n\s+contents:\s+read/);
-  assert.match(workflow, /PROTOCAP_BASE_URL:\s+https:\/\/protocap-production\.up\.railway\.app/);
-  assert.match(workflow, /PROTOCAP_DEMO_BASE_URL:\s+https:\/\/protocap-demo-production\.up\.railway\.app/);
+  assert.match(workflow, /PROTOCAP_BASE_URL:\s+https:\/\/protocap\.akiksystems\.fr/);
+  assert.match(workflow, /PROTOCAP_DEMO_BASE_URL:\s+https:\/\/demo\.protocap\.akiksystems\.fr/);
   assert.match(workflow, /npm run smoke:live \| tee test-results\/live-smoke\/output\.txt/);
   assert.match(workflow, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
   assert.doesNotMatch(workflow, /secrets\./);

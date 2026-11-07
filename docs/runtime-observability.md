@@ -112,7 +112,7 @@ Process startup emits `server_started` with bounded runtime metadata. In additio
 - `shiftGuideConfigured`: whether `SHIFTGUIDE_CODE` contains at least one non-whitespace character in the process environment;
 - `deepSeekConfigured`: whether `DEEPSEEK_API_KEY` contains at least one non-whitespace character in the process environment.
 
-These fields deliberately expose **presence only**. Secret values, lengths, prefixes, hashes and Railway reference expressions are never logged. Whitespace-only values are treated as unconfigured so the startup signal matches readiness/provider construction semantics. The values themselves are never trimmed or rewritten by this check.
+These fields deliberately expose **presence only**. Secret values, lengths, prefixes, hashes and environment reference expressions are never logged. Whitespace-only values are treated as unconfigured so the startup signal matches readiness/provider construction semantics. The values themselves are never trimmed or rewritten by this check.
 
 ## Deliberate limits
 

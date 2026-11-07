@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
 import { createServerApp } from '../server/app.mjs';
-import { RAILWAY_INGRESS_TRUST } from '../server/ingressTrust.mjs';
+import { NGINX_INGRESS_TRUST } from '../server/ingressTrust.mjs';
 import { DEFAULT_SHIFTGUIDE_URGENCES } from '../server/shiftGuideDefaults.mjs';
 import { TEST_CELINE_ROUTING_SPEC } from './celineRoutingFixture.mjs';
 
@@ -21,12 +21,12 @@ const shiftGuideConfig = {
   systemPromptExtra: null,
 };
 
-async function withRailwayServer(run, options = {}) {
+async function withNginxServer(run, options = {}) {
   const { app } = createServerApp({
     shiftGuideCode: 'access-code',
     shiftGuideConfig,
     celineRoutingSpec: TEST_CELINE_ROUTING_SPEC,
-    ingressTrust: RAILWAY_INGRESS_TRUST,
+    ingressTrust: NGINX_INGRESS_TRUST,
     logger: { info() {}, warn() {}, error() {} },
     ...options,
   });
@@ -53,8 +53,8 @@ async function wrongUnlock(baseUrl, headers = {}) {
   });
 }
 
-test('changing X-Forwarded-For cannot bypass Railway client rate limiting', async () => {
-  await withRailwayServer(async (baseUrl) => {
+test('changing X-Forwarded-For cannot bypass nginx client rate limiting', async () => {
+  await withNginxServer(async (baseUrl) => {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const response = await wrongUnlock(baseUrl, {
         'X-Real-IP': '203.0.113.20',
@@ -73,7 +73,7 @@ test('changing X-Forwarded-For cannot bypass Railway client rate limiting', asyn
 
 test('unlock rate limiting stays bounded across the old fixed-window reset boundary', async () => {
   let currentTime = 0;
-  await withRailwayServer(async (baseUrl) => {
+  await withNginxServer(async (baseUrl) => {
     const headers = { 'X-Real-IP': '203.0.113.40' };
 
     assert.equal((await wrongUnlock(baseUrl, headers)).status, 401);
@@ -92,8 +92,8 @@ test('unlock rate limiting stays bounded across the old fixed-window reset bound
   }, { now: () => currentTime });
 });
 
-test('distinct valid Railway client IPs keep distinct unlock buckets', async () => {
-  await withRailwayServer(async (baseUrl) => {
+test('distinct valid nginx client IPs keep distinct unlock buckets', async () => {
+  await withNginxServer(async (baseUrl) => {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const response = await wrongUnlock(baseUrl, { 'X-Real-IP': '203.0.113.30' });
       assert.equal(response.status, 401);
@@ -104,8 +104,8 @@ test('distinct valid Railway client IPs keep distinct unlock buckets', async () 
   });
 });
 
-test('Railway HTTPS metadata still enables HSTS without Express trust proxy', async () => {
-  await withRailwayServer(async (baseUrl) => {
+test('nginx HTTPS metadata still enables HSTS without Express trust proxy', async () => {
+  await withNginxServer(async (baseUrl) => {
     const secure = await fetch(`${baseUrl}/api/health`, {
       headers: { 'X-Forwarded-Proto': 'https' },
     });

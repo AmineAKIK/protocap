@@ -47,7 +47,7 @@ Configuration size is only one part of provider cost control. `server/celineCost
 
 ## Compatibility boundary
 
-No Railway variable or secret must change for these defaults to take effect. Existing deployments use the default provider budgets unless the server-only tuning variables are explicitly configured.
+No environment variable or secret must change for these defaults to take effect. Existing deployments use the default provider budgets unless the server-only tuning variables are explicitly configured.
 
 An existing `SG_SYSTEM_PROMPT`, lexicon or routing override that makes the derived classifier prompt exceed 32 KiB will fail startup. This is intentional: a classifier prompt that large is outside the cost envelope of the current demonstrator and should be reduced rather than silently accepted.
 

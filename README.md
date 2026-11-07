@@ -4,7 +4,7 @@
 
 **Engineering portfolio and interactive demonstrator for industrial operations — guided work, local traceability, logistics workflows, packaging calculations and AI-assisted decision support.**
 
-[Open ProtoCap](https://protocap-production.up.railway.app/) · [Try ShiftGuide demo](https://protocap-demo-production.up.railway.app/demo) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Quality evidence](docs/quality-gates.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
+[Open ProtoCap](https://protocap.akiksystems.fr/) · [Try ShiftGuide demo](https://demo.protocap.akiksystems.fr/demo) · [Architecture](docs/architecture.md) · [Product boundaries](docs/product-boundaries.md) · [Quality evidence](docs/quality-gates.md) · [Security](SECURITY.md) · [Licensing](LICENSING.md)
 
 ProtoCap is a public engineering demonstrator built around recurring shop-floor frictions: fragmented operational information, manual checks, logistics requests, packaging calculations and guided decision support. It combines browser-local prototypes with the protected **ShiftGuide** workspace and its server-mediated AI guide, **Céline**.
 
@@ -119,9 +119,9 @@ Server-backed ShiftGuide/Céline development uses the variables documented in `.
 
 ## Deployment
 
-The public demonstrator is hosted on Railway. The repository root `Dockerfile` is the production build/runtime source of truth: a Node 24 build stage installs the locked dependency graph and compiles the Vite bundle, then a separate Node 24 runtime stage installs production dependencies only and runs `node server.mjs` as the non-root `node` user. `.dockerignore` keeps generated, test and documentation material out of the Docker build context.
+The public demonstrator is self-hosted on a VPS (Docker behind nginx). The repository root `Dockerfile` is the production build/runtime source of truth: a Node 24 build stage installs the locked dependency graph and compiles the Vite bundle, then a separate Node 24 runtime stage installs production dependencies only and runs `node server.mjs` as the non-root `node` user. `.dockerignore` keeps generated, test and documentation material out of the Docker build context.
 
-Railway automatically detects the root `Dockerfile`. Deployment health and restart policy are configured on the Railway service itself: `/api/ready` is the readiness gate, while `/api/health` remains the lightweight process-liveness endpoint. The readiness probe validates local ShiftGuide/Céline bootstrap capabilities without pinging DeepSeek. The deprecated `railway.toml`/Nixpacks configuration path is intentionally not used. Successful CI validates the repository and container build but is not presented as proof that an external Railway deployment completed successfully. See [docs/runtime-readiness.md](docs/runtime-readiness.md).
+Two containers are built from that one image: the protected ProtoCap service at `https://protocap.akiksystems.fr` and the isolated ShiftGuide demo at `https://demo.protocap.akiksystems.fr` (`PROTOCAP_RUNTIME_PROFILE=demo`, fictitious data, no AI-provider key). nginx terminates TLS and forwards `X-Real-IP` / `X-Forwarded-Proto`; both containers listen on loopback only. `/api/ready` is the readiness gate, while `/api/health` remains the lightweight process-liveness endpoint. The readiness probe validates local ShiftGuide/Céline bootstrap capabilities without pinging DeepSeek. Ready-to-adapt files live in [deploy/](deploy/); the full procedure is in [docs/release-and-operations.md](docs/release-and-operations.md) and [docs/runtime-readiness.md](docs/runtime-readiness.md). Successful CI validates the repository and container build but is not presented as proof that the VPS deployment completed successfully.
 
 ## Repository map
 

@@ -42,7 +42,7 @@ Never log:
 
 ## Why the guard is process-local
 
-ProtoCap is currently an advanced single-process demonstrator and Railway runs one replica. A process-local provider budget therefore matches the current runtime model and keeps the implementation auditable.
+ProtoCap is currently an advanced single-process demonstrator and the VPS runs one replica. A process-local provider budget therefore matches the current runtime model and keeps the implementation auditable.
 
 If ProtoCap later becomes multi-replica or a client product, provider budgets must move to a shared store or provider-side quota system before horizontal scaling is enabled.
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
-export const DEFAULT_BASE_URL = 'https://protocap-production.up.railway.app';
-export const DEFAULT_DEMO_BASE_URL = 'https://protocap-demo-production.up.railway.app';
+export const DEFAULT_BASE_URL = 'https://protocap.akiksystems.fr';
+export const DEFAULT_DEMO_BASE_URL = 'https://demo.protocap.akiksystems.fr';
 export const ESSAY_PDF_PATH = '/rendre-l-attention-au-reel-akik-mohamed-amine.pdf';
 
 const REQUIRED_SECURITY_HEADERS = {

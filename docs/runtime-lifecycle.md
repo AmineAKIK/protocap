@@ -18,17 +18,15 @@ If the HTTP server has not closed within 8 seconds, the lifecycle guard records 
 
 Shutdown logs contain lifecycle metadata only. They do not include request bodies, protected configuration, credentials, session tokens or provider payloads.
 
-## Railway draining
+## Docker draining
 
-Railway sends `SIGTERM` to the old deployment after the replacement deployment becomes active. The production service sets:
+`docker compose stop` / `restart` sends `SIGTERM` and waits for `stop_grace_period` before `SIGKILL`. The provided Compose file sets:
 
-```text
-RAILWAY_DEPLOYMENT_DRAINING_SECONDS=10
+```yaml
+stop_grace_period: 10s
 ```
 
-The platform window is deliberately longer than Protocap's 8 second application timeout. This gives the application time to complete or force its own bounded shutdown before Railway can issue `SIGKILL`.
-
-This value is deployment configuration rather than an application secret. It was added without triggering an immediate redeploy; it applies to subsequent deployment teardown.
+The window is deliberately longer than Protocap's 8 second application timeout. This gives the application time to complete or force its own bounded shutdown before Docker can issue `SIGKILL`.
 
 ## Scope
 

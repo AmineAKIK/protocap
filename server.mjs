@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServerApp, createServerRuntimeState } from './server/app.mjs';
 import { DEFAULT_CELINE_COST_LIMITS } from './server/celineCostGuard.mjs';
 import { DEFAULT_CELINE_ROUTING_SPEC } from './server/celineRoutingDefault.mjs';
-import { RAILWAY_INGRESS_TRUST } from './server/ingressTrust.mjs';
+import { NGINX_INGRESS_TRUST } from './server/ingressTrust.mjs';
 import { installGracefulShutdown } from './server/lifecycle.mjs';
 import { createStructuredLogger } from './server/observability.mjs';
 import { createDeepSeekProvider } from './server/providers/deepSeekProvider.mjs';
@@ -111,7 +111,7 @@ const { app } = createServerApp({
   celineProvider,
   runtimeState,
   distDir,
-  ingressTrust: RAILWAY_INGRESS_TRUST,
+  ingressTrust: NGINX_INGRESS_TRUST,
   publicDemo: { selfServe: demoMode, url: publicDemoUrl },
   demoPublicOrigin: demoMode ? protoCapPublicUrl : null,
 });

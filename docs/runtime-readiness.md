@@ -46,11 +46,11 @@ This is intentional:
 
 A configured but invalid/expired provider credential can therefore pass deployment readiness and later fail a real Celine request. That is a separate observability concern.
 
-## Railway
+## VPS
 
-The Railway production service configures `/api/ready` as its deployment healthcheck with a 60-second timeout and an `ON_FAILURE` restart policy with three retries. These operational settings live on the Railway service rather than in the deprecated `railway.toml` config-as-code format.
+The Docker Compose services configure `/api/ready` as their healthcheck (see `deploy/docker-compose.yml`) with `restart: unless-stopped`. These operational settings live in the Compose file on the host, not in a platform config-as-code file.
 
-The repository root `Dockerfile` is the build/runtime source of truth. Railway automatically detects it and builds that image before applying the service-level healthcheck. `/api/health` remains available as the process-liveness endpoint.
+The repository root `Dockerfile` is the build/runtime source of truth. `/api/health` remains available as the process-liveness endpoint.
 
 This distinction does not turn Protocap into a distributed or highly available system. Sessions and rate-limit/provider context remain process-local as documented in the architecture.
 

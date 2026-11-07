@@ -6,11 +6,12 @@ ProtoCap is a public technical demonstrator, not an enterprise production platfo
 
 Canonical deployment:
 
-- `https://protocap-production.up.railway.app`
-- Railway production healthcheck: `/api/ready`
+- `https://protocap.akiksystems.fr`
+- `https://demo.protocap.akiksystems.fr` (isolated ShiftGuide demo, fictitious data)
+- healthcheck: `/api/ready`
 - GitHub deployment source: `main`
 
-A custom domain can replace the Railway hostname later if an owned domain is available. The live smoke target, `robots.txt`, sitemap and canonical metadata must then be changed together.
+The hosting is a self-managed VPS (Docker Compose behind nginx, see `deploy/`). If an origin changes, the live smoke target, `robots.txt`, sitemap and canonical metadata must be changed together.
 
 ## External live smoke
 
@@ -67,9 +68,15 @@ Useful event families:
 - `celine_provider` — provider outcome, duration, model and provider-reported token counts when available;
 - graceful-shutdown lifecycle events from the runtime lifecycle handler.
 
-For provider-cost investigation, aggregate `celine_provider` events in Railway by outcome and sum `totalTokens`, `promptTokens`, `completionTokens`, `promptCacheHitTokens` and `promptCacheMissTokens` over the relevant period. The application deliberately does not expose a public metrics endpoint containing this information.
+For provider-cost investigation, aggregate `celine_provider` events in the container logs (`docker compose logs protocap`) by outcome and sum `totalTokens`, `promptTokens`, `completionTokens`, `promptCacheHitTokens` and `promptCacheMissTokens` over the relevant period. The application deliberately does not expose a public metrics endpoint containing this information.
 
 Important limitation: these logs provide operational evidence for the demo, not durable billing-grade accounting. Provider-reported usage and the provider billing console remain the source of truth for external token spend.
+
+## VPS deployment layout
+
+`deploy/docker-compose.yml` runs two services from the same image: `protocap` (protected, port 3000 on loopback) and `protocap-demo` (demo profile, port 3001 on loopback). `deploy/nginx/protocap.conf` terminates TLS for both hostnames. Environment files (`protocap.env`, `protocap-demo.env`) stay on the host and are never committed; see `.env.example` and `deploy/README.md`.
+
+Enabling the public demo requires, once: a DNS record for `demo.protocap.akiksystems.fr`, a TLS certificate for it, the demo service running, and `PUBLIC_DEMO_URL=https://demo.protocap.akiksystems.fr` set on the protected service. The protected service then advertises the demo through `/api/public-demo` and the "Essayer ShiftGuide en démo" button appears.
 
 ## Deployment verification
 
@@ -77,12 +84,12 @@ For every runtime-affecting merge to `main`:
 
 1. confirm the GitHub Quality Gate is green before merge;
 2. record the squash-merge commit SHA;
-3. confirm Railway creates a deployment for that exact SHA;
-4. wait for Railway `SUCCESS`;
+3. confirm the VPS rebuilt and runs that exact SHA (`docker compose ps`, image label or build log);
+4. wait for the containers to report `healthy`;
 5. confirm `/api/ready` returns HTTP 200;
 6. run or inspect the external live smoke when the change affects public HTTP behavior.
 
-Do not continue a release from a broken `main` or from a Railway deployment whose commit does not match the intended release commit.
+Do not continue a release from a broken `main` or from a VPS deployment whose commit does not match the intended release commit.
 
 ### Packing Cockpit V2 closure proof
 
@@ -92,12 +99,12 @@ After the final PR is squash-merged:
 
 1. re-read `main` and record the exact resulting commit SHA;
 2. confirm the final merged SHA still has successful CodeQL and Quality Gate evidence from the validated PR head/merge policy;
-3. deploy or confirm Railway deploys that exact `main` SHA to the production `protocap` service;
-4. require Railway deployment status `SUCCESS` before claiming completion;
+3. deploy or confirm the VPS deploys that exact `main` SHA to the production `protocap` service;
+4. require the container to be `healthy` before claiming completion;
 5. request `GET /api/ready` on the canonical production hostname and require HTTP `200`;
 6. record only deployment identifiers, commit SHA, status and readiness result — never environment-variable values or secret material.
 
-The Packing closure proof is invalid if Railway is serving an older commit, even when `/api/ready` is healthy. Health proves runtime readiness; the commit match proves that the validated cockpit revision is the code actually running.
+The Packing closure proof is invalid if the VPS is serving an older commit, even when `/api/ready` is healthy. Health proves runtime readiness; the commit match proves that the validated cockpit revision is the code actually running.
 
 The final Packing architecture is declaration-based. Legacy parameter-keyed shipment progress is ignored and no longer part of the public storage registry; planning inputs persist independently from the explicitly selected active-run strategy. Production verification must not fabricate or migrate old shipment counters into declaration history.
 
@@ -105,12 +112,12 @@ The final Packing architecture is declaration-based. Legacy parameter-keyed ship
 
 The first public release is intentionally named `v0.1.0-demo` to communicate maturity accurately.
 
-Create the tag/release only after PR10 is merged and the resulting `main` commit has passed Railway production verification. The tag must point to that verified `main` commit, not to the PR branch head.
+Create the tag/release only after PR10 is merged and the resulting `main` commit has passed VPS production verification. The tag must point to that verified `main` commit, not to the PR branch head.
 
 Release checklist:
 
 1. Quality Gate and CodeQL are green on the merged work;
-2. Railway deployment for the release commit is `SUCCESS`;
+2. the VPS deployment for the release commit is healthy;
 3. `/api/ready` is 200;
 4. the live smoke passes against production;
 5. release notes describe the repository as a technical demonstrator and do not claim enterprise availability, compliance or accessibility certification;
@@ -119,7 +126,7 @@ Release checklist:
 Suggested release-note scope:
 
 - reproducible Node 24 containerized runtime;
-- graceful Railway lifecycle handling;
+- graceful Docker lifecycle handling;
 - canonical ProtoCap product/public-demo polish;
 - bounded Céline provider usage and server-side secrets;
 - strengthened CI, CodeQL, production dependency audit and browser-secret invariants;

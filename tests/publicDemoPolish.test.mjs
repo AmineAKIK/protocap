@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const PUBLIC_ORIGIN = 'https://protocap-production.up.railway.app';
+const PUBLIC_ORIGIN = 'https://protocap.akiksystems.fr';
 
 test('public demo metadata is canonical and shareable', async () => {
   const [indexHtml, viteConfig, robots, sitemap, socialCard] = await Promise.all([

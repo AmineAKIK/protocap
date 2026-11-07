@@ -30,7 +30,7 @@ The production image runs `npm cache clean --force` after installing production 
 
 Browser suites do not inherit a trusted application server. Every Playwright configuration starts identified synthetic services with `reuseExistingServer: false` and graceful shutdown.
 
-The harnesses replace the host environment before importing the production bootstrap. Provider credentials are empty, protected configuration sentinels are discarded and no CI browser test calls the live DeepSeek provider. The public-demo suite starts two isolated loopback origins rather than contacting Railway.
+The harnesses replace the host environment before importing the production bootstrap. Provider credentials are empty, protected configuration sentinels are discarded and no CI browser test calls the live DeepSeek provider. The public-demo suite starts two isolated loopback origins rather than contacting a hosted service.
 
 The Docker runtime smoke starts the exact image built in the job with a synthetic demo configuration. It binds only to loopback, waits for readiness, verifies that the protected unlock route is absent and removes the container on success or failure.
 
