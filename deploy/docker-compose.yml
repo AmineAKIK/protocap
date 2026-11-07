@@ -1,0 +1,39 @@
+# Two services from one image: the protected ProtoCap app and the isolated ShiftGuide demo.
+# Ports are published on loopback only; nginx (deploy/nginx/protocap.conf) is the single way in.
+# Real values live in protocap.env / protocap-demo.env on the host (never committed).
+services:
+  protocap:
+    build: ..
+    image: protocap:latest
+    restart: unless-stopped
+    stop_grace_period: 10s
+    env_file: protocap.env
+    environment:
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  protocap-demo:
+    image: protocap:latest
+    depends_on:
+      - protocap
+    restart: unless-stopped
+    stop_grace_period: 10s
+    command: ["node", "demo/startHostedDemo.mjs"]
+    env_file: protocap-demo.env
+    environment:
+      PORT: "3001"
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

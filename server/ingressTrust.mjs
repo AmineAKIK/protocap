@@ -21,7 +21,7 @@ export const DIRECT_INGRESS_TRUST = Object.freeze({
   },
 });
 
-export const RAILWAY_INGRESS_TRUST = Object.freeze({
+export const NGINX_INGRESS_TRUST = Object.freeze({
   clientAddress(req) {
     return validIpHeader(req.get('x-real-ip')) ?? socketAddress(req);
   },

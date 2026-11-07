@@ -2,7 +2,7 @@
 node_modules/
 
 # Generated output
-# Built by GitHub Actions and Railway; never commit generated bundles.
+# Built by GitHub Actions and the VPS Docker build; never commit generated bundles.
 dist/
 coverage/
 playwright-report/

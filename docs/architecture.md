@@ -25,7 +25,7 @@ flowchart TB
     Static[Static Vite bundle]
   end
 
-  Env[Railway environment\nsecrets + ShiftGuide config + optional routing]
+  Env[VPS environment files\nsecrets + ShiftGuide config + optional routing]
   ProviderAdapter[DeepSeek adapter\n+ cost guard]
   Provider[DeepSeek API]
 
@@ -169,4 +169,4 @@ Routing is configurable but intentionally not editable from the browser or an ad
 
 ## Deployment boundary
 
-Railway hosts the current public demonstrator. CI and deployment are separate concerns: GitHub Actions proves repository checks pass; it does not by itself prove the external Railway deployment completed successfully.
+A self-managed VPS (Docker Compose behind nginx) hosts the current public demonstrator. CI and deployment are separate concerns: GitHub Actions proves repository checks pass; it does not by itself prove the VPS deployment completed successfully.

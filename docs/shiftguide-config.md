@@ -16,7 +16,7 @@ ShiftGuide reads protected runtime content from server-side environment variable
 
 Secrets must remain server-side. Do not introduce `VITE_*` names for secrets or protected runtime configuration. The runtime accepts only the canonical `SHIFTGUIDE_CODE` and `DEEPSEEK_API_KEY` names; legacy `VITE_SHIFTGUIDE_CODE`, `VITE_DEEPSEEK_API_KEY` and `VITE_OPENAI_API_KEY` names are not supported by application code.
 
-For an existing Railway deployment that still has legacy names, migrate without copying secret plaintext: create the canonical variables as same-service Railway reference variables (`SHIFTGUIDE_CODE=${{ VITE_SHIFTGUIDE_CODE }}` and `DEEPSEEK_API_KEY=${{ VITE_DEEPSEEK_API_KEY }}`), deploy and verify readiness, then replace the references with canonical secret values or rotate the credentials before deleting the legacy variables. Never remove a legacy source variable while a canonical reference still depends on it.
+Legacy `VITE_*` names are not read by the runtime. If a host still defines them, copy the real values into the canonical names in the host's environment file, restart, verify readiness, then delete the legacy entries.
 
 ## Contract invariants
 
@@ -127,4 +127,4 @@ The example intentionally shortens `goldenRules`; a configured production value 
 
 Before deploying a change that explicitly sets `SG_URGENCES` or `SG_CELINE_ROUTING`, validate the JSON against the repository contracts. For routing changes, validate them together with the exact `SG_MODULES` value from the target environment: compatibility is intentionally cross-configuration, not shape-only.
 
-If Railway currently has no `SG_URGENCES` or `SG_CELINE_ROUTING` value, no migration is required: repository defaults are used automatically. A deployment with custom routing should add `SG_CELINE_ROUTING` atomically with any `SG_MODULES` change it depends on.
+If the host environment has no `SG_URGENCES` or `SG_CELINE_ROUTING` value, no migration is required: repository defaults are used automatically. A deployment with custom routing should add `SG_CELINE_ROUTING` atomically with any `SG_MODULES` change it depends on.

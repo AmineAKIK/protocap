@@ -149,7 +149,7 @@ CI first builds the repository Docker image and then executes `scripts/container
 - verifies the protected code-unlock endpoint is absent;
 - removes the container even when an assertion fails.
 
-This proves more than `docker build` while remaining provider-free and non-destructive. It does not prove a Railway deployment; live deployment correlation belongs to PR-13.
+This proves more than `docker build` while remaining provider-free and non-destructive. It does not prove a VPS deployment; live deployment correlation belongs to PR-13.
 
 ## Supply-chain audit policy
 

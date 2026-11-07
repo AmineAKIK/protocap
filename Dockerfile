@@ -20,6 +20,7 @@ COPY --from=build /app/dist ./dist
 COPY server.mjs ./server.mjs
 COPY server ./server
 COPY shared ./shared
+COPY demo ./demo
 
 USER node
 

@@ -46,4 +46,4 @@ If a substantial contribution may later be included in a separately licensed com
 
 ## Deployment
 
-Railway is the production deployment target. A successful GitHub Quality Gate validates the repository, but deployment status must be checked independently when production behavior matters.
+The self-hosted VPS (Docker behind nginx) is the production deployment target. A successful GitHub Quality Gate validates the repository, but deployment status must be checked independently when production behavior matters.

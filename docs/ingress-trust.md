@@ -20,12 +20,14 @@ The application therefore does **not** enable Express `trust proxy` globally. `c
 
 This prevents arbitrary forwarded headers from changing rate-limit identity when the app is reached directly.
 
-## Railway policy
+## nginx policy
 
-`server.mjs` is the Railway deployment adapter and explicitly injects `RAILWAY_INGRESS_TRUST`.
+`server.mjs` is the VPS deployment adapter and explicitly injects `NGINX_INGRESS_TRUST`.
 
-That policy relies on the current Railway public-network ingress contract:
+That policy relies on the ingress contract established by the repository's nginx configuration (`deploy/nginx/`):
 
+- nginx **overwrites** `X-Real-IP` with `$remote_addr` and `X-Forwarded-Proto` with `$scheme` on every proxied request; client-supplied values never reach the app;
+- the app containers publish their port on `127.0.0.1` only, so there is no path that bypasses nginx;
 - client identity comes from a syntactically valid `X-Real-IP` value;
 - an absent or malformed `X-Real-IP` falls back to the transport socket address;
 - `X-Forwarded-For` is deliberately ignored for security decisions;
@@ -53,10 +55,10 @@ Session-level Céline rate limiting remains keyed by the authenticated session t
 
 ## Deployment compatibility
 
-This policy introduces no new environment variable and requires no Railway variable migration.
+This policy introduces no new environment variable and requires no variable migration.
 
 The public routes, health/readiness endpoints, provider configuration, session contract, procedures, browser DTOs and Docker runtime contract are unchanged by the ingress policy itself.
 
 ## Operational rule
 
-Do not copy `RAILWAY_INGRESS_TRUST` to another hosting platform merely because it also sends similarly named headers. A new deployment adapter must first establish which ingress headers the platform itself overwrites and whether the application can be reached by a path that bypasses that ingress.
+Do not reuse `NGINX_INGRESS_TRUST` behind a proxy that does not overwrite `X-Real-IP`, or if the container port is reachable directly. A new deployment adapter must first establish which ingress headers the platform itself overwrites and whether the application can be reached by a path that bypasses that ingress.
