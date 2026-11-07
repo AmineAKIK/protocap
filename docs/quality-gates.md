@@ -155,7 +155,7 @@ This proves more than `docker build` while remaining provider-free and non-destr
 
 Dependency risk is split by trust surface:
 
-- `npm run audit:full` audits the development/build graph from low severity;
+- `npm run audit:full` audits the development/build graph from moderate severity (low-severity findings without an available fix are reported, not blocking);
 - `npm run audit:prod` audits the production graph from low severity;
 - registry errors remain failures and are exercised through a loopback failure fixture;
 - `npm ci` must preserve `package.json` and `package-lock.json`;

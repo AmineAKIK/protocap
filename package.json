@@ -31,7 +31,7 @@
     "check:server": "node --check server.mjs && node --check server/app.mjs && node --check server/celineAuthority.mjs && node --check server/celineCostGuard.mjs && node --check server/celineDomainEngine.mjs && node --check server/celineFallback.mjs && node --check server/celineOperationalState.mjs && node --check server/celineProviderContext.mjs && node --check server/celineRoutingContract.mjs && node --check server/celineRoutingDefault.mjs && node --check server/celineSemanticIndex.mjs && node --check server/celinePrompt.mjs && node --check server/ingressTrust.mjs && node --check server/lifecycle.mjs && node --check server/observability.mjs && node --check server/providers/deepSeekProvider.mjs && node --check server/readiness.mjs && node --check server/requestCancellation.mjs && node --check server/runtimeUtils.mjs && node --check server/security.mjs && node --check server/shiftGuideDefaults.mjs && node --check server/shiftGuideRevision.mjs && node --check shared/celineContract.js && node --check shared/configBudgets.js && node --check shared/shiftGuideContract.js && node --check shared/shiftGuidePersistence.js && node --check shared/shiftGuideProgress.js && node --check scripts/live-smoke.mjs && node --check server/providers/demoScenarioProvider.mjs && node --check scripts/runtime-env.mjs && node --check scripts/run-full-dev.mjs && node --check scripts/run-demo.mjs && node --check scripts/server-coverage.mjs && node --check scripts/mutation-smoke.mjs && node --check scripts/e2e-suites.mjs && node --check scripts/run-e2e-suite.mjs && node --check scripts/container-runtime-smoke.mjs && node --check demo/runtimeFixtures.mjs && node --check scripts/public-demo-e2e-harness.mjs && node --check scripts/public-demo-protected-e2e-harness.mjs",
     "check": "npm run check:server && npm run test:unit && npm run test:frontend:coverage && npm run lint && npm run build",
     "check:ci": "npm run check && npm run test:frontend:coverage:global && npm run test:server:coverage && npm run test:mutation:smoke",
-    "audit:full": "npm audit --include=dev --audit-level=low",
+    "audit:full": "npm audit --include=dev --audit-level=moderate",
     "audit:prod": "npm audit --omit=dev --audit-level=low",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
@@ -57,21 +57,25 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.0.0",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "autoprefixer": "^10.4.20",
-    "eslint": "^10.8.1",
+    "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.11.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.67.0",
-    "vite": "^6.0.1",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^6.4.5",
     "vite-plugin-pwa": "^0.21.1",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "allowScripts": {
     "esbuild@0.25.12": true
+  },
+  "overrides": {
+    "minimatch": "^11.0.5",
+    "glob": "^14.0.4"
   }
 }

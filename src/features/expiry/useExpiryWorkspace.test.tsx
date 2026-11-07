@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConditioningLine } from '../../types/expiry';
 import {
   EXPIRY_AGGREGATE_KEY,
@@ -40,7 +40,14 @@ function seedV1() {
   }));
 }
 
+beforeEach(() => {
+  // Fixture dates are anchored on 2026-09-17: pin the wall clock (Date only, timers stay real).
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-17T14:30:00+02:00'));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   localStorage.clear();
 });
