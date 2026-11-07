@@ -11,7 +11,7 @@ ProtoCap keeps CI security proportional to its role as a public technical demons
 
 ## Dependency and installation controls
 
-- `npm run audit:full` explicitly includes development dependencies and blocks findings from low severity upward.
+- `npm run audit:full` explicitly includes development dependencies and blocks findings from moderate severity upward. Low-severity findings are reported but non-blocking: the only one today is `deepmerge` <=4.3.1 (build-time, via `workbox-build`), which has no patched release. Production audit (`audit:prod`) stays at low.
 - `npm run audit:prod` separately applies the same floor to the production graph.
 - Registry failures remain failures. Loopback HTTP 503 tests exercise both audit scripts without depending on a live external outage.
 - `npm ci` must leave `package.json` and `package-lock.json` unchanged.

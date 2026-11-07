@@ -55,7 +55,7 @@ test('supply-chain policy audits build tooling and production separately without
     read('.github/workflows/ci.yml'),
   ]);
 
-  assert.equal(packageJson.scripts['audit:full'], 'npm audit --include=dev --audit-level=low');
+  assert.equal(packageJson.scripts['audit:full'], 'npm audit --include=dev --audit-level=moderate');
   assert.equal(packageJson.scripts['audit:prod'], 'npm audit --omit=dev --audit-level=low');
   assert.deepEqual(packageJson.allowScripts, { 'esbuild@0.25.12': true });
   assert.match(workflow, /run: npm run audit:full\n/);
